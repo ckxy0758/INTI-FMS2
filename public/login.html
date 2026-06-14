@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>INTI Facility Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-page">
+
+  <header class="topbar">
+    <h2>INTI Facility Management System</h2>
+    <span class="help-icon">?</span>
+  </header>
+
+  <main class="login-hero">
+    <div class="login-card">
+      <h1>Welcome Back</h1>
+      <p>Book the facilities now !</p>
+
+      <label>Email</label>
+      <input type="email" id="email" placeholder="username@roles.newinti.edu.my">
+
+      <div class="password-row">
+        <label>Password</label>
+        <a href="#">Forgot Password?</a>
+      </div>
+      <input type="password" id="password" placeholder="********">
+
+    <div class="remember-row">
+    <label class="custom-checkbox">
+        <input type="checkbox" id="remember">
+        <span class="checkmark"></span>
+        <span>Remember me on this device</span>
+    </label>
+    </div>
+
+      <button onclick="login()">Log In</button>
+
+      <p id="message"></p>
+    </div>
+  </main>
+
+  <script>
+    function login() {
+
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const message = document.getElementById("message");
+
+        message.innerText = "";
+
+        if (!email || !password) {
+          message.style.color = "#ffb4b4";
+          message.innerText = "Please enter email and password";
+          return;
+        }
+
+        fetch("/api/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email, password })
+        })
+
+        .then(res => res.json())
+
+        .then(data => {
+
+          if (data.success) {
+
+            const remember =
+            document.getElementById("remember").checked;
+
+            if (remember) {
+              localStorage.setItem(
+                "user",
+                JSON.stringify(data.user)
+              );
+
+              sessionStorage.removeItem("user");
+
+            } else {
+
+              sessionStorage.setItem(
+                "user",
+                JSON.stringify(data.user)
+              );
+
+              localStorage.removeItem("user");
+            }
+
+            if (
+              data.user.must_change_password == 1 &&
+              data.user.role !== "admin"
+            ) {
+
+              window.location.href =
+              "change-password.html";
+
+            } else if (data.user.role === "admin") {
+
+              window.location.href =
+              "admin.html";
+
+            } else if (data.user.role === "student") {
+
+              window.location.href =
+              "student.html";
+
+            } else if (data.user.role === "staff") {
+
+              window.location.href =
+              "staff.html";
+            }
+
+          } else {
+
+            message.style.color = "#ffb4b4";
+            message.innerText = data.message;
+          }
+        })
+
+        .catch(() => {
+          message.style.color = "#ffb4b4";
+          message.innerText = "Server connection failed";
+        });
+      }
+  </script>
+
+</body>
+</html>

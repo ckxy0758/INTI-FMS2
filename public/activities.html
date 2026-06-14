@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Activities</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dashboard-body">
+
+  <div id="appHeader"></div>
+
+  <div class="dashboard-layout">
+
+    <div id="appSidebar"></div>
+
+    <main class="main-content">
+
+      <h1 class="page-title">My Activities</h1>
+
+      <div class="activity-filter-row">
+        <button class="activity-filter active" onclick="filterActivities('all', event)">All Activities</button>
+        <button class="activity-filter" onclick="filterActivities('upcoming', event)">Upcoming Activities</button>
+        <button class="activity-filter" onclick="filterActivities('past', event)">Past Activities</button>
+        <button class="activity-filter" onclick="filterActivities('cancelled', event)">Cancelled Activities</button>
+
+        <select id="sortActivities" onchange="sortActivityList()">
+          <option value="newest">Sort By: Newest First</option>
+          <option value="oldest">Sort By: Oldest First</option>
+        </select>
+      </div>
+
+      <div id="activityList"></div>
+
+    </main>
+
+  </div>
+
+  <script src="component.js"></script>
+
+  <script>
+    loadLayout("activities");
+
+    const user =
+      JSON.parse(localStorage.getItem("user")) ||
+      JSON.parse(sessionStorage.getItem("user"));
+
+    if (!user) {
+      window.location.href = "login.html";
+    }
+
+    let allActivities = [];
+
+    loadActivities();
+
+    function loadActivities() {
+      fetch(`/api/activities/${user.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) {
+            document.getElementById("activityList").innerHTML =
+              "<p>Failed to load activities.</p>";
+            return;
+          }
+
+        allActivities = data.activities;
+        sortActivityList();
+        });
+    }
+
+    function renderActivities(activities) {
+      const activityList = document.getElementById("activityList");
+      activityList.innerHTML = "";
+
+      if (activities.length === 0) {
+        activityList.innerHTML = "<p>No activities found.</p>";
+        return;
+      }
+
+      activities.forEach(activity => {
+        activityList.innerHTML += `
+          <div class="activity-card">
+
+            <div class="activity-img">
+              <img 
+                src="${activity.image_path || 'images/bg-image-2.jpeg'}"
+                alt="${activity.facility_name}"
+              >
+            </div>
+
+            <div class="activity-info">
+              <h3>${activity.facility_name}</h3>
+              <p>${activity.description || "Technology & robotics workspace"}</p>
+
+              <p class="activity-info-row">
+                <span class="activity-info-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg"
+                       viewBox="0 -960 960 960"
+                       fill="currentColor">
+                    <path d="m600-120-240-84-186 72q-20 8-37-4.5T120-170v-560q0-13 7.5-23t20.5-15l212-72 240 84 186-72q20-8 37 4.5t17 33.5v560q0 13-7.5 23T812-192l-212 72Zm-40-98v-468l-160-56v468l160 56Zm80 0 120-40v-474l-120 46v468Zm-440-10 120-46v-468l-120 40v474Zm440-458v468-468Zm-320-56v468-468Z"/>
+                  </svg>
+                </span>
+
+                <span class="activity-info-text">
+                  Location: ${activity.location}
+                </span>
+              </p>
+
+              <p class="activity-info-row">
+                <span class="activity-info-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg"
+                       viewBox="0 -960 960 960"
+                       fill="currentColor">
+                    <path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Z"/>
+                  </svg>
+                </span>
+
+                <span class="activity-info-text">
+                  Date: ${formatDate(activity.booking_date)}
+                </span>
+              </p>
+
+              <p class="activity-info-row">
+                <span class="activity-info-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M582-298 440-440v-200h80v167l118 118-56 57ZM440-720v-80h80v80h-80Zm280 280v-80h80v80h-80ZM440-160v-80h80v80h-80ZM160-440v-80h80v80h-80ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>
+                </span>
+
+                <span class="activity-info-text">
+                  Time: ${formatTime(activity.start_time)} - ${formatTime(activity.end_time)}
+                </span>
+              </p>
+            </div>
+
+            <div class="activity-progress">
+              ${getProgress(activity)}
+            </div>
+
+            <div class="activity-actions">
+              <button class="outline-btn" onclick="window.location.href='booking-details.html?id=${activity.booking_id}'">
+                View Details
+              </button>
+
+              <button class="solid-btn" onclick="modifyBooking(${activity.booking_id})">
+                Modify
+              </button>
+            </div>
+
+          </div>
+        `;
+      });
+    }
+
+    function getProgress(activity) {
+      const facilityName = activity.facility_name
+        ? activity.facility_name.trim().toLowerCase()
+        : "";
+
+      const bookingStatus = activity.booking_status
+        ? activity.booking_status.trim().toLowerCase()
+        : "";
+
+      if (bookingStatus === "cancelled") {
+        return `
+          <div class="progress-wrapper">
+
+            <div class="progress-step active">
+              <div class="circle">1</div>
+              <span>Submitted</span>
+            </div>
+
+            <div class="progress-line active-line"></div>
+
+            <div class="progress-step active cancelled-step">
+              <div class="circle">2</div>
+              <span>Cancelled</span>
+            </div>
+
+          </div>
+        `;
+      }
+
+      if (activity.booking_flow_type === "direct_reservation") {
+        if (bookingStatus === "expired") {
+          return `<p style="color:red;font-weight:700;text-align:center;">Reservation Expired</p>`;
+        }
+
+        let step = 1;
+
+        if (bookingStatus === "checked_in") step = 2;
+        if (bookingStatus === "completed") step = 3;
+
+        return `
+          <div class="progress-wrapper">
+
+            <div class="progress-step active">
+              <div class="circle">1</div>
+              <span>Cubicle Reserved</span>
+            </div>
+
+            <div class="progress-line ${step >= 2 ? 'active-line' : ''}"></div>
+
+            <div class="progress-step ${step >= 2 ? 'active' : ''}">
+              <div class="circle">2</div>
+              <span>Checked In</span>
+            </div>
+
+            <div class="progress-line ${step >= 3 ? 'active-line' : ''}"></div>
+
+            <div class="progress-step ${step >= 3 ? 'active' : ''}">
+              <div class="circle">3</div>
+              <span>Completed</span>
+            </div>
+
+          </div>
+        `;
+      }
+
+    if (activity.booking_flow_type === "staff_key_approval") {
+        let step = 1;
+
+        if (bookingStatus === "approved") step = 2;
+        if (bookingStatus === "key_collected") step = 3;
+        if (bookingStatus === "completed") step = 4;
+
+        return `
+          <div class="progress-wrapper">
+
+            <div class="progress-step active">
+              <div class="circle">1</div>
+              <span>Submitted</span>
+            </div>
+
+            <div class="progress-line ${step >= 2 ? 'active-line' : ''}"></div>
+
+            <div class="progress-step ${step >= 2 ? 'active' : ''}">
+              <div class="circle">2</div>
+              <span>Approved</span>
+            </div>
+
+            <div class="progress-line ${step >= 3 ? 'active-line' : ''}"></div>
+
+            <div class="progress-step ${step >= 3 ? 'active' : ''}">
+              <div class="circle">3</div>
+              <span>Key<br>Collected</span>
+            </div>
+
+            <div class="progress-line ${step >= 4 ? 'active-line' : ''}"></div>
+
+            <div class="progress-step ${step >= 4 ? 'active' : ''}">
+              <div class="circle">4</div>
+              <span>Returned</span>
+            </div>
+
+          </div>
+        `;
+      }
+
+      let step = 1;
+      let step1Text = "Submitted";
+      let step2Text = "Waiting List";
+      let step3Text = "Approved";
+
+      const paymentRequired =
+        activity.payment_required === 1 ||
+        activity.payment_required === "1";
+
+      if (paymentRequired) {
+        step2Text = "Pending Payment";
+
+        if (activity.payment_status === "pending_payment") {
+          step = 2;
+          step2Text = "Pending Payment";
+        }
+
+        if (activity.payment_status === "payment_submitted") {
+          step = 2;
+          step2Text = "Payment Submitted";
+        }
+
+        if (
+          activity.payment_status === "verified" ||
+          bookingStatus === "approved"
+        ) {
+          step = 3;
+          step2Text = "Payment Verified";
+        }
+      } else {
+        if (bookingStatus === "waiting" || bookingStatus === "waitlist") {
+          step = 2;
+          step2Text = "Waiting List";
+        }
+
+        if (bookingStatus === "approved") {
+          step = 3;
+        }
+      }
+
+      return `
+        <div class="progress-wrapper">
+
+          <div class="progress-step active">
+            <div class="circle">1</div>
+            <span>${step1Text}</span>
+          </div>
+
+          <div class="progress-line ${step >= 2 ? 'active-line' : ''}"></div>
+
+          <div class="progress-step ${step >= 2 ? 'active' : ''}">
+            <div class="circle">2</div>
+            <span>${step2Text}</span>
+          </div>
+
+          <div class="progress-line ${step >= 3 ? 'active-line' : ''}"></div>
+
+          <div class="progress-step ${step >= 3 ? 'active' : ''}">
+            <div class="circle">3</div>
+            <span>${step3Text}</span>
+          </div>
+
+        </div>
+      `;
+    }
+
+    function formatStatus(activity) {
+      const facilityName = activity.facility_name
+        ? activity.facility_name.trim().toLowerCase()
+        : "";
+
+      const bookingStatus = activity.booking_status
+        ? activity.booking_status.trim().toLowerCase()
+        : "";
+
+      const paymentStatus = activity.payment_status
+        ? activity.payment_status.trim().toLowerCase()
+        : "";
+
+      if (activity.booking_flow_type === "direct_reservation") {
+        if (bookingStatus === "reserved") return "Cubicle Reserved";
+        if (bookingStatus === "checked_in") return "Checked In";
+        if (bookingStatus === "expired") return "Reservation Expired";
+        if (bookingStatus === "completed") return "Completed";
+      }
+
+      if (activity.booking_flow_type === "staff_key_approval") {
+        if (bookingStatus === "pending") return "Submitted";
+        if (bookingStatus === "approved") return "Approved";
+        if (bookingStatus === "key_collected") return "Key Collected";
+        if (bookingStatus === "completed") return "Returned";
+      }
+
+      if (activity.payment_required === 1 || activity.payment_required === "1") {
+        if (paymentStatus === "pending_payment") return "Pending Payment";
+        if (paymentStatus === "payment_submitted") return "Payment Submitted";
+        if (paymentStatus === "verified") return "Payment Verified";
+      }
+
+      if (bookingStatus === "pending") return "Pending";
+      if (bookingStatus === "approved") return "Approved";
+      if (bookingStatus === "rejected") return "Rejected";
+      if (bookingStatus === "cancelled") return "Cancelled";
+      if (bookingStatus === "completed") return "Completed";
+
+      return activity.booking_status || "Unknown";
+    }
+
+    function formatDate(dateValue) {
+      const date = new Date(dateValue);
+
+      return date.toLocaleDateString("en-MY", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      });
+    }
+
+    function getActivityEndDateTime(activity) {
+    return new Date(`${activity.booking_date}T${activity.end_time}`);
+  }
+
+    function filterActivities(type, event) {
+      document.querySelectorAll(".activity-filter").forEach(btn => {
+        btn.classList.remove("active");
+      });
+
+      event.target.classList.add("active");
+
+      const now = new Date();
+
+      if (type === "upcoming") {
+        renderActivities(
+          allActivities.filter(item =>
+            getActivityEndDateTime(item) > now &&
+            item.booking_status !== "cancelled"
+          )
+        );
+      } else if (type === "past") {
+        renderActivities(
+          allActivities.filter(item =>
+            getActivityEndDateTime(item) <= now &&
+            item.booking_status !== "cancelled"
+          )
+        );
+      } else if (type === "cancelled") {
+        renderActivities(
+          allActivities.filter(item => item.booking_status === "cancelled")
+        );
+      } else {
+        renderActivities(allActivities);
+      }
+    }
+      function sortActivityList() {
+        const sortType = document.getElementById("sortActivities").value;
+
+        let sorted = [...allActivities];
+
+        sorted.sort((a, b) => {
+          const dateA = new Date(`${a.booking_date}T${a.start_time}`);
+          const dateB = new Date(`${b.booking_date}T${b.start_time}`);
+
+          return sortType === "newest" ? dateB - dateA : dateA - dateB;
+        });
+
+        renderActivities(sorted);
+      }
+
+    function formatTime(time) {
+      const [hour, minute] = time.split(":");
+      let h = parseInt(hour);
+      const ampm = h >= 12 ? "PM" : "AM";
+
+      h = h % 12;
+      if (h === 0) h = 12;
+
+      return `${h}:${minute} ${ampm}`;
+    }
+
+    function modifyBooking(id) {
+      if (!confirm("Are you sure you want to cancel this booking? You can only cancel at least 30 minutes before the booking starts.")) {
+        return;
+      }
+
+      fetch(`/api/bookings/${id}/cancel`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          user_id: user.id
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message);
+
+        if (data.success) {
+          loadActivities();
+        }
+      })
+      .catch(() => {
+        alert("Failed to cancel booking. Please try again.");
+      });
+    }
+
+    function logout() {
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
+      window.location.href = "login.html";
+    }
+  </script>
+
+</body>
+</html>

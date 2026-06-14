@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Facility Details</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dashboard-body">
+
+  <div id="appHeader"></div>
+
+  <div class="dashboard-layout">
+
+    <div id="appSidebar"></div>
+
+    <main class="main-content">
+
+      <div class="details-layout">
+
+        <div class="details-left" id="facilityDetails"></div>
+
+        <div class="booking-panel">
+
+          <h2>Booking Details</h2>
+
+          <label>Select Program</label>
+          <select id="program">
+            <option value="">Select Program</option>
+            <option value="School of Computing (SOC)">School of Computing (SOC)</option>
+            <option value="School of Business">School of Business</option>
+            <option value="School of Engineering">School of Engineering</option>
+            <option value="General Use">General Use</option>
+          </select>
+
+          <label>Date</label>
+          <input type="date" id="bookingDate">
+
+          <label>Available Time Slot</label>
+          <select id="timeSlot">
+            <option value="">Select a date first</option>
+          </select>
+
+          <div id="equipmentSection">
+
+            <label>Equipment / Requirements</label>
+
+            <div class="equipment-list">
+
+              <label class="equipment-row">
+                <input type="checkbox" value="Computer" class="equipment">
+                <span>Computer</span>
+              </label>
+
+              <label class="equipment-row">
+                <input type="checkbox" value="HDMI Cable" class="equipment">
+                <span>HDMI Cable</span>
+              </label>
+
+              <label class="equipment-row">
+                <input type="checkbox" value="Projector" class="equipment">
+                <span>Projector</span>
+              </label>
+
+              <label class="equipment-row">
+                <input type="checkbox" value="Others" class="equipment">
+                <span>Others:</span>
+
+                <input
+                  type="text"
+                  id="otherEquipment"
+                  class="other-equipment-input"
+                  placeholder="__________"
+                >
+              </label>
+
+            </div>
+
+          </div>
+
+          <label>Purpose</label>
+          <textarea id="purpose" placeholder="Enter booking purpose"></textarea>
+
+          <button onclick="submitBooking()">Confirm Booking</button>
+
+          <p id="message"></p>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <div id="bookingModal" class="modal-overlay">
+    <div class="booking-modal">
+      <div class="success-icon" id="modalIcon">✓</div>
+
+      <h2 id="modalTitle">Booking Request Submitted</h2>
+
+      <p id="modalMessage">
+        Your booking request has been submitted successfully.
+      </p>
+
+      <button onclick="closeBookingModal()">
+        OK (<span id="countdown">3</span>s)
+      </button>
+    </div>
+  </div>
+
+  <script src="component.js"></script>
+
+  <script>
+    loadLayout("facilities");
+
+    const user =
+      JSON.parse(localStorage.getItem("user")) ||
+      JSON.parse(sessionStorage.getItem("user"));
+
+    if (!user) {
+      window.location.href = "login.html";
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const facilityId = params.get("id");
+
+    if (!facilityId) {
+      window.location.href =
+        user.role === "staff" ? "staff.html" : "student.html";
+    }
+
+    let currentFacility = null;
+
+    setMinimumBookingDate();
+    loadFacility();
+
+    document
+      .getElementById("bookingDate")
+      .addEventListener("change", loadAvailableSlots);
+
+    function setMinimumBookingDate() {
+      const today = new Date().toISOString().split("T")[0];
+      document.getElementById("bookingDate").setAttribute("min", today);
+    }
+
+    function loadAvailableSlots() {
+      const bookingDate = document.getElementById("bookingDate").value;
+      const timeSlot = document.getElementById("timeSlot");
+      const message = document.getElementById("message");
+
+      timeSlot.innerHTML = `<option value="">Loading available slots...</option>`;
+      message.innerText = "";
+
+      if (!bookingDate) {
+        timeSlot.innerHTML = `<option value="">Select a date first</option>`;
+        return;
+      }
+
+      if (isWeekend(bookingDate)) {
+        timeSlot.innerHTML = `<option value="">No booking on weekends</option>`;
+        message.style.color = "red";
+        message.innerText = "Bookings are not available on Saturday and Sunday.";
+        return;
+      }
+
+      fetch(`/api/facilities/${facilityId}/available-slots?date=${bookingDate}`)
+        .then(res => res.json())
+        .then(data => {
+          timeSlot.innerHTML = `<option value="">Select Available Time Slot</option>`;
+
+          if (!data.success || data.slots.length === 0) {
+            timeSlot.innerHTML = `<option value="">No available slots</option>`;
+            return;
+          }
+
+          data.slots.forEach(slot => {
+            timeSlot.innerHTML += `
+              <option value="${slot.start_time}|${slot.end_time}">
+                ${slot.label}
+              </option>
+            `;
+          });
+        })
+        .catch(() => {
+          timeSlot.innerHTML = `<option value="">Failed to load slots</option>`;
+        });
+    }
+
+    function isPastBookingDateTime(bookingDate, startTime) {
+      const selectedDateTime = new Date(`${bookingDate}T${startTime}`);
+      const now = new Date();
+      return selectedDateTime < now;
+    }
+
+    function isWeekend(dateValue) {
+      const day = new Date(dateValue).getDay();
+      return day === 0 || day === 6;
+    }
+
+    function loadFacility() {
+      fetch(`/api/facilities/${facilityId}`)
+        .then(res => res.json())
+        .then(data => {
+          const container = document.getElementById("facilityDetails");
+
+          if (!data.success) {
+            container.innerHTML = "<p>Facility not found.</p>";
+            return;
+          }
+
+          const facility = data.facility;
+          currentFacility = facility;
+
+          const bookingFlowType = facility.booking_flow_type || "normal_approval";
+
+          const equipmentSection = document.getElementById("equipmentSection");
+
+          if (
+            facility.facility_name.toLowerCase() === "stem lab" ||
+            facility.equipment
+          ) {
+            equipmentSection.style.display = "block";
+          } else {
+            equipmentSection.style.display = "none";
+          }
+
+          container.innerHTML = `
+            <div class="facility-image-wrapper">
+              <img
+                src="${facility.image_path || 'images/bg-image-2.jpeg'}"
+                alt="${facility.facility_name}"
+                class="details-image"
+              >
+              <span class="status-badge detail-badge">
+                ${formatAvailability(facility.availability_status)}
+              </span>
+            </div>
+
+            <h2>${facility.facility_name}</h2>
+
+            <p>${facility.description || ""}</p>
+
+        <div class="details-meta">
+
+          <div>
+            <span>
+              <svg xmlns="http://www.w3.org/2000/svg" height="24px"
+                  viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                <path d="M120-120v-560h160v-160h400v320h160v400H520v-160h-80v160H120Zm80-80h80v-80h-80v80Zm0-160h80v-80h-80v80Zm0-160h80v-80h-80v80Zm160 160h80v-80h-80v80Zm0-160h80v-80h-80v80Zm0-160h80v-80h-80v80Zm160 320h80v-80h-80v80Zm0-160h80v-80h-80v80Zm0-160h80v-80h-80v80Zm160 480h80v-80h-80v80Zm0-160h80v-80h-80v80Z"/>
+              </svg>
+            </span>
+            Facility Type: ${facility.facility_type || "-"}
+          </div>
+
+          <div>
+            <span>
+              <svg xmlns="http://www.w3.org/2000/svg" height="24px"
+                  viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                <path d="m600-120-240-84-186 72q-20 8-37-4.5T120-170v-560q0-13 7.5-23t20.5-15l212-72 240 84 186-72q20-8 37 4.5t17 33.5v560q0 13-7.5 23T812-192l-212 72Zm-40-98v-468l-160-56v468l160 56Zm80 0 120-40v-474l-120 46v468Zm-440-10 120-46v-468l-120 40v474Zm440-458v468-468Zm-320-56v468-468Z"/>
+              </svg>
+            </span>
+            Location: ${facility.location || "-"}
+          </div>
+
+          <div>
+            <span>
+              <svg xmlns="http://www.w3.org/2000/svg" height="24px"
+                  viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                <path d="M40-160v-112q0-34 17.5-62.5T104-378q62-31 126-46.5T360-440q66 0 130 15.5T616-378q29 15 46.5 43.5T680-272v112H40Zm720 0v-120q0-44-24.5-84.5T666-434q51 6 96 20.5t84 35.5q36 20 55 44.5t19 53.5v120H760ZM247-527q-47-47-47-113t47-113q47-47 113-47t113 47q47 47 47 113t-47 113q-47 47-113 47t-113-47Zm466 0q-47 47-113 47-11 0-28-2.5t-28-5.5q27-32 41.5-71t14.5-81q0-42-14.5-81T544-792q14-5 28-6.5t28-1.5q66 0 113 47t47 113q0 66-47 113ZM120-240h480v-32q0-11-5.5-20T580-306q-54-27-109-40.5T360-360q-56 0-111 13.5T140-306q-9 5-14.5 14t-5.5 20v32Zm296.5-343.5Q440-607 440-640t-23.5-56.5Q393-720 360-720t-56.5 23.5Q280-673 280-640t23.5 56.5Q327-560 360-560t56.5-23.5ZM360-240Zm0-400Z"/>
+              </svg>
+            </span>
+            Max. People: ${facility.max_people || "-"}
+          </div>
+
+        </div>
+
+            <div class="details-section">
+              <h3>Facility Rules</h3>
+              <p style="white-space: pre-line;">${facility.rules || "No rules provided."}</p>
+            </div>
+
+            <div class="details-section">
+              <h3>Additional Information</h3>
+                <p class="additional-info-text">${facility.additional_info || getDefaultAdditionalInfo(facility, bookingFlowType)}</p>
+            </div>
+          `;
+        });
+    }
+
+    function submitBooking() {
+      const program = document.getElementById("program").value;
+      const bookingDate = document.getElementById("bookingDate").value;
+      const selectedSlot = document.getElementById("timeSlot").value;
+      const purpose = document.getElementById("purpose").value;
+      const message = document.getElementById("message");
+
+      let startTime = "";
+      let endTime = "";
+
+      if (selectedSlot) {
+        const slotParts = selectedSlot.split("|");
+        startTime = slotParts[0];
+        endTime = slotParts[1];
+      }
+
+      let equipmentRequired = "";
+
+      if (document.getElementById("equipmentSection").style.display !== "none") {
+        const selectedEquipment = [];
+
+        document
+          .querySelectorAll(".equipment:checked")
+          .forEach(item => {
+            if (item.value === "Others") {
+              const otherText =
+                document.getElementById("otherEquipment").value.trim();
+
+              if (otherText) {
+                selectedEquipment.push(`Others: ${otherText}`);
+              } else {
+                selectedEquipment.push("Others");
+              }
+            } else {
+              selectedEquipment.push(item.value);
+            }
+          });
+
+        equipmentRequired = selectedEquipment.join(", ");
+      }
+
+      message.innerText = "";
+
+      if (!program || !bookingDate || !selectedSlot) {
+        message.style.color = "red";
+        message.innerText = "Please fill in all required booking details.";
+        return;
+      }
+
+      if (isWeekend(bookingDate)) {
+        message.style.color = "red";
+        message.innerText = "Bookings are not allowed on Saturday and Sunday.";
+        return;
+      }
+
+      if (isPastBookingDateTime(bookingDate, startTime)) {
+        message.style.color = "red";
+        message.innerText = "You cannot book a date or time that has already passed.";
+        return;
+      }
+
+      fetch("/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          facility_id: facilityId,
+          program: program,
+          booking_date: bookingDate,
+          start_time: startTime,
+          end_time: endTime,
+          purpose: purpose,
+          equipmentRequired: equipmentRequired
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          showBookingModal(data);
+        } else {
+          message.style.color = "red";
+          message.innerText = data.message;
+        }
+      })
+      .catch(() => {
+        message.style.color = "red";
+        message.innerText = "Booking submission failed. Please try again.";
+      });
+    }
+
+    function showBookingModal(data) {
+      const modal = document.getElementById("bookingModal");
+      const modalIcon = document.getElementById("modalIcon");
+      const modalTitle = document.getElementById("modalTitle");
+      const modalMessage = document.getElementById("modalMessage");
+      const countdownText = document.getElementById("countdown");
+
+      const bookingStatus = data.booking_status;
+      const paymentRequired =
+        data.payment_required === 1 ||
+        data.payment_required === "1";
+
+      const bookingFlowType =
+        currentFacility && currentFacility.booking_flow_type
+          ? currentFacility.booking_flow_type
+          : "normal_approval";
+
+      if (paymentRequired) {
+        modalIcon.innerText = "RM";
+        modalTitle.innerText = "Payment Required";
+        modalMessage.innerHTML = `
+          Your booking request has been submitted successfully.<br><br>
+          Please proceed to the AFM Office to make payment
+          <strong>(RM${Number(data.payment_amount).toFixed(2)} per hour)</strong>.<br><br>
+          Your booking status is now <strong>Pending Payment</strong>.
+        `;
+      } else if (bookingFlowType === "direct_reservation" || bookingStatus === "reserved") {
+        modalIcon.innerText = "✓";
+        modalTitle.innerText = "Reservation Confirmed";
+        modalMessage.innerHTML = `
+          Your reservation has been confirmed successfully.<br><br>
+          Please check in during the allowed check-in window:
+          <strong>15 minutes before until 15 minutes after your booking starts</strong>.
+        `;
+      } else if (bookingFlowType === "staff_key_approval") {
+        modalIcon.innerText = "✓";
+        modalTitle.innerText = "Booking Request Submitted";
+        modalMessage.innerHTML = `
+          Your booking request has been submitted successfully.<br><br>
+          Please wait for admin approval. After approval, you may collect and return the key according to the booking status.
+        `;
+      } else {
+        modalIcon.innerText = "✓";
+        modalTitle.innerText = "Booking Request Submitted";
+        modalMessage.innerHTML = `
+          Your booking request has been submitted successfully.<br><br>
+          You will be notified once the request has been reviewed.
+        `;
+      }
+
+      let count = 3;
+      countdownText.innerText = count;
+      modal.style.display = "flex";
+
+      const timer = setInterval(() => {
+        count--;
+        countdownText.innerText = count;
+
+        if (count === 0) {
+          clearInterval(timer);
+          closeBookingModal();
+        }
+      }, 1000);
+    }
+
+    function closeBookingModal() {
+      window.location.href =
+        user.role === "staff" ? "staff.html" : "student.html";
+    }
+
+    function formatBookingFlow(flow) {
+      if (flow === "normal_approval") return "Normal Approval";
+      if (flow === "payment_required") return "Payment Required";
+      if (flow === "direct_reservation") return "Direct Reservation";
+      if (flow === "staff_key_approval") return "Staff Key Approval";
+      return "Normal Approval";
+    }
+
+    function formatAvailability(status) {
+      if (status === "available") return "Available Now";
+      if (status === "unavailable") return "Unavailable";
+      if (status === "maintenance") return "Maintenance";
+      return "Available Now";
+    }
+
+    function getDefaultAdditionalInfo(facility, bookingFlowType) {
+      if (bookingFlowType === "payment_required") {
+        return `${facility.facility_name} requires payment before the booking can be verified. Please proceed to the AFM Office after submitting the booking request.`;
+      }
+
+      if (bookingFlowType === "direct_reservation") {
+        return `${facility.facility_name} uses direct reservation. No admin approval is required, but users must check in within the allowed check-in time.`;
+      }
+
+      if (bookingFlowType === "staff_key_approval") {
+        return `${facility.facility_name} is available for staff only. Admin approval is required, and users must return the key after use.`;
+      }
+
+      return `${facility.facility_name} requires admin approval. Users will be notified once the booking request has been reviewed.`;
+    }
+
+    function formatTime(time) {
+      if (!time) return "-";
+
+      const [hour, minute] = time.split(":");
+
+      let h = parseInt(hour);
+      const ampm = h >= 12 ? "PM" : "AM";
+
+      h = h % 12;
+      if (h === 0) h = 12;
+
+      return `${h}:${minute} ${ampm}`;
+    }
+
+    function logout() {
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
+      window.location.href = "login.html";
+    }
+  </script>
+
+</body>
+</html>

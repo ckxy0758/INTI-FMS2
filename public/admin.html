@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dashboard-body">
+
+  <div id="appHeader"></div>
+
+  <div class="dashboard-layout">
+
+    <div id="appSidebar"></div>
+
+    <main class="main-content">
+
+      <h1 class="page-title">Admin Dashboard</h1>
+
+      <p class="page-subtitle">
+        Welcome Admin. Manage users, facilities, bookings, and reports.
+      </p>
+
+
+    </main>
+
+  </div>
+
+  <script src="component.js"></script>
+
+  <script>
+    loadLayout("admin-dashboard");
+
+    const user =
+      JSON.parse(localStorage.getItem("user")) ||
+      JSON.parse(sessionStorage.getItem("user"));
+
+    if (!user || user.role !== "admin") {
+      window.location.href = "login.html";
+    }
+
+    function logout() {
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
+      window.location.href = "login.html";
+    }
+  </script>
+
+</body>
+</html>

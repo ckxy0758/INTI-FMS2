@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Manage Bookings - Facility Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dashboard-body">
+
+  <div id="appHeader"></div>
+
+  <div class="dashboard-layout">
+
+    <div id="appSidebar"></div>
+
+    <main class="main-content">
+
+      <h1 class="page-title">Manage Bookings</h1>
+
+      <p class="page-subtitle">
+        View, filter, and modify student and staff reservations campus-wide.
+      </p>
+
+      <div class="manage-booking-tabs">
+        <button class="booking-tab active" onclick="filterBookings('all', event)">All</button>
+        <button class="booking-tab" onclick="filterBookings('pending', event)">Pending Review</button>
+        <button class="booking-tab" onclick="filterBookings('active', event)">Active</button>
+        <button class="booking-tab" onclick="filterBookings('approved', event)">Approved</button>
+        <button class="booking-tab" onclick="filterBookings('cancelled', event)">Cancelled</button>
+      </div>
+
+      <div class="booking-toolbar">
+
+        <select id="facilityFilter" onchange="applyBookingFilters()">
+          <option value="">Filter By: Facility</option>
+        </select>
+
+        <input type="date" id="dateFilter" onchange="applyBookingFilters()">
+
+        <button class="export-btn" onclick="alert('Export feature can be added later.')">
+          ⬇ Export
+        </button>
+
+      </div>
+
+      <div class="booking-table-card">
+
+        <table class="manage-booking-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>User</th>
+              <th>Room</th>
+              <th>Date & Time</th>
+              <th>Purpose</th>
+              <th>Action</th>
+              <th>More</th>
+            </tr>
+          </thead>
+
+          <tbody id="bookingTable"></tbody>
+        </table>
+
+      </div>
+
+      <div class="booking-footer">
+        <p id="bookingCount">Showing 0 bookings</p>
+      </div>
+
+    </main>
+
+  </div>
+
+  <script src="component.js"></script>
+
+  <script>
+    loadLayout("manage-bookings");
+
+    const user =
+      JSON.parse(localStorage.getItem("user")) ||
+      JSON.parse(sessionStorage.getItem("user"));
+
+    if (!user || user.role !== "admin") {
+      window.location.href = "login.html";
+    }
+
+    let allBookings = [];
+    let currentStatusFilter = "all";
+
+    loadBookings();
+
+    function loadBookings() {
+      fetch("/api/admin/bookings")
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) {
+            document.getElementById("bookingTable").innerHTML = `
+              <tr>
+                <td colspan="7">Failed to load bookings.</td>
+              </tr>
+            `;
+            return;
+          }
+
+          allBookings = data.bookings;
+          loadFacilityFilter();
+          renderBookings(allBookings);
+        })
+        .catch(() => {
+          document.getElementById("bookingTable").innerHTML = `
+            <tr>
+              <td colspan="7">Failed to load bookings.</td>
+            </tr>
+          `;
+        });
+    }
+
+    function loadFacilityFilter() {
+      const facilityFilter = document.getElementById("facilityFilter");
+
+      const facilities = [
+        ...new Set(allBookings.map(item => item.facility_name))
+      ];
+
+      facilityFilter.innerHTML = `<option value="">Filter By: Facility</option>`;
+
+      facilities.forEach(name => {
+        facilityFilter.innerHTML += `
+          <option value="${name}">${name}</option>
+        `;
+      });
+    }
+
+    function filterBookings(type, event) {
+      currentStatusFilter = type;
+
+      document.querySelectorAll(".booking-tab").forEach(tab => {
+        tab.classList.remove("active");
+      });
+
+      event.target.classList.add("active");
+
+      applyBookingFilters();
+    }
+
+    function applyBookingFilters() {
+      const facilityValue = document.getElementById("facilityFilter").value;
+      const dateValue = document.getElementById("dateFilter").value;
+
+      let filtered = [...allBookings];
+
+      if (currentStatusFilter !== "all") {
+        filtered = filtered.filter(item => {
+          const status = item.booking_status;
+
+          if (currentStatusFilter === "pending") {
+            return status === "pending" || status === "pending_payment";
+          }
+
+          if (currentStatusFilter === "active") {
+            return status === "reserved" || status === "checked_in" || status === "key_collected";
+          }
+
+          if (currentStatusFilter === "approved") {
+            return status === "approved";
+          }
+
+          if (currentStatusFilter === "cancelled") {
+            return status === "cancelled";
+          }
+
+          return true;
+        });
+      }
+
+      if (facilityValue) {
+        filtered = filtered.filter(item => item.facility_name === facilityValue);
+      }
+
+      if (dateValue) {
+        filtered = filtered.filter(item => {
+        return item.booking_date === dateValue;
+        });
+      }
+
+      renderBookings(filtered);
+    }
+
+    function renderBookings(bookings) {
+      const bookingTable = document.getElementById("bookingTable");
+      const bookingCount = document.getElementById("bookingCount");
+
+      bookingTable.innerHTML = "";
+
+      if (bookings.length === 0) {
+        bookingTable.innerHTML = `
+          <tr>
+            <td colspan="7">No bookings found.</td>
+          </tr>
+        `;
+
+        bookingCount.innerText = "Showing 0 bookings";
+        return;
+      }
+
+      bookings.forEach(booking => {
+        bookingTable.innerHTML += `
+          <tr>
+            <td>#${String(booking.booking_id).padStart(3, "0")}</td>
+
+            <td>
+              <strong>${booking.user_name}</strong>
+              <br>
+              <span>${formatRole(booking.user_role)}</span>
+            </td>
+
+            <td>
+              <strong>${booking.facility_name}</strong>
+            </td>
+
+            <td>
+              <strong>${formatDate(booking.booking_date)}</strong>
+              <br>
+              ${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}
+            </td>
+
+            <td>
+              <strong>${booking.purpose || "-"}</strong>
+            </td>
+
+            <td class="booking-action-icons">
+              ${getActionButtons(booking)}
+            </td>
+
+            <td>
+              <button class="more-btn" onclick="viewBooking(${booking.booking_id})">•••</button>
+            </td>
+          </tr>
+        `;
+      });
+
+      bookingCount.innerText =
+        `Showing 1-${bookings.length} of ${allBookings.length} bookings`;
+    }
+
+    function getActionButtons(booking) {
+      const status = booking.booking_status;
+
+      if (status === "pending" || status === "pending_payment") {
+        return `
+          <button class="approve-icon" title="Approve" onclick="approveBooking(${booking.booking_id})">✓</button>
+        <button class="reject-icon" title="Cancel" onclick="cancelBooking(${booking.booking_id})">×</button>
+        `;
+      }
+
+      if (status === "approved") {
+        return `<span class="status-active">Approved</span>`;
+      }
+
+      if (status === "cancelled") {
+        return `<span class="status-inactive">Cancelled</span>`;
+      }
+
+      if (status === "completed") {
+        return `<span class="status-active">Completed</span>`;
+      }
+
+      return `<span>${formatStatus(status)}</span>`;
+    }
+
+
+    function approveBooking(bookingId) {
+        if (!confirm("Approve this booking?")) {
+            return;
+        }
+
+        fetch(`/api/admin/bookings/${bookingId}/approve`, {
+            method: "PUT"
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            loadBookings();
+        });
+        }
+
+    function cancelBooking(bookingId) {
+        if (!confirm("Cancel this booking?")) {
+            return;
+        }
+
+        fetch(`/api/admin/bookings/${bookingId}/cancel`, {
+            method: "PUT"
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            loadBookings();
+        });
+}
+
+    function viewBooking(id) {
+      alert("Booking details page can be connected later. Booking ID: " + id);
+    }
+
+    function formatRole(role) {
+      if (role === "student") return "Student";
+      if (role === "staff") return "Staff";
+      if (role === "admin") return "Admin";
+      return role;
+    }
+
+    function formatStatus(status) {
+      if (status === "pending") return "Pending Review";
+      if (status === "pending_payment") return "Pending Payment";
+      if (status === "payment_submitted") return "Payment Submitted";
+      if (status === "approved") return "Approved";
+      if (status === "reserved") return "Reserved";
+      if (status === "checked_in") return "Checked In";
+      if (status === "key_collected") return "Key Collected";
+      if (status === "completed") return "Completed";
+      if (status === "cancelled") return "Cancelled";
+      if (status === "expired") return "Expired";
+      return status;
+    }
+
+    function formatDate(dateValue) {
+    const [year, month, day] = dateValue.split("-");
+
+    const date = new Date(year, month - 1, day);
+
+    return date.toLocaleDateString("en-MY", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+    });
+    }
+
+    function formatTime(time) {
+      if (!time) return "-";
+
+      const [hour, minute] = time.split(":");
+      let h = parseInt(hour);
+      const ampm = h >= 12 ? "PM" : "AM";
+
+      h = h % 12;
+      if (h === 0) h = 12;
+
+      return `${h}:${minute} ${ampm}`;
+    }
+
+    function logout() {
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
+      window.location.href = "login.html";
+    }
+  </script>
+
+</body>
+</html>

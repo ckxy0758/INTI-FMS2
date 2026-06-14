@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Manage Facilities - Facility Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dashboard-body">
+
+  <div id="appHeader"></div>
+
+  <div class="dashboard-layout">
+
+    <div id="appSidebar"></div>
+
+    <main class="main-content">
+
+      <div id="facilityListPage">
+
+        <h1 class="page-title">Manage Campus Facilities</h1>
+        <p class="page-subtitle">
+          View inventory and update room details, capacity, amenities, and status.
+        </p>
+
+        <div class="manage-user-toolbar">
+          <div class="user-search-box">
+            <span>🔍</span>
+            <input 
+              type="text" 
+              id="facilitySearch" 
+              placeholder="Search Rooms..."
+              onkeyup="searchFacilities()"
+            >
+          </div>
+
+          <button class="add-user-btn" onclick="openAddFacility()">
+            + Add New Facility
+          </button>
+        </div>
+
+        <div id="facilityList"></div>
+
+      </div>
+
+      <div id="facilityFormPage" style="display:none;">
+
+        <div class="facility-form-card">
+
+          <h2 id="formTitle">Selected Facility</h2>
+          <hr>
+
+          <div class="facility-photo-row">
+            <img id="facilityPreview" src="images/bg-image-2.jpeg" class="facility-edit-image">
+
+            <label class="facility-upload-box">
+              📷
+              <span>Edit Room Photo</span>
+              <small>JPG, PNG up to 5MB</small>
+              <input type="file" id="imageFile" accept="image/*" onchange="previewImage(event)" hidden>
+            </label>
+          </div>
+
+          <input type="hidden" id="facility_id">
+
+          <div class="facility-form-grid">
+
+            <div>
+              <label>Facility Name</label>
+              <input type="text" id="facility_name">
+            </div>
+
+            <div>
+              <label>Description</label>
+              <input type="text" id="description">
+            </div>
+
+            <div>
+              <label>Facility Type</label>
+
+              <select id="facility_type" onchange="toggleOtherFacilityType()">
+                <option value="">Select Facility Type</option>
+                <option value="Laboratory">Laboratory</option>
+                <option value="Sports Facility">Sports Facility</option>
+                <option value="Study Space">Study Space</option>
+                <option value="Music Facility">Music Facility</option>
+                <option value="Meeting Room">Meeting Room</option>
+                <option value="Classroom">Classroom</option>
+                <option value="Other">Other</option>
+              </select>
+
+              <input
+                type="text"
+                id="other_facility_type"
+                placeholder="Enter facility type"
+                style="display:none; margin-top:10px;"
+              >
+            </div>
+
+            <div>
+              <label>Booking Flow Type</label>
+              <select id="booking_flow_type">
+                <option value="normal_approval">Normal Approval</option>
+                <option value="payment_required">Payment Required</option>
+                <option value="direct_reservation">Direct Reservation</option>
+                <option value="staff_key_approval">Staff Key Approval</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Operating Hours</label>
+              <div class="time-row">
+                <input type="time" id="operating_start">
+                <span>to</span>
+                <input type="time" id="operating_end">
+              </div>
+            </div>
+
+            <div>
+              <label>Location</label>
+              <input type="text" id="location">
+            </div>
+
+            <div>
+              <label>Max Capacity (Users)</label>
+              <input type="number" id="max_people">
+            </div>
+
+            <div>
+              <label>Operational Status</label>
+              <select id="availability_status">
+                <option value="available">Available</option>
+                <option value="unavailable">Unavailable</option>
+                <option value="maintenance">Maintenance</option>
+              </select>
+            </div>
+
+          </div>
+
+          <label>Facility Rules</label>
+          <textarea id="rules"></textarea>
+
+          <label>Additional Information</label>
+          <textarea id="additional_info"></textarea>
+
+          <div class="facility-form-grid">
+            <div>
+              <label>Visible To</label>
+              <select id="visible_to">
+                <option value="student">Student Only</option>
+                <option value="staff">Staff Only</option>
+                <option value="both">Student & Staff</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Key Required</label>
+              <select id="key_required">
+                <option value="0">No</option>
+                <option value="1">Yes</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Include Equipment / Requirements?</label>
+              <select id="equipment_included" onchange="toggleEquipmentOptions()">
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="equipmentOptions" style="display:none;">
+            <label>Equipment / Requirements</label>
+
+            <div class="equipment-row">
+              <label>
+                <input type="checkbox" id="equipment_computer">
+                Computer
+              </label>
+
+              <label>
+                <input type="checkbox" id="equipment_hdmi">
+                HDMI Cable
+              </label>
+
+              <label>
+                <input type="checkbox" id="equipment_projector">
+                Projector
+              </label>
+
+              <label>
+                <input type="checkbox" id="equipment_other">
+                Others
+              </label>
+
+              <input type="text" id="equipment_other_text" placeholder="Others...">
+            </div>
+          </div>
+
+          <div class="facility-form-actions">
+            <button class="delete-facility-btn" type="button" onclick="backToFacilityList()">
+              Back
+            </button>
+
+            <button class="delete-facility-btn" id="deleteBtn" type="button" onclick="deleteFacility()">
+              Delete Facility
+            </button>
+
+            <button class="create-account-btn" type="button" onclick="saveFacility()">
+              Save Changes
+            </button>
+          </div>
+
+          <p id="facilityMessage"></p>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <script src="component.js"></script>
+
+  <script>
+    loadLayout("manage-facilities");
+
+    const user =
+      JSON.parse(localStorage.getItem("user")) ||
+      JSON.parse(sessionStorage.getItem("user"));
+
+    if (!user || user.role !== "admin") {
+      window.location.href = "login.html";
+    }
+
+    let allFacilities = [];
+    let imageBase64 = "";
+
+    loadFacilities();
+
+    function loadFacilities() {
+      fetch("/api/facilities")
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) {
+            document.getElementById("facilityList").innerHTML = "<p>Failed to load facilities.</p>";
+            return;
+          }
+
+          allFacilities = data.facilities;
+          renderFacilities(allFacilities);
+        })
+        .catch(() => {
+          document.getElementById("facilityList").innerHTML = "<p>Failed to load facilities.</p>";
+        });
+    }
+
+    function toggleOtherFacilityType() {
+      const facilityType = document.getElementById("facility_type").value;
+      const otherInput = document.getElementById("other_facility_type");
+
+      if (facilityType === "Other") {
+        otherInput.style.display = "block";
+      } else {
+        otherInput.style.display = "none";
+        otherInput.value = "";
+      }
+    }
+
+    function toggleEquipmentOptions() {
+      const equipmentIncluded = document.getElementById("equipment_included").value;
+      const equipmentOptions = document.getElementById("equipmentOptions");
+
+      if (equipmentIncluded === "yes") {
+        equipmentOptions.style.display = "block";
+      } else {
+        equipmentOptions.style.display = "none";
+        clearEquipmentFields();
+      }
+    }
+
+    function clearEquipmentFields() {
+      document.getElementById("equipment_computer").checked = false;
+      document.getElementById("equipment_hdmi").checked = false;
+      document.getElementById("equipment_projector").checked = false;
+      document.getElementById("equipment_other").checked = false;
+      document.getElementById("equipment_other_text").value = "";
+    }
+
+    function renderFacilities(facilities) {
+      const facilityList = document.getElementById("facilityList");
+      facilityList.innerHTML = "";
+
+      if (facilities.length === 0) {
+        facilityList.innerHTML = "<p>No facilities found.</p>";
+        return;
+      }
+
+      facilities.forEach(facility => {
+        facilityList.innerHTML += `
+          <div class="admin-facility-card">
+
+            <img 
+              src="${facility.image_path || 'images/bg-image-2.jpeg'}" 
+              class="admin-facility-img"
+            >
+
+            <div class="admin-facility-info">
+              <h3>${facility.facility_name}</h3>
+              <p>${facility.description || "No description available"}</p>
+              <p>📍 Location: ${facility.location || "-"}</p>
+              <p>🕒 Time: ${formatTime(facility.operating_start)} - ${formatTime(facility.operating_end)}</p>
+              <p>📌 Flow: ${formatBookingFlow(facility.booking_flow_type)}</p>
+            </div>
+
+            <button class="facility-edit-btn" onclick="editFacility(${facility.facility_id})">
+              ✎
+            </button>
+
+          </div>
+        `;
+      });
+    }
+
+    function searchFacilities() {
+      const searchValue = document.getElementById("facilitySearch").value.toLowerCase();
+
+      const filtered = allFacilities.filter(item =>
+        (item.facility_name || "").toLowerCase().includes(searchValue) ||
+        (item.location || "").toLowerCase().includes(searchValue) ||
+        (item.facility_type || "").toLowerCase().includes(searchValue) ||
+        (item.booking_flow_type || "").toLowerCase().includes(searchValue)
+      );
+
+      renderFacilities(filtered);
+    }
+
+    function openAddFacility() {
+      document.getElementById("facilityListPage").style.display = "none";
+      document.getElementById("facilityFormPage").style.display = "block";
+
+      document.getElementById("formTitle").innerText = "Add New Facility";
+      document.getElementById("deleteBtn").style.display = "none";
+
+      clearFacilityForm();
+    }
+
+    function editFacility(id) {
+      const facility = allFacilities.find(item => item.facility_id === id);
+
+      if (!facility) {
+        alert("Facility not found.");
+        return;
+      }
+
+      document.getElementById("facilityListPage").style.display = "none";
+      document.getElementById("facilityFormPage").style.display = "block";
+
+      document.getElementById("formTitle").innerText = `Selected Facility: ${facility.facility_name}`;
+      document.getElementById("deleteBtn").style.display = "inline-block";
+
+      document.getElementById("facility_id").value = facility.facility_id;
+      document.getElementById("facility_name").value = facility.facility_name || "";
+      document.getElementById("description").value = facility.description || "";
+
+      setFacilityType(facility.facility_type || "");
+
+      document.getElementById("booking_flow_type").value = facility.booking_flow_type || "normal_approval";
+      document.getElementById("operating_start").value = formatInputTime(facility.operating_start);
+      document.getElementById("operating_end").value = formatInputTime(facility.operating_end);
+      document.getElementById("location").value = facility.location || "";
+      document.getElementById("max_people").value = facility.max_people || "";
+      document.getElementById("availability_status").value = facility.availability_status || "available";
+      document.getElementById("rules").value = facility.rules || "";
+      document.getElementById("additional_info").value = facility.additional_info || "";
+      document.getElementById("visible_to").value = facility.visible_to || "both";
+      document.getElementById("key_required").value = String(facility.key_required || 0);
+
+      document.getElementById("facilityPreview").src = facility.image_path || "images/bg-image-2.jpeg";
+      imageBase64 = facility.image_path || "";
+
+      const equipment = facility.equipment || "";
+
+      if (equipment.trim() !== "") {
+        document.getElementById("equipment_included").value = "yes";
+        document.getElementById("equipmentOptions").style.display = "block";
+
+        document.getElementById("equipment_computer").checked = equipment.includes("Computer");
+        document.getElementById("equipment_hdmi").checked = equipment.includes("HDMI Cable");
+        document.getElementById("equipment_projector").checked = equipment.includes("Projector");
+        document.getElementById("equipment_other").checked = equipment.includes("Others");
+
+        if (equipment.includes("Others:")) {
+          document.getElementById("equipment_other_text").value =
+            equipment.split("Others:")[1].trim();
+        } else {
+          document.getElementById("equipment_other_text").value = "";
+        }
+      } else {
+        document.getElementById("equipment_included").value = "no";
+        document.getElementById("equipmentOptions").style.display = "none";
+        clearEquipmentFields();
+      }
+    }
+
+    function setFacilityType(type) {
+      const predefinedTypes = [
+        "Laboratory",
+        "Sports Facility",
+        "Study Space",
+        "Music Facility",
+        "Meeting Room",
+        "Classroom"
+      ];
+
+      if (predefinedTypes.includes(type)) {
+        document.getElementById("facility_type").value = type;
+        document.getElementById("other_facility_type").style.display = "none";
+        document.getElementById("other_facility_type").value = "";
+      } else if (type) {
+        document.getElementById("facility_type").value = "Other";
+        document.getElementById("other_facility_type").style.display = "block";
+        document.getElementById("other_facility_type").value = type;
+      } else {
+        document.getElementById("facility_type").value = "";
+        document.getElementById("other_facility_type").style.display = "none";
+        document.getElementById("other_facility_type").value = "";
+      }
+    }
+
+    function clearFacilityForm() {
+      document.getElementById("facility_id").value = "";
+      document.getElementById("facility_name").value = "";
+      document.getElementById("description").value = "";
+      document.getElementById("facility_type").value = "";
+      document.getElementById("other_facility_type").value = "";
+      document.getElementById("other_facility_type").style.display = "none";
+      document.getElementById("booking_flow_type").value = "normal_approval";
+      document.getElementById("operating_start").value = "";
+      document.getElementById("operating_end").value = "";
+      document.getElementById("location").value = "";
+      document.getElementById("max_people").value = "";
+      document.getElementById("availability_status").value = "available";
+      document.getElementById("rules").value = "";
+      document.getElementById("additional_info").value = "";
+      document.getElementById("visible_to").value = "both";
+      document.getElementById("key_required").value = "0";
+
+      document.getElementById("equipment_included").value = "no";
+      document.getElementById("equipmentOptions").style.display = "none";
+      clearEquipmentFields();
+
+      document.getElementById("facilityPreview").src = "images/bg-image-2.jpeg";
+      document.getElementById("facilityMessage").innerText = "";
+      imageBase64 = "";
+    }
+
+    function previewImage(event) {
+      const file = event.target.files[0];
+
+      if (!file) return;
+
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image size must be below 5MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        imageBase64 = e.target.result;
+        document.getElementById("facilityPreview").src = imageBase64;
+      };
+
+      reader.readAsDataURL(file);
+    }
+
+    function getEquipmentText() {
+      const equipmentIncluded = document.getElementById("equipment_included").value;
+
+      if (equipmentIncluded === "no") {
+        return "";
+      }
+
+      let equipment = [];
+
+      if (document.getElementById("equipment_computer").checked) {
+        equipment.push("Computer");
+      }
+
+      if (document.getElementById("equipment_hdmi").checked) {
+        equipment.push("HDMI Cable");
+      }
+
+      if (document.getElementById("equipment_projector").checked) {
+        equipment.push("Projector");
+      }
+
+      if (document.getElementById("equipment_other").checked) {
+        const otherText = document.getElementById("equipment_other_text").value.trim();
+        equipment.push(otherText ? `Others: ${otherText}` : "Others");
+      }
+
+      return equipment.join(", ");
+    }
+
+    function saveFacility() {
+      const facility_id = document.getElementById("facility_id").value;
+
+      const selectedFacilityType =
+        document.getElementById("facility_type").value;
+
+      const finalFacilityType =
+        selectedFacilityType === "Other"
+          ? document.getElementById("other_facility_type").value.trim()
+          : selectedFacilityType;
+
+      const bookingFlowType = document.getElementById("booking_flow_type").value;
+
+      let keyRequired = document.getElementById("key_required").value;
+      let visibleTo = document.getElementById("visible_to").value;
+
+      if (bookingFlowType === "staff_key_approval") {
+        keyRequired = "1";
+        visibleTo = "staff";
+      }
+
+      const facilityData = {
+        facility_name: document.getElementById("facility_name").value.trim(),
+        description: document.getElementById("description").value.trim(),
+        facility_type: finalFacilityType,
+        booking_flow_type: bookingFlowType,
+        operating_start: document.getElementById("operating_start").value,
+        operating_end: document.getElementById("operating_end").value,
+        location: document.getElementById("location").value.trim(),
+        max_people: document.getElementById("max_people").value,
+        availability_status: document.getElementById("availability_status").value,
+        rules: document.getElementById("rules").value.trim(),
+        additional_info: document.getElementById("additional_info").value.trim(),
+        visible_to: visibleTo,
+        key_required: keyRequired,
+        equipment: getEquipmentText(),
+        image_path: imageBase64 || "images/bg-image-2.jpeg"
+      };
+
+      if (
+        !facilityData.facility_name ||
+        !facilityData.facility_type ||
+        !facilityData.booking_flow_type ||
+        !facilityData.operating_start ||
+        !facilityData.operating_end ||
+        !facilityData.location ||
+        !facilityData.max_people
+      ) {
+        document.getElementById("facilityMessage").style.color = "red";
+        document.getElementById("facilityMessage").innerText = "Please fill in all required fields.";
+        return;
+      }
+
+      const url = facility_id
+        ? `/api/facilities/${facility_id}`
+        : "/api/facilities";
+
+      const method = facility_id ? "PUT" : "POST";
+
+      fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(facilityData)
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message);
+
+        if (data.success) {
+          backToFacilityList();
+          loadFacilities();
+        }
+      })
+      .catch(() => {
+        alert("Failed to save facility.");
+      });
+    }
+
+    function deleteFacility() {
+      const facility_id = document.getElementById("facility_id").value;
+
+      if (!facility_id) return;
+
+      if (!confirm("Are you sure you want to delete this facility?")) {
+        return;
+      }
+
+      fetch(`/api/facilities/${facility_id}`, {
+        method: "DELETE"
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message);
+
+        if (data.success) {
+          backToFacilityList();
+          loadFacilities();
+        }
+      })
+      .catch(() => {
+        alert("Failed to delete facility.");
+      });
+    }
+
+    function backToFacilityList() {
+      document.getElementById("facilityFormPage").style.display = "none";
+      document.getElementById("facilityListPage").style.display = "block";
+      document.getElementById("facilityMessage").innerText = "";
+    }
+
+    function formatBookingFlow(flow) {
+      if (flow === "normal_approval") return "Normal Approval";
+      if (flow === "payment_required") return "Payment Required";
+      if (flow === "direct_reservation") return "Direct Reservation";
+      if (flow === "staff_key_approval") return "Staff Key Approval";
+      return "Normal Approval";
+    }
+
+    function formatTime(time) {
+      if (!time) return "-";
+
+      const [hour, minute] = time.split(":");
+      let h = parseInt(hour);
+      const ampm = h >= 12 ? "PM" : "AM";
+
+      h = h % 12;
+      if (h === 0) h = 12;
+
+      return `${h}:${minute} ${ampm}`;
+    }
+
+    function formatInputTime(time) {
+      if (!time) return "";
+      return time.substring(0, 5);
+    }
+
+    function logout() {
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
+      window.location.href = "login.html";
+    }
+  </script>
+
+</body>
+</html>

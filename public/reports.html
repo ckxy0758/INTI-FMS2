@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports & Analytics</title>
+
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+  <div id="appHeader"></div>
+  <div id="appSidebar"></div>
+
+  <main class="main-content">
+    <section class="reports-page">
+
+      <h1 class="page-title">Reports & Analytics</h1>
+      <p class="page-subtitle">
+        Analyze facility usage, booking trends, payment records, and key management performance.
+      </p>
+
+      <!-- Group 1: Most Frequently Used Facilities -->
+      <div class="report-card wide">
+        <div class="card-header">
+          <h3>Most Frequently Used Facilities</h3>
+
+          <div class="mini-filters">
+            <select id="usageMonth">
+              <option value="">All Months</option>
+              <option value="1">January</option>
+              <option value="2">February</option>
+              <option value="3">March</option>
+              <option value="4">April</option>
+              <option value="5">May</option>
+              <option value="6">June</option>
+              <option value="7">July</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+
+            <select id="usageYear">
+              <option value="2026">2026</option>
+              <option value="2025">2025</option>
+            </select>
+
+            <select id="usageUserType">
+              <option value="All">All Users</option>
+              <option value="student">Student</option>
+              <option value="staff">Staff</option>
+            </select>
+
+            <select id="usageFacilityType">
+              <option value="All">All Facility Types</option>
+              <option value="Lab">Lab</option>
+              <option value="Sports">Sports</option>
+              <option value="Study Space">Study Space</option>
+              <option value="Music">Music</option>
+            </select>
+
+            <button class="mini-filter-btn" onclick="loadReports()">Apply</button>
+          </div>
+        </div>
+
+        <canvas id="facilityUsageChart"></canvas>
+      </div>
+
+      <!-- Group 2: Booking Trends Over Time -->
+      <div class="report-card wide">
+        <div class="card-header">
+          <h3>Booking Trends Over Time</h3>
+
+          <div class="mini-filters">
+            <select id="trendView">
+              <option value="monthly">View: Monthly</option>
+              <option value="semester">View: Semester</option>
+              <option value="yearly">View: Yearly</option>
+            </select>
+
+            <select id="trendFacility">
+              <option value="All">All Facilities</option>
+            </select>
+
+            <select id="trendUserType">
+              <option value="All">All Users</option>
+              <option value="student">Student</option>
+              <option value="staff">Staff</option>
+            </select>
+
+            <button class="mini-filter-btn" onclick="loadReports()">Apply</button>
+          </div>
+        </div>
+
+        <canvas id="bookingTrendsChart"></canvas>
+      </div>
+
+      <!-- Group 3: Booking Status + Cancellation -->
+      <div class="reports-grid two">
+        <div class="report-card">
+          <div class="card-header">
+            <h3>Booking Status Overview</h3>
+
+            <div class="mini-filters">
+              <select id="statusMonth">
+                <option value="">All Months</option>
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+              </select>
+
+              <select id="statusUserType">
+                <option value="All">All Users</option>
+                <option value="student">Student</option>
+                <option value="staff">Staff</option>
+              </select>
+
+              <select id="statusFacility">
+                <option value="All">All Facilities</option>
+              </select>
+
+              <button class="mini-filter-btn" onclick="loadReports()">Apply</button>
+            </div>
+          </div>
+
+          <canvas id="statusOverviewChart"></canvas>
+        </div>
+
+        <div class="report-card">
+          <h3>Cancellation Insights</h3>
+
+          <div class="insight-box">
+            <span>Cancelled Bookings</span>
+            <strong id="cancelledCount">0</strong>
+          </div>
+
+          <div class="warning-box">
+            <span>Most Cancelled Facility</span>
+            <strong id="mostCancelledFacility">Not available</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group 4: Key Management Performance -->
+      <div class="report-card wide">
+        <div class="card-header">
+          <h3>Key Management Performance</h3>
+
+          <div class="mini-filters">
+            <select id="keyFacility">
+              <option value="All">All Key Facilities</option>
+              <option value="AI Lab">AI Lab</option>
+              <option value="CC Lab">CC Lab</option>
+              <option value="LR501">LR501</option>
+            </select>
+
+            <select id="keyMonth">
+              <option value="">All Months</option>
+              <option value="1">January</option>
+              <option value="2">February</option>
+              <option value="3">March</option>
+              <option value="4">April</option>
+              <option value="5">May</option>
+              <option value="6">June</option>
+              <option value="7">July</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+
+            <select id="keyStatus">
+              <option value="All">All Key Status</option>
+              <option value="collected">Collected</option>
+              <option value="returned">Returned</option>
+              <option value="overdue">Overdue</option>
+            </select>
+
+            <button class="mini-filter-btn" onclick="loadReports()">Apply</button>
+          </div>
+        </div>
+
+        <div class="kpi-row">
+          <div>
+            <span>Total Bookings</span>
+            <strong id="totalKeyBookings">0</strong>
+          </div>
+
+          <div>
+            <span>Returned Keys</span>
+            <strong id="returnedKeys">0</strong>
+          </div>
+
+          <div>
+            <span>Overdue</span>
+            <strong id="overdueKeys">0</strong>
+          </div>
+
+          <div>
+            <span>Outstanding</span>
+            <strong id="outstandingKeys">0</strong>
+          </div>
+        </div>
+
+        <canvas id="keyAnalyticsChart"></canvas>
+      </div>
+
+      <!-- Group 5: Payment Analytics -->
+      <div class="reports-grid two">
+        <div class="report-card">
+          <div class="card-header">
+            <h3>Revenue Summary</h3>
+
+            <div class="mini-filters">
+              <select id="paymentFacility">
+                <option value="All">All Payment Facilities</option>
+                <option value="Table Tennis">Table Tennis</option>
+                <option value="Pool Table">Pool Table</option>
+              </select>
+
+              <select id="paymentMonth">
+                <option value="">All Months</option>
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+              </select>
+
+              <select id="paymentStatus">
+                <option value="All">All Payment Status</option>
+                <option value="pending_payment">Pending</option>
+                <option value="payment_submitted">Submitted</option>
+                <option value="verified">Verified</option>
+              </select>
+
+              <button class="mini-filter-btn" onclick="loadReports()">Apply</button>
+            </div>
+          </div>
+
+          <div class="revenue-box">
+            <span>Total Revenue</span>
+            <strong id="totalRevenue">RM 0.00</strong>
+          </div>
+
+          <div class="small-stat-grid">
+            <div>
+              <span>Verified</span>
+              <strong id="verifiedPayments">0</strong>
+            </div>
+
+            <div>
+              <span>Pending</span>
+              <strong id="pendingPayments">0</strong>
+            </div>
+
+            <div>
+              <span>Submitted</span>
+              <strong id="submittedPayments">0</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="report-card">
+          <h3>Payment Analytics</h3>
+          <canvas id="paymentAnalyticsChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Group 6: Student vs Staff Usage -->
+      <div class="report-card wide">
+        <div class="card-header">
+          <h3>Student vs Staff Usage</h3>
+
+          <div class="mini-filters">
+            <select id="userUsageMonth">
+              <option value="">All Months</option>
+              <option value="1">January</option>
+              <option value="2">February</option>
+              <option value="3">March</option>
+              <option value="4">April</option>
+              <option value="5">May</option>
+              <option value="6">June</option>
+              <option value="7">July</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+
+            <select id="userUsageYear">
+              <option value="2026">2026</option>
+              <option value="2025">2025</option>
+            </select>
+
+            <select id="userUsageFacilityType">
+              <option value="All">All Facility Types</option>
+              <option value="Lab">Lab</option>
+              <option value="Sports">Sports</option>
+              <option value="Study Space">Study Space</option>
+              <option value="Music">Music</option>
+            </select>
+
+            <button class="mini-filter-btn" onclick="loadReports()">Apply</button>
+          </div>
+        </div>
+
+        <canvas id="userUsageChart"></canvas>
+      </div>
+
+    </section>
+  </main>
+
+  <script src="component.js"></script>
+
+  <script>
+    loadLayout("reports");
+
+    let facilityUsageChart;
+    let bookingTrendsChart;
+    let statusOverviewChart;
+    let keyAnalyticsChart;
+    let paymentAnalyticsChart;
+    let userUsageChart;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadFacilitiesForFilters();
+      loadReports();
+    });
+
+    function loadReports() {
+      const month = document.getElementById("usageMonth").value;
+      const year = document.getElementById("usageYear").value;
+      const userType = document.getElementById("usageUserType").value;
+      const facilityType = document.getElementById("usageFacilityType").value;
+
+      let url = `http://localhost:3000/api/admin/reports?userType=${userType}&facilityType=${facilityType}&facilityId=All`;
+
+      if (month) {
+        url += `&month=${month}`;
+      }
+
+      if (year) {
+        url += `&year=${year}`;
+      }
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (!data.success) {
+            alert("Failed to load reports data.");
+            return;
+          }
+
+          renderFacilityUsageChart(data.facilityUsage || []);
+          renderBookingTrendsChart(data.bookingTrends || []);
+          renderStatusOverviewChart(data.statusOverview || []);
+          renderKeyAnalytics(data.keyAnalytics || {});
+          renderPaymentAnalytics(data.paymentAnalytics || {});
+          renderUserUsageChart(data.userUsage || []);
+          renderCancellationInsights(data.statusOverview || []);
+        })
+        .catch(error => {
+          console.error("Reports load error:", error);
+          alert("Unable to connect to reports API.");
+        });
+    }
+
+    function loadFacilitiesForFilters() {
+      fetch("http://localhost:3000/api/facilities?role=admin")
+        .then(response => response.json())
+        .then(data => {
+          if (!data.success) return;
+
+          const facilitySelects = [
+            document.getElementById("trendFacility"),
+            document.getElementById("statusFacility")
+          ].filter(select => select !== null);
+
+          data.facilities.forEach(facility => {
+            facilitySelects.forEach(select => {
+              const option = document.createElement("option");
+              option.value = facility.facility_id;
+              option.textContent = facility.facility_name;
+              select.appendChild(option);
+            });
+          });
+        })
+        .catch(error => {
+          console.error("Facility filter load error:", error);
+        });
+    }
+
+    function renderFacilityUsageChart(data) {
+      const labels = data.map(item => item.facility_name);
+      const values = data.map(item => Number(item.total_bookings));
+
+      if (facilityUsageChart) facilityUsageChart.destroy();
+
+      facilityUsageChart = new Chart(document.getElementById("facilityUsageChart"), {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Total Bookings",
+            data: values,
+            backgroundColor: "#3f63d8",
+            borderRadius: 8
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderBookingTrendsChart(data) {
+      const labels = data.map(item => item.booking_month);
+      const values = data.map(item => Number(item.total_bookings));
+
+      if (bookingTrendsChart) bookingTrendsChart.destroy();
+
+      bookingTrendsChart = new Chart(document.getElementById("bookingTrendsChart"), {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Total Bookings",
+            data: values,
+            borderColor: "#3f63d8",
+            backgroundColor: "rgba(63, 99, 216, 0.12)",
+            fill: true,
+            tension: 0.35,
+            pointRadius: 4,
+            pointBackgroundColor: "#ffffff",
+            pointBorderColor: "#3f63d8",
+            pointBorderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderStatusOverviewChart(data) {
+      const labels = data.map(item => formatStatus(item.booking_status));
+      const values = data.map(item => Number(item.total));
+
+      if (statusOverviewChart) statusOverviewChart.destroy();
+
+      statusOverviewChart = new Chart(document.getElementById("statusOverviewChart"), {
+        type: "doughnut",
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values,
+            backgroundColor: [
+              "#3f63d8",
+              "#f59e0b",
+              "#10b981",
+              "#ef4444",
+              "#8b5cf6",
+              "#6b7280",
+              "#14b8a6",
+              "#f97316"
+            ]
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    }
+
+    function renderKeyAnalytics(data) {
+      document.getElementById("totalKeyBookings").textContent = data.total_key_bookings || 0;
+      document.getElementById("returnedKeys").textContent = data.returned_keys || 0;
+      document.getElementById("outstandingKeys").textContent = data.outstanding_keys || 0;
+      document.getElementById("overdueKeys").textContent = data.overdue_keys || 0;
+
+      const labels = ["Returned", "Outstanding", "Overdue"];
+      const values = [
+        Number(data.returned_keys || 0),
+        Number(data.outstanding_keys || 0),
+        Number(data.overdue_keys || 0)
+      ];
+
+      if (keyAnalyticsChart) keyAnalyticsChart.destroy();
+
+      keyAnalyticsChart = new Chart(document.getElementById("keyAnalyticsChart"), {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Key Records",
+            data: values,
+            backgroundColor: ["#10b981", "#3f63d8", "#ef4444"],
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderPaymentAnalytics(data) {
+      document.getElementById("totalRevenue").textContent =
+        `RM ${Number(data.total_revenue || 0).toFixed(2)}`;
+
+      document.getElementById("verifiedPayments").textContent = data.verified_payments || 0;
+      document.getElementById("pendingPayments").textContent = data.pending_payments || 0;
+      document.getElementById("submittedPayments").textContent = data.submitted_payments || 0;
+
+      const labels = ["Verified", "Pending", "Submitted"];
+      const values = [
+        Number(data.verified_payments || 0),
+        Number(data.pending_payments || 0),
+        Number(data.submitted_payments || 0)
+      ];
+
+      if (paymentAnalyticsChart) paymentAnalyticsChart.destroy();
+
+      paymentAnalyticsChart = new Chart(document.getElementById("paymentAnalyticsChart"), {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Payments",
+            data: values,
+            backgroundColor: ["#10b981", "#f59e0b", "#3f63d8"],
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderUserUsageChart(data) {
+      const labels = data.map(item => formatStatus(item.role));
+      const values = data.map(item => Number(item.total_bookings));
+
+      if (userUsageChart) userUsageChart.destroy();
+
+      userUsageChart = new Chart(document.getElementById("userUsageChart"), {
+        type: "pie",
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values,
+            backgroundColor: ["#3f63d8", "#10b981", "#f59e0b"]
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    }
+
+    function renderCancellationInsights(statusData) {
+      const cancelled = statusData.find(item => item.booking_status === "cancelled");
+
+      document.getElementById("cancelledCount").textContent =
+        cancelled ? cancelled.total : 0;
+
+      document.getElementById("mostCancelledFacility").textContent =
+        "Need backend data";
+    }
+
+    function formatStatus(value) {
+      if (!value) return "";
+
+      return value
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, char => char.toUpperCase());
+    }
+  </script>
+</body>
+</html>

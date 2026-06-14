@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Manage Users - Facility Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dashboard-body">
+
+  <div id="appHeader"></div>
+
+  <div class="dashboard-layout">
+
+    <div id="appSidebar"></div>
+
+    <main class="main-content">
+
+      <h1 class="page-title">Manage Users</h1>
+      <p class="page-subtitle">View, audit, and manage user access permissions.</p>
+
+      <div class="manage-user-tabs">
+        <button class="user-tab active" onclick="filterUsers('all', event)">All</button>
+        <button class="user-tab" onclick="filterUsers('student', event)">Students</button>
+        <button class="user-tab" onclick="filterUsers('staff', event)">Staffs</button>
+        <button class="user-tab" onclick="filterUsers('admin', event)">Admins</button>
+      </div>
+
+      <div class="manage-user-toolbar">
+        <div class="user-search-box">
+          <span>🔍</span>
+          <input 
+            type="text" 
+            id="userSearch" 
+            placeholder="Search student/staff by name or ID..."
+            onkeyup="searchUsers()"
+          >
+        </div>
+
+        <button class="add-user-btn" onclick="openCreateModal()">
+          + Add New User
+        </button>
+      </div>
+
+      <div class="user-table-card">
+        <table class="manage-user-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>ID</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+
+          <tbody id="userTable"></tbody>
+        </table>
+      </div>
+
+      <p id="userCount" class="user-count-text"></p>
+
+    </main>
+
+  </div>
+
+  <div id="createUserModal" class="modal-overlay">
+    <div class="create-user-modal">
+
+      <button class="modal-close-btn" onclick="closeCreateModal()">×</button>
+
+      <h2>Quick Create Account</h2>
+      <p>Add new student, staff, or admin account</p>
+
+      <label>Full Name</label>
+      <input type="text" id="name" placeholder="Enter full name">
+
+      <label>Student ID / Staff ID</label>
+      <input type="text" id="user_code" placeholder="Enter student ID or staff ID">
+
+      <label>Institutional Email</label>
+      <input type="email" id="email" placeholder="Enter institutional email">
+
+      <label>Account Role</label>
+      <select id="role">
+        <option value="student">Student</option>
+        <option value="staff">Staff</option>
+        <option value="admin">Admin</option>
+      </select>
+
+      <button class="create-account-btn" onclick="createUser()">
+        Create Account Now
+      </button>
+
+      <p id="message"></p>
+
+    </div>
+  </div>
+
+  <script src="component.js"></script>
+
+  <script>
+    loadLayout("manage-users");
+
+    const user =
+      JSON.parse(localStorage.getItem("user")) ||
+      JSON.parse(sessionStorage.getItem("user"));
+
+    if (!user || user.role !== "admin") {
+      window.location.href = "login.html";
+    }
+
+    let allUsers = [];
+    let currentRoleFilter = "all";
+
+    loadUsers();
+
+    function openCreateModal() {
+      document.getElementById("createUserModal").style.display = "flex";
+      document.getElementById("message").innerText = "";
+    }
+
+    function closeCreateModal() {
+      document.getElementById("createUserModal").style.display = "none";
+    }
+
+    function createUser() {
+      const name = document.getElementById("name").value.trim();
+      const user_code = document.getElementById("user_code").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const role = document.getElementById("role").value;
+      const message = document.getElementById("message");
+
+      if (!name || !user_code || !email || !role) {
+        message.style.color = "red";
+        message.innerText = "Please fill in all fields.";
+        return;
+      }
+
+      fetch("/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name,
+          user_code,
+          email,
+          role
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          message.style.color = "green";
+          message.innerText = data.message;
+
+          document.getElementById("name").value = "";
+          document.getElementById("user_code").value = "";
+          document.getElementById("email").value = "";
+          document.getElementById("role").value = "student";
+
+          loadUsers();
+
+          setTimeout(() => {
+            closeCreateModal();
+          }, 1000);
+
+        } else {
+          message.style.color = "red";
+          message.innerText = data.message;
+        }
+      })
+      .catch(() => {
+        message.style.color = "red";
+        message.innerText = "Failed to create user.";
+      });
+    }
+
+    function loadUsers() {
+      fetch("/api/users")
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) {
+            document.getElementById("userTable").innerHTML = `
+              <tr>
+                <td colspan="6">Failed to load users.</td>
+              </tr>
+            `;
+            return;
+          }
+
+          allUsers = data.users;
+          applyFilters();
+        });
+    }
+
+    function filterUsers(role, event) {
+      currentRoleFilter = role;
+
+      document.querySelectorAll(".user-tab").forEach(tab => {
+        tab.classList.remove("active");
+      });
+
+      event.target.classList.add("active");
+
+      applyFilters();
+    }
+
+    function searchUsers() {
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const searchValue = document.getElementById("userSearch").value.toLowerCase();
+
+      let filteredUsers = allUsers.filter(item => {
+        const matchRole =
+          currentRoleFilter === "all" ||
+          item.role.toLowerCase() === currentRoleFilter;
+
+        const matchSearch =
+          item.name.toLowerCase().includes(searchValue) ||
+          item.user_code.toLowerCase().includes(searchValue);
+
+        return matchRole && matchSearch;
+      });
+
+      renderUsers(filteredUsers);
+    }
+
+    function renderUsers(users) {
+      const userTable = document.getElementById("userTable");
+      const userCount = document.getElementById("userCount");
+
+      userTable.innerHTML = "";
+
+      if (users.length === 0) {
+        userTable.innerHTML = `
+          <tr>
+            <td colspan="6">No users found.</td>
+          </tr>
+        `;
+
+        userCount.innerText = "Showing 0 users";
+        return;
+      }
+
+      users.forEach(item => {
+        const statusClass =
+          item.status === "active" ? "status-active" : "status-inactive";
+
+        userTable.innerHTML += `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.user_code}</td>
+            <td>${item.email}</td>
+            <td>${formatRole(item.role)}</td>
+            <td class="${statusClass}">${formatStatus(item.status)}</td>
+            <td>
+              ${
+                item.status === "active"
+                  ? `<button class="text-action-btn danger" onclick="deactivateUser(${item.user_id})">Deactivate</button>`
+                  : `<button class="text-action-btn success" onclick="reactivateUser(${item.user_id})">Reactivate</button>`
+              }
+            </td>
+          </tr>
+        `;
+      });
+
+      userCount.innerText = `Showing ${users.length} of ${allUsers.length} users`;
+    }
+
+    function formatRole(role) {
+      if (role === "student") return "Student";
+      if (role === "staff") return "Staff";
+      if (role === "admin") return "Admin";
+      return role;
+    }
+
+    function formatStatus(status) {
+      if (status === "active") return "Active";
+      if (status === "inactive") return "Inactive";
+      return status;
+    }
+
+    function deactivateUser(userId) {
+      if (!confirm("Are you sure you want to deactivate this user?")) {
+        return;
+      }
+
+      fetch(`/api/users/${userId}/deactivate`, {
+        method: "PUT"
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message);
+        loadUsers();
+      });
+    }
+
+    function reactivateUser(userId) {
+      if (!confirm("Are you sure you want to reactivate this user?")) {
+        return;
+      }
+
+      fetch(`/api/users/${userId}/reactivate`, {
+        method: "PUT"
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message);
+        loadUsers();
+      });
+    }
+
+    function logout() {
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
+      window.location.href = "login.html";
+    }
+  </script>
+
+</body>
+</html>

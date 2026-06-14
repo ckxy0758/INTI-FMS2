@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Booking Details</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dashboard-body">
+
+  <div id="appHeader"></div>
+
+  <div class="dashboard-layout">
+    <div id="appSidebar"></div>
+
+    <main class="main-content">
+
+      <h1 class="page-title">Booking Details</h1>
+
+      <div class="booking-details-layout">
+
+        <div class="booking-detail-card" id="bookingLeftCard">
+          Loading booking details...
+        </div>
+
+        <div class="booking-action-card" id="bookingRightCard">
+          Loading action...
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <script src="component.js"></script>
+
+  <script>
+    loadLayout("activities");
+
+    const user =
+      JSON.parse(localStorage.getItem("user")) ||
+      JSON.parse(sessionStorage.getItem("user"));
+
+    if (!user) {
+      window.location.href = "login.html";
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const bookingId = params.get("id");
+
+    if (!bookingId) {
+      window.location.href = "activities.html";
+    }
+
+    let currentBooking = null;
+
+    loadBookingDetails();
+
+    function loadBookingDetails() {
+      fetch(`/api/bookings/${bookingId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) {
+            alert(data.message);
+            window.location.href = "activities.html";
+            return;
+          }
+
+          currentBooking = data.booking;
+          renderBookingDetails(currentBooking);
+          renderActionPanel(currentBooking);
+        })
+        .catch(() => {
+          alert("Failed to load booking details.");
+        });
+    }
+
+    function renderBookingDetails(booking) {
+      document.getElementById("bookingLeftCard").innerHTML = `
+        <div class="booking-detail-header">
+          <h2>Booking ID: #${String(booking.booking_id).padStart(3, "0")}</h2>
+          <span class="booking-status-badge">${formatStatus(booking)}</span>
+        </div>
+
+        <img
+          src="${booking.image_path || 'images/bg-image-2.jpeg'}"
+          class="booking-detail-image"
+          alt="${booking.facility_name}"
+        >
+
+        <h2>${booking.facility_name}</h2>
+        <p class="booking-detail-desc">${booking.description || ""}</p>
+
+        <div class="booking-detail-info-grid">
+          <p><strong>Facility:</strong> ${booking.facility_name}</p>
+          <p><strong>Location:</strong> ${booking.location}</p>
+          <p><strong>Date:</strong> ${formatDate(booking.booking_date)}</p>
+          <p><strong>Time:</strong> ${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}</p>
+          <p><strong>Duration:</strong> ${booking.duration_hours} hour(s)</p>
+          <p><strong>Status:</strong> ${formatStatus(booking)}</p>
+        </div>
+
+        <div class="booking-purpose-box">
+          <strong>Purpose</strong>
+          <p>${booking.purpose || "-"}</p>
+        </div>
+      `;
+    }
+
+    function renderActionPanel(booking) {
+      const card = document.getElementById("bookingRightCard");
+
+      const facilityName = booking.facility_name
+        ? booking.facility_name.trim().toLowerCase()
+        : "";
+
+      const status = booking.booking_status
+        ? booking.booking_status.trim().toLowerCase()
+        : "";
+
+    if (booking.booking_flow_type === "direct_reservation") {
+        const canCheckIn = isWithinCheckInWindow(booking);
+
+        card.innerHTML = `
+          <h2>Cubicle Check In</h2>
+          <p>Please check in when you arrive at the cubicle.</p>
+
+          <div class="action-box">
+            <strong>Check-in Window</strong>
+            <h3>${getCheckInStartTime(booking.start_time)} - ${getCheckInEndTime(booking.start_time)}</h3>
+            <p>For ${formatTime(booking.start_time)} booking</p>
+          </div>
+
+          <p><strong>Current Status:</strong> ${formatStatus(booking)}</p>
+
+          ${
+            status === "reserved" || status === "pending"
+              ? canCheckIn
+                ? `<button class="action-main-btn full-width-btn" onclick="checkInCubicle()">Check In</button>`
+                : `<button class="action-main-btn full-width-btn" disabled style="opacity:0.5; cursor:not-allowed;">Check In Not Available Yet
+                </button>`
+              : ""
+          }
+
+          <button class="action-secondary-btn" onclick="window.location.href='activities.html'">
+            Back to Activities
+          </button>
+        `;
+        return;
+      }
+
+    if (booking.booking_flow_type === "staff_key_approval") {
+        card.innerHTML = `
+          <h2>Key Return</h2>
+          <p>Please return the key after using the facility.</p>
+
+          <div class="action-box">
+            <strong>Current Status</strong>
+            <h3>${formatStatus(booking)}</h3>
+          </div>
+
+          ${
+            status === "key_collected"
+              ? `<button class="action-main-btn full-width-btn" onclick="returnKey()">Returned Key</button>`
+              : status === "completed"
+                ? `<button class="action-main-btn full-width-btn" disabled style="opacity:0.5; cursor:not-allowed;">
+                    Key Already Returned
+                  </button>`
+                : `<button class="action-main-btn full-width-btn" disabled style="opacity:0.5; cursor:not-allowed;">
+                    Return Key Not Available Yet
+                  </button>`
+          }
+
+          <button class="action-secondary-btn" onclick="window.location.href='activities.html'">
+            Back to Activities
+          </button>
+        `;
+        return;
+      }
+
+      card.innerHTML = `
+        <h2>Booking Status</h2>
+        <p>Your booking request is being processed.</p>
+
+        <div class="action-box">
+          <strong>Status</strong>
+          <h3>${formatStatus(booking)}</h3>
+        </div>
+
+        <button class="action-secondary-btn" onclick="window.location.href='activities.html'">
+          Back to Activities
+        </button>
+      `;
+    }
+
+    function checkInCubicle() {
+      fetch(`/api/bookings/${bookingId}/check-in`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          user_id: user.id
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message);
+
+        if (data.success) {
+          loadBookingDetails();
+        }
+      })
+      .catch(() => {
+        alert("Check-in failed. Please try again.");
+      });
+    }
+
+    function returnKey() {
+      fetch(`/api/bookings/${bookingId}/return-key`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          user_id: user.id
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message);
+
+        if (data.success) {
+          loadBookingDetails();
+        }
+      })
+      .catch(() => {
+        alert("Key return failed. Please try again.");
+      });
+    }
+
+    function formatStatus(booking) {
+      const facilityName = booking.facility_name
+        ? booking.facility_name.trim().toLowerCase()
+        : "";
+
+      const bookingStatus = booking.booking_status
+        ? booking.booking_status.trim().toLowerCase()
+        : "";
+
+      const paymentStatus = booking.payment_status
+        ? booking.payment_status.trim().toLowerCase()
+        : "";
+
+    if (booking.booking_flow_type === "direct_reservation") {
+        if (bookingStatus === "reserved") return "Cubicle Reserved";
+        if (bookingStatus === "checked_in") return "Checked In";
+        if (bookingStatus === "expired") return "Reservation Expired";
+        if (bookingStatus === "completed") return "Completed";
+      }
+
+    if (booking.booking_flow_type === "staff_key_approval") {
+        if (bookingStatus === "pending") return "Submitted";
+        if (bookingStatus === "approved") return "Approved";
+        if (bookingStatus === "key_collected") return "Key Collected";
+        if (bookingStatus === "completed") return "Returned";
+      }
+
+      if (booking.payment_required === 1 || booking.payment_required === "1") {
+        if (paymentStatus === "pending_payment") return "Pending Payment";
+        if (paymentStatus === "payment_submitted") return "Payment Submitted";
+        if (paymentStatus === "verified") return "Payment Verified";
+      }
+
+      if (bookingStatus === "pending") return "Pending";
+      if (bookingStatus === "approved") return "Approved";
+      if (bookingStatus === "rejected") return "Rejected";
+      if (bookingStatus === "cancelled") return "Cancelled";
+      if (bookingStatus === "completed") return "Completed";
+
+      return "Unknown";
+    }
+
+    function isWithinCheckInWindow(booking) {
+      const bookingDate = booking.booking_date;
+      const startTime = booking.start_time;
+
+      const startDateTime = new Date(`${bookingDate}T${startTime}`);
+
+      const checkInStart = new Date(startDateTime);
+      checkInStart.setMinutes(checkInStart.getMinutes() - 15);
+
+      const checkInEnd = new Date(startDateTime);
+      checkInEnd.setMinutes(checkInEnd.getMinutes() + 15);
+
+      const now = new Date();
+
+      return now >= checkInStart && now <= checkInEnd;
+    }
+
+    function getCheckInStartTime(startTime) {
+      const [hour, minute] = startTime.split(":").map(Number);
+      const date = new Date();
+      date.setHours(hour);
+      date.setMinutes(minute - 15);
+      return formatTimeFromDate(date);
+    }
+
+    function getCheckInEndTime(startTime) {
+      const [hour, minute] = startTime.split(":").map(Number);
+      const date = new Date();
+      date.setHours(hour);
+      date.setMinutes(minute + 15);
+      return formatTimeFromDate(date);
+    }
+
+    function formatTimeFromDate(date) {
+      let h = date.getHours();
+      const minute = String(date.getMinutes()).padStart(2, "0");
+      const ampm = h >= 12 ? "PM" : "AM";
+
+      h = h % 12;
+      if (h === 0) h = 12;
+
+      return `${h}:${minute} ${ampm}`;
+    }
+
+    function formatDate(dateValue) {
+      const date = new Date(dateValue);
+
+      return date.toLocaleDateString("en-MY", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      });
+    }
+
+    function formatTime(time) {
+      const [hour, minute] = time.split(":");
+      let h = parseInt(hour);
+      const ampm = h >= 12 ? "PM" : "AM";
+
+      h = h % 12;
+      if (h === 0) h = 12;
+
+      return `${h}:${minute} ${ampm}`;
+    }
+
+    function logout() {
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
+      window.location.href = "login.html";
+    }
+  </script>
+
+</body>
+</html>

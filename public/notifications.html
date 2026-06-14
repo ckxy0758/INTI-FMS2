@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Notifications</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dashboard-body">
+
+  <div id="appHeader"></div>
+
+  <div class="dashboard-layout">
+
+    <div id="appSidebar"></div>
+
+    <main class="main-content">
+
+      <div class="notification-header-row">
+        <div>
+          <h1 class="page-title">Notifications</h1>
+          <p class="page-subtitle">
+            You have <span id="unreadCount">0</span> new notifications
+          </p>
+        </div>
+
+        <button
+          class="mark-read-btn"
+          id="markToggleBtn"
+          onclick="toggleNotificationReadStatus()"
+        >
+          Mark all as read
+        </button>
+      </div>
+
+      <div id="notificationList"></div>
+
+    </main>
+
+  </div>
+
+  <script src="component.js"></script>
+
+  <script>
+    loadLayout("notifications");
+
+    const user =
+      JSON.parse(localStorage.getItem("user")) ||
+      JSON.parse(sessionStorage.getItem("user"));
+
+    if (!user) {
+      window.location.href = "login.html";
+    }
+
+    let allNotifications = [];
+    let allRead = false;
+
+    loadNotifications();
+
+    function loadNotifications() {
+      fetch(`/api/notifications/${user.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) {
+            document.getElementById("notificationList").innerHTML =
+              "<p>Failed to load notifications.</p>";
+            return;
+          }
+
+          allNotifications = data.notifications;
+
+          allRead =
+            allNotifications.length > 0 &&
+            allNotifications.every(item => item.is_read == 1);
+
+          updateToggleButton();
+
+          renderNotifications(allNotifications);
+        });
+    }
+
+    function renderNotifications(notifications) {
+      const list = document.getElementById("notificationList");
+      list.innerHTML = "";
+
+      const unread = notifications.filter(n => n.is_read == 0).length;
+      document.getElementById("unreadCount").innerText = unread;
+
+      if (notifications.length === 0) {
+        list.innerHTML = "<p>No notifications found.</p>";
+        return;
+      }
+
+      const grouped = {
+        Today: [],
+        Yesterday: [],
+        Older: []
+      };
+
+      notifications.forEach(item => {
+        const group = getNotificationGroup(item.created_at);
+        grouped[group].push(item);
+      });
+
+      Object.keys(grouped).forEach(group => {
+        if (grouped[group].length === 0) return;
+
+        list.innerHTML += `<h3 class="notification-group-title">${group}</h3>`;
+
+        grouped[group].forEach(item => {
+          list.innerHTML += `
+            <div 
+                class="notification-card ${item.is_read == 0 ? "unread" : ""}"
+                onclick="openNotification(${item.booking_id}, '${item.notification_type}')"
+              >
+              <div class="notification-icon">
+                🔔
+              </div>
+
+              <div class="notification-content">
+                <h3>${item.title}</h3>
+                <p>${item.message}</p>
+              </div>
+
+              <div class="notification-time">
+                ${formatNotificationTime(item.created_at)}
+              </div>
+            </div>
+          `;
+        });
+      });
+    }
+
+    function getNotificationGroup(dateValue) {
+      const notificationDate = new Date(dateValue);
+      const today = new Date();
+
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+
+      const nDate = notificationDate.toDateString();
+      const tDate = today.toDateString();
+      const yDate = yesterday.toDateString();
+
+      if (nDate === tDate) return "Today";
+      if (nDate === yDate) return "Yesterday";
+      return "Older";
+    }
+
+    function formatNotificationTime(dateValue) {
+      const date = new Date(dateValue);
+      const now = new Date();
+
+      const diffMs = now - date;
+      const diffMinutes = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMinutes / 60);
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffMinutes < 1) return "Just now";
+      if (diffMinutes < 60) return `${diffMinutes} min ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays === 1) return "Yesterday";
+      if (diffDays < 7) return `${diffDays} days ago`;
+
+      return date.toLocaleDateString("en-MY", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      });
+    }
+
+    function updateToggleButton() {
+      const btn = document.getElementById("markToggleBtn");
+
+      btn.innerText =
+        allRead
+          ? "Mark all as unread"
+          : "Mark all as read";
+    }
+
+    function toggleNotificationReadStatus() {
+      const endpoint =
+        allRead
+          ? "unread-all"
+          : "read-all";
+
+      fetch(`/api/notifications/${user.id}/${endpoint}`, {
+        method: "PUT"
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            loadNotifications();
+          }
+        });
+    }
+
+    function openNotification(bookingId, notificationType) {
+      if (!bookingId) return;
+
+      if (user.role === "admin" && notificationType === "admin_booking") {
+        window.location.href = "manage-bookings.html";
+      } else {
+        window.location.href = `booking-details.html?id=${bookingId}`;
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
+      window.location.href = "login.html";
+    }
+  </script>
+
+</body>
+</html>

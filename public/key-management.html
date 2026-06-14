@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Key Management - Facility Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dashboard-body">
+
+  <div id="appHeader"></div>
+
+  <div class="dashboard-layout">
+
+    <div id="appSidebar"></div>
+
+    <main class="main-content">
+
+      <h1 class="page-title">Key Management</h1>
+
+      <p class="page-subtitle">
+        Monitor live key possession, deadlines and issue reminders
+      </p>
+
+      <div class="manage-user-toolbar">
+        <div class="user-search-box">
+          <span>🔍</span>
+          <input 
+            type="text" 
+            id="keySearch" 
+            placeholder="Search by room or staff name..."
+            onkeyup="searchKeys()"
+          >
+        </div>
+
+        <select id="keyStatusFilter" class="key-status-filter" onchange="searchKeys()">
+          <option value="">Filter: All Status</option>
+          <option value="pending_collection">Pending Collection</option>
+          <option value="collected">Key Collected</option>
+          <option value="returned">Returned</option>
+          <option value="overdue">Overdue</option>
+        </select>
+      </div>
+
+      <div id="keyList"></div>
+
+    </main>
+
+  </div>
+
+  <script src="component.js"></script>
+
+  <script>
+    loadLayout("key-management");
+
+    const user =
+      JSON.parse(localStorage.getItem("user")) ||
+      JSON.parse(sessionStorage.getItem("user"));
+
+    if (!user || user.role !== "admin") {
+      window.location.href = "login.html";
+    }
+
+    let allKeys = [];
+
+    loadKeyManagement();
+
+    function loadKeyManagement() {
+      fetch("/api/admin/key-management")
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) {
+            document.getElementById("keyList").innerHTML =
+              "<p>Failed to load key records.</p>";
+            return;
+          }
+
+          allKeys = data.keys;
+          renderKeys(allKeys);
+        })
+        .catch(() => {
+          document.getElementById("keyList").innerHTML =
+            "<p>Failed to load key records.</p>";
+        });
+    }
+
+    function renderKeys(keys) {
+      const keyList = document.getElementById("keyList");
+      keyList.innerHTML = "";
+
+      if (keys.length === 0) {
+        keyList.innerHTML = "<p>No active key records found.</p>";
+        return;
+      }
+
+      keys.forEach(item => {
+        keyList.innerHTML += `
+          <div class="key-card">
+
+            <img 
+              src="${item.image_path || 'images/bg-image-2.jpeg'}" 
+              class="key-card-img"
+              alt="${item.facility_name}"
+            >
+
+            <div class="key-card-info">
+              <h3>${item.facility_name} Key</h3>
+
+              <p>👤 <strong>Holder:</strong> ${item.holder_name}</p>
+              <p>📅 <strong>Date:</strong> ${formatDate(item.booking_date)}</p>
+              <p>🕒 <strong>Start Time:</strong> ${formatTime(item.start_time)}</p>
+              <p>🕘 <strong>End Time:</strong> ${formatTime(item.end_time)}</p>
+
+              ${
+                item.key_returned_at
+                  ? `<p>✅ <strong>Returned At:</strong> ${formatReturnedTime(item.key_returned_at)}</p>`
+                  : ""
+              }
+            </div>
+
+            <div class="key-card-status">
+              ${getKeyStatusText(item)}
+            </div>
+
+            ${getKeyActionButton(item)}
+
+          </div>
+        `;
+      });
+    }
+
+    function searchKeys() {
+      const searchValue =
+        document.getElementById("keySearch").value.toLowerCase();
+
+      const statusValue =
+        document.getElementById("keyStatusFilter").value;
+
+      let filtered = [...allKeys];
+
+      if (searchValue) {
+        filtered = filtered.filter(item =>
+          (item.facility_name || "").toLowerCase().includes(searchValue) ||
+          (item.holder_name || "").toLowerCase().includes(searchValue)
+        );
+      }
+
+      if (statusValue) {
+        filtered = filtered.filter(item => {
+          if (statusValue === "overdue") {
+            return isOverdue(item);
+          }
+
+          if (statusValue === "returned") {
+            return item.key_status === "returned" ||
+                   item.booking_status === "completed";
+          }
+
+          return item.key_status === statusValue;
+        });
+      }
+
+      renderKeys(filtered);
+    }
+
+    function getKeyStatusText(item) {
+      if (
+        item.key_status === "returned" ||
+        item.booking_status === "completed"
+      ) {
+        return `<span class="key-returned">Returned</span>`;
+      }
+
+    if (
+        item.booking_status === "approved" &&
+        item.key_status === "pending_collection"
+    ) {
+        return ``;
+    }
+
+      if (
+        item.booking_status === "key_collected" &&
+        item.key_status === "collected"
+      ) {
+        if (isOverdue(item)) {
+          return `<span class="key-overdue">Overdue - Not Returned</span>`;
+        }
+
+        return `
+          <span class="key-time-left">
+            Waiting to be Returned<br>
+            ${getTimeLeft(item)}
+          </span>
+        `;
+      }
+
+      return `<span class="key-pending">Pending</span>`;
+    }
+
+    function getKeyActionButton(item) {
+      if (
+        item.booking_status === "approved" &&
+        item.key_status === "pending_collection"
+      ) {
+        return `
+          <button class="action-main-btn" onclick="markKeyCollected(${item.booking_id})">
+            Key Collected
+          </button>
+        `;
+      }
+
+      return `
+        <button class="key-more-btn" onclick="viewKeyRecord(${item.booking_id})">
+          ›
+        </button>
+      `;
+    }
+
+    function markKeyCollected(bookingId) {
+      if (!confirm("Confirm that the key has been collected?")) {
+        return;
+      }
+
+      fetch(`/api/admin/bookings/${bookingId}/collect-key`, {
+        method: "PUT"
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message);
+        loadKeyManagement();
+      })
+      .catch(() => {
+        alert("Failed to update key status.");
+      });
+    }
+
+    function isOverdue(item) {
+      if (
+        item.key_status === "returned" ||
+        item.booking_status === "completed"
+      ) {
+        return false;
+      }
+
+      const endDateTime = new Date(`${item.booking_date}T${item.end_time}`);
+      const now = new Date();
+
+      return now > endDateTime;
+    }
+
+    function getTimeLeft(item) {
+      const endDateTime = new Date(`${item.booking_date}T${item.end_time}`);
+      const now = new Date();
+
+      const diffMs = endDateTime - now;
+
+      if (diffMs <= 0) {
+        return "Due now";
+      }
+
+      const diffMin = Math.floor(diffMs / 60000);
+      const hours = Math.floor(diffMin / 60);
+      const minutes = diffMin % 60;
+
+      if (hours > 0) {
+        return `${hours} hr ${minutes} min left`;
+      }
+
+      return `${minutes} min left`;
+    }
+
+    function viewKeyRecord(bookingId) {
+      window.location.href = `booking-details.html?id=${bookingId}`;
+    }
+
+    function formatDate(dateValue) {
+      if (!dateValue) return "-";
+
+      const [year, month, day] = dateValue.split("-");
+      const date = new Date(year, month - 1, day);
+
+      return date.toLocaleDateString("en-MY", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      });
+    }
+
+    function formatTime(time) {
+      if (!time) return "-";
+
+      const [hour, minute] = time.split(":");
+      let h = parseInt(hour);
+      const ampm = h >= 12 ? "PM" : "AM";
+
+      h = h % 12;
+      if (h === 0) h = 12;
+
+      return `${h}:${minute} ${ampm}`;
+    }
+
+    function formatReturnedTime(dateTimeValue) {
+      if (!dateTimeValue) return "-";
+
+      const date = new Date(dateTimeValue);
+
+      return date.toLocaleString("en-MY", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      });
+    }
+
+    function logout() {
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
+      window.location.href = "login.html";
+    }
+  </script>
+
+</body>
+</html>

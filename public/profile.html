@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Profile</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dashboard-body">
+
+  <div id="appHeader"></div>
+
+  <div class="dashboard-layout">
+
+    <div id="appSidebar"></div>
+
+    <main class="main-content">
+
+      <h1 class="page-title">My Profile</h1>
+
+      <div class="profile-card">
+
+        <div class="profile-avatar">
+          <span id="profileInitial">U</span>
+        </div>
+
+        <div class="profile-info">
+          <h2 id="profileName">Loading...</h2>
+          <p id="profileRole">-</p>
+          <p id="profileLocation">Bayan Lepas, Pulau Pinang</p>
+          <p id="profileEmail">-</p>
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <script src="component.js"></script>
+
+  <script>
+    loadLayout("profile");
+
+    const user =
+      JSON.parse(localStorage.getItem("user")) ||
+      JSON.parse(sessionStorage.getItem("user"));
+
+    if (!user) {
+      window.location.href = "login.html";
+    }
+
+    loadProfile();
+
+    function loadProfile() {
+      fetch(`/api/profile/${user.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) {
+            alert(data.message);
+            return;
+          }
+
+          const profile = data.user;
+
+          document.getElementById("profileInitial").innerText =
+            profile.name ? profile.name.charAt(0).toUpperCase() : "U";
+
+          document.getElementById("profileName").innerText =
+            profile.name || "-";
+
+          document.getElementById("profileRole").innerText =
+            formatRole(profile.role);
+
+          document.getElementById("profileEmail").innerText =
+            profile.email || "-";
+
+          document.getElementById("profileEmail").innerText =
+            profile.email || "-";
+        })
+        .catch(() => {
+          alert("Failed to load profile.");
+        });
+    }
+
+    function formatRole(role) {
+      if (!role) return "-";
+      return role.charAt(0).toUpperCase() + role.slice(1);
+    }
+
+    function logout() {
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
+      window.location.href = "login.html";
+    }
+  </script>
+
+</body>
+</html>
