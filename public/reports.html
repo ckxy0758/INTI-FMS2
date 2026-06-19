@@ -21,7 +21,6 @@
         Analyze facility usage, booking trends, payment records, and key management performance.
       </p>
 
-      <!-- Group 1: Most Frequently Used Facilities -->
       <div class="report-card wide">
         <div class="card-header">
           <h3>Most Frequently Used Facilities</h3>
@@ -55,21 +54,15 @@
             </select>
 
             <select id="usageFacilityType">
-              <option value="All">All Facility Types</option>
-              <option value="Lab">Lab</option>
-              <option value="Sports">Sports</option>
-              <option value="Study Space">Study Space</option>
-              <option value="Music">Music</option>
             </select>
 
-            <button class="mini-filter-btn" onclick="loadReports()">Apply</button>
+            <button class="mini-filter-btn" onclick="loadReports('usage')">Apply</button>
           </div>
         </div>
 
         <canvas id="facilityUsageChart"></canvas>
       </div>
 
-      <!-- Group 2: Booking Trends Over Time -->
       <div class="report-card wide">
         <div class="card-header">
           <h3>Booking Trends Over Time</h3>
@@ -91,14 +84,13 @@
               <option value="staff">Staff</option>
             </select>
 
-            <button class="mini-filter-btn" onclick="loadReports()">Apply</button>
+            <button class="mini-filter-btn" onclick="loadReports('trends')">Apply</button>
           </div>
         </div>
 
         <canvas id="bookingTrendsChart"></canvas>
       </div>
 
-      <!-- Group 3: Booking Status + Cancellation -->
       <div class="reports-grid two">
         <div class="report-card">
           <div class="card-header">
@@ -131,7 +123,7 @@
                 <option value="All">All Facilities</option>
               </select>
 
-              <button class="mini-filter-btn" onclick="loadReports()">Apply</button>
+              <button class="mini-filter-btn" onclick="loadReports('status')">Apply</button>
             </div>
           </div>
 
@@ -153,7 +145,6 @@
         </div>
       </div>
 
-      <!-- Group 4: Key Management Performance -->
       <div class="report-card wide">
         <div class="card-header">
           <h3>Key Management Performance</h3>
@@ -161,9 +152,6 @@
           <div class="mini-filters">
             <select id="keyFacility">
               <option value="All">All Key Facilities</option>
-              <option value="AI Lab">AI Lab</option>
-              <option value="CC Lab">CC Lab</option>
-              <option value="LR501">LR501</option>
             </select>
 
             <select id="keyMonth">
@@ -182,14 +170,7 @@
               <option value="12">December</option>
             </select>
 
-            <select id="keyStatus">
-              <option value="All">All Key Status</option>
-              <option value="collected">Collected</option>
-              <option value="returned">Returned</option>
-              <option value="overdue">Overdue</option>
-            </select>
-
-            <button class="mini-filter-btn" onclick="loadReports()">Apply</button>
+            <button class="mini-filter-btn" onclick="loadReports('key')">Apply</button>
           </div>
         </div>
 
@@ -203,22 +184,21 @@
             <span>Returned Keys</span>
             <strong id="returnedKeys">0</strong>
           </div>
+          
+          <div>
+            <span>Collected Keys</span>
+            <strong id="collectedKeys">0</strong>
+          </div>
 
           <div>
             <span>Overdue</span>
             <strong id="overdueKeys">0</strong>
-          </div>
-
-          <div>
-            <span>Outstanding</span>
-            <strong id="outstandingKeys">0</strong>
           </div>
         </div>
 
         <canvas id="keyAnalyticsChart"></canvas>
       </div>
 
-      <!-- Group 5: Payment Analytics -->
       <div class="reports-grid two">
         <div class="report-card">
           <div class="card-header">
@@ -227,8 +207,6 @@
             <div class="mini-filters">
               <select id="paymentFacility">
                 <option value="All">All Payment Facilities</option>
-                <option value="Table Tennis">Table Tennis</option>
-                <option value="Pool Table">Pool Table</option>
               </select>
 
               <select id="paymentMonth">
@@ -247,14 +225,7 @@
                 <option value="12">December</option>
               </select>
 
-              <select id="paymentStatus">
-                <option value="All">All Payment Status</option>
-                <option value="pending_payment">Pending</option>
-                <option value="payment_submitted">Submitted</option>
-                <option value="verified">Verified</option>
-              </select>
-
-              <button class="mini-filter-btn" onclick="loadReports()">Apply</button>
+              <button class="mini-filter-btn" onclick="loadReports('payment')">Apply</button>
             </div>
           </div>
 
@@ -264,11 +235,6 @@
           </div>
 
           <div class="small-stat-grid">
-            <div>
-              <span>Verified</span>
-              <strong id="verifiedPayments">0</strong>
-            </div>
-
             <div>
               <span>Pending</span>
               <strong id="pendingPayments">0</strong>
@@ -287,7 +253,6 @@
         </div>
       </div>
 
-      <!-- Group 6: Student vs Staff Usage -->
       <div class="report-card wide">
         <div class="card-header">
           <h3>Student vs Staff Usage</h3>
@@ -314,15 +279,10 @@
               <option value="2025">2025</option>
             </select>
 
-            <select id="userUsageFacilityType">
-              <option value="All">All Facility Types</option>
-              <option value="Lab">Lab</option>
-              <option value="Sports">Sports</option>
-              <option value="Study Space">Study Space</option>
-              <option value="Music">Music</option>
+            <select id="userUsageFacility">
             </select>
 
-            <button class="mini-filter-btn" onclick="loadReports()">Apply</button>
+            <button class="mini-filter-btn" onclick="loadReports('user')">Apply</button>
           </div>
         </div>
 
@@ -346,24 +306,46 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       loadFacilitiesForFilters();
-      loadReports();
+      loadReports('all'); 
     });
 
-    function loadReports() {
-      const month = document.getElementById("usageMonth").value;
-      const year = document.getElementById("usageYear").value;
-      const userType = document.getElementById("usageUserType").value;
-      const facilityType = document.getElementById("usageFacilityType").value;
+    function loadReports(section = 'all') {
+      let month = "", year = "", userType = "All", facilityType = "All", facilityId = "All";
 
-      let url = `http://localhost:3000/api/admin/reports?userType=${userType}&facilityType=${facilityType}&facilityId=All`;
+      if (section === 'usage') {
+        month = document.getElementById("usageMonth").value;
+        year = document.getElementById("usageYear").value;
+        userType = document.getElementById("usageUserType").value;
+        
+        const typeSelect = document.getElementById("usageFacilityType");
+        if (typeSelect && typeSelect.options.length > 0) {
+          facilityType = typeSelect.value;
+        }
 
-      if (month) {
-        url += `&month=${month}`;
+      } else if (section === 'trends') {
+        facilityId = document.getElementById("trendFacility").value;
+        userType = document.getElementById("trendUserType").value;
+      } else if (section === 'status') {
+        month = document.getElementById("statusMonth").value;
+        userType = document.getElementById("statusUserType").value;
+        facilityId = document.getElementById("statusFacility").value;
+      } else if (section === 'key') {
+        facilityId = document.getElementById("keyFacility").value;
+        month = document.getElementById("keyMonth").value;
+        // Removed keyStatus retrieval
+      } else if (section === 'payment') {
+        facilityId = document.getElementById("paymentFacility").value;
+        month = document.getElementById("paymentMonth").value;
+      } else if (section === 'user') {
+        month = document.getElementById("userUsageMonth").value;
+        year = document.getElementById("userUsageYear").value;
+        facilityId = document.getElementById("userUsageFacility").value;
       }
 
-      if (year) {
-        url += `&year=${year}`;
-      }
+      let url = `http://localhost:3000/api/admin/reports?userType=${userType}&facilityType=${facilityType}&facilityId=${facilityId}`;
+
+      if (month) url += `&month=${month}`;
+      if (year) url += `&year=${year}`;
 
       fetch(url)
         .then(response => response.json())
@@ -373,13 +355,25 @@
             return;
           }
 
-          renderFacilityUsageChart(data.facilityUsage || []);
-          renderBookingTrendsChart(data.bookingTrends || []);
-          renderStatusOverviewChart(data.statusOverview || []);
-          renderKeyAnalytics(data.keyAnalytics || {});
-          renderPaymentAnalytics(data.paymentAnalytics || {});
-          renderUserUsageChart(data.userUsage || []);
-          renderCancellationInsights(data.statusOverview || []);
+          if (section === 'all' || section === 'usage') {
+            renderFacilityUsageChart(data.facilityUsage || []);
+          }
+          if (section === 'all' || section === 'trends') {
+            renderBookingTrendsChart(data.bookingTrends || []);
+          }
+          if (section === 'all' || section === 'status') {
+            renderStatusOverviewChart(data.statusOverview || []);
+            renderCancellationInsights(data.statusOverview || [], data.mostCancelledFacility);
+          }
+          if (section === 'all' || section === 'key') {
+            renderKeyAnalytics(data.keyAnalytics || {});
+          }
+          if (section === 'all' || section === 'payment') {
+            renderPaymentAnalytics(data.paymentAnalytics || {});
+          }
+          if (section === 'all' || section === 'user') {
+            renderUserUsageChart(data.userUsage || []);
+          }
         })
         .catch(error => {
           console.error("Reports load error:", error);
@@ -393,18 +387,65 @@
         .then(data => {
           if (!data.success) return;
 
-          const facilitySelects = [
-            document.getElementById("trendFacility"),
-            document.getElementById("statusFacility")
-          ].filter(select => select !== null);
+          const usageTypeSelect = document.getElementById("usageFacilityType");
+          const trendSelect = document.getElementById("trendFacility");
+          const statusSelect = document.getElementById("statusFacility");
+          const keySelect = document.getElementById("keyFacility");
+          const paymentSelect = document.getElementById("paymentFacility");
+          const userUsageSelect = document.getElementById("userUsageFacility");
+
+          if (trendSelect) trendSelect.innerHTML = '<option value="All">All Facilities</option>';
+          if (statusSelect) statusSelect.innerHTML = '<option value="All">All Facilities</option>';
+          if (keySelect) keySelect.innerHTML = '<option value="All">All Key Facilities</option>';
+          if (paymentSelect) paymentSelect.innerHTML = '<option value="All">All Payment Facilities</option>';
+          
+          if (usageTypeSelect) usageTypeSelect.innerHTML = '<option value="All">All Facility Types</option>'; 
+          if (userUsageSelect) userUsageSelect.innerHTML = '<option value="All">All Facilities</option>'; 
+
+          const keyFacilities = ["AI Lab", "CC Lab", "LR501"];
+          const paymentFacilities = ["Table Tennis", "Pool Table"];
+
+          const uniqueTypes = [...new Set(data.facilities.map(f => f.facility_type))];
+          if (usageTypeSelect) {
+            uniqueTypes.forEach(type => {
+              const option = document.createElement("option");
+              option.value = type;
+              option.textContent = type;
+              usageTypeSelect.appendChild(option);
+            });
+          }
 
           data.facilities.forEach(facility => {
-            facilitySelects.forEach(select => {
+            if (trendSelect) {
               const option = document.createElement("option");
               option.value = facility.facility_id;
               option.textContent = facility.facility_name;
-              select.appendChild(option);
-            });
+              trendSelect.appendChild(option);
+            }
+            if (statusSelect) {
+              const option = document.createElement("option");
+              option.value = facility.facility_id;
+              option.textContent = facility.facility_name;
+              statusSelect.appendChild(option);
+            }
+            if (keySelect && keyFacilities.includes(facility.facility_name)) {
+              const option = document.createElement("option");
+              option.value = facility.facility_id; 
+              option.textContent = facility.facility_name;
+              keySelect.appendChild(option);
+            }
+            if (paymentSelect && paymentFacilities.includes(facility.facility_name)) {
+              const option = document.createElement("option");
+              option.value = facility.facility_id;
+              option.textContent = facility.facility_name;
+              paymentSelect.appendChild(option);
+            }
+            if (userUsageSelect) {
+              const option = document.createElement("option");
+              option.value = facility.facility_id;
+              option.textContent = facility.facility_name;
+              userUsageSelect.appendChild(option);
+            }
           });
         })
         .catch(error => {
@@ -434,17 +475,10 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: {
-              display: false
-            }
+            legend: { display: false }
           },
           scales: {
-            x: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0
-              }
-            }
+            x: { beginAtZero: true, ticks: { precision: 0 } }
           }
         }
       });
@@ -476,19 +510,8 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0
-              }
-            }
-          }
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
         }
       });
     }
@@ -506,34 +529,25 @@
           datasets: [{
             data: values,
             backgroundColor: [
-              "#3f63d8",
-              "#f59e0b",
-              "#10b981",
-              "#ef4444",
-              "#8b5cf6",
-              "#6b7280",
-              "#14b8a6",
-              "#f97316"
+              "#3f63d8", "#f59e0b", "#10b981", "#ef4444",
+              "#8b5cf6", "#6b7280", "#14b8a6", "#f97316"
             ]
           }]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false
-        }
+        options: { responsive: true, maintainAspectRatio: false }
       });
     }
 
     function renderKeyAnalytics(data) {
       document.getElementById("totalKeyBookings").textContent = data.total_key_bookings || 0;
       document.getElementById("returnedKeys").textContent = data.returned_keys || 0;
-      document.getElementById("outstandingKeys").textContent = data.outstanding_keys || 0;
+      document.getElementById("collectedKeys").textContent = data.collected_keys || 0;
       document.getElementById("overdueKeys").textContent = data.overdue_keys || 0;
 
-      const labels = ["Returned", "Outstanding", "Overdue"];
+      const labels = ["Returned", "Collected", "Overdue"];
       const values = [
         Number(data.returned_keys || 0),
-        Number(data.outstanding_keys || 0),
+        Number(data.collected_keys || 0),
         Number(data.overdue_keys || 0)
       ];
 
@@ -546,26 +560,15 @@
           datasets: [{
             label: "Key Records",
             data: values,
-            backgroundColor: ["#10b981", "#3f63d8", "#ef4444"],
+            backgroundColor: ["#10b981", "#3b82f6", "#ef4444"],
             borderRadius: 8
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0
-              }
-            }
-          }
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
         }
       });
     }
@@ -574,13 +577,11 @@
       document.getElementById("totalRevenue").textContent =
         `RM ${Number(data.total_revenue || 0).toFixed(2)}`;
 
-      document.getElementById("verifiedPayments").textContent = data.verified_payments || 0;
       document.getElementById("pendingPayments").textContent = data.pending_payments || 0;
       document.getElementById("submittedPayments").textContent = data.submitted_payments || 0;
 
-      const labels = ["Verified", "Pending", "Submitted"];
+      const labels = ["Pending", "Submitted"];
       const values = [
-        Number(data.verified_payments || 0),
         Number(data.pending_payments || 0),
         Number(data.submitted_payments || 0)
       ];
@@ -594,33 +595,28 @@
           datasets: [{
             label: "Payments",
             data: values,
-            backgroundColor: ["#10b981", "#f59e0b", "#3f63d8"],
+            backgroundColor: ["#f59e0b", "#3f63d8"],
             borderRadius: 8
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0
-              }
-            }
-          }
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
         }
       });
     }
 
     function renderUserUsageChart(data) {
-      const labels = data.map(item => formatStatus(item.role));
-      const values = data.map(item => Number(item.total_bookings));
+      const studentData = data.find(item => item.role === 'student');
+      const staffData = data.find(item => item.role === 'staff');
+
+      const studentCount = studentData ? Number(studentData.total_bookings) : 0;
+      const staffCount = staffData ? Number(staffData.total_bookings) : 0;
+
+      const labels = ["Student", "Staff"];
+      const values = [studentCount, staffCount];
 
       if (userUsageChart) userUsageChart.destroy();
 
@@ -630,7 +626,7 @@
           labels: labels,
           datasets: [{
             data: values,
-            backgroundColor: ["#3f63d8", "#10b981", "#f59e0b"]
+            backgroundColor: ["#ef4444", "#3f63d8"]
           }]
         },
         options: {
@@ -640,22 +636,15 @@
       });
     }
 
-    function renderCancellationInsights(statusData) {
+    function renderCancellationInsights(statusData, mostCancelledName) {
       const cancelled = statusData.find(item => item.booking_status === "cancelled");
-
-      document.getElementById("cancelledCount").textContent =
-        cancelled ? cancelled.total : 0;
-
-      document.getElementById("mostCancelledFacility").textContent =
-        "Need backend data";
+      document.getElementById("cancelledCount").textContent = cancelled ? cancelled.total : 0;
+      document.getElementById("mostCancelledFacility").textContent = mostCancelledName || "None";
     }
 
     function formatStatus(value) {
       if (!value) return "";
-
-      return value
-        .replaceAll("_", " ")
-        .replace(/\b\w/g, char => char.toUpperCase());
+      return value.replaceAll("_", " ").replace(/\b\w/g, char => char.toUpperCase());
     }
   </script>
 </body>

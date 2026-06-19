@@ -1,50 +1,215 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Dashboard</title>
-  <link rel="stylesheet" href="style.css">
+
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body class="dashboard-body">
-
   <div id="appHeader"></div>
 
   <div class="dashboard-layout">
-
     <div id="appSidebar"></div>
 
     <main class="main-content">
+      <section class="admin-dashboard">
 
-      <h1 class="page-title">Admin Dashboard</h1>
+        <h1 class="page-title">Welcome Back, Admin!</h1>
+        <p class="page-subtitle" style="color: #6b7280; margin-top: -10px; margin-bottom: 25px;">
+          Manage our INTI Facilities easily!
+        </p>
 
-      <p class="page-subtitle">
-        Welcome Admin. Manage users, facilities, bookings, and reports.
-      </p>
+        <div class="dashboard-kpi-row">
+          <div class="kpi-card" id="card-pending">
+            <div class="kpi-content">
+              <span>Pending Approval</span>
+              <strong id="kpiPending">0</strong>
+            </div>
+            <div class="kpi-icon-container"><i class="fas fa-clock"></i></div>
+          </div>
+          <div class="kpi-card" id="card-users">
+            <div class="kpi-content">
+              <span>Active Users</span>
+              <strong id="kpiUsers">0</strong>
+            </div>
+            <div class="kpi-icon-container"><i class="fas fa-users"></i></div>
+          </div>
+          <div class="kpi-card" id="card-facilities">
+            <div class="kpi-content">
+              <span>Total Facilities</span>
+              <strong id="kpiFacilities">0</strong>
+            </div>
+            <div class="kpi-icon-container"><i class="fas fa-building"></i></div>
+          </div>
+          <div class="kpi-card" id="card-keys">
+            <div class="kpi-content">
+              <span>Keys Not Returned</span>
+              <strong id="kpiKeys">0</strong>
+            </div>
+            <div class="kpi-icon-container"><i class="fas fa-key"></i></div>
+          </div>
+        </div>
 
+        <div class="admin-top-row">
+          <div class="report-card">
+            <div class="card-header">
+              <h3>Latest Requests <span id="badgeRequests" class="badge">0</span></h3>
+              <button onclick="window.location.href='manage-bookings.html'" class="btn-view-all">View All</button>
+            </div>
+            <div class="card-body" style="overflow-x: auto;">
+              <table style="min-width: 250px;">
+                <thead><tr><th>User</th><th>Facility</th><th>Status</th></tr></thead>
+                <tbody id="recentBookingsBody"></tbody>
+              </table>
+            </div>
+          </div>
 
+          <div class="report-card chart-card">
+            <div class="card-header">
+              <h3>Facility Usage</h3>
+              <button onclick="window.location.href='reports.html'" class="btn-view-all">Full Reports</button>
+            </div>
+            <div class="card-body" style="position: relative; min-height: 250px;">
+              <canvas id="dashboardChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-bottom-row">
+          <div class="report-card" style="width: 100%;">
+            <div class="card-header">
+              <h3>Notifications <span id="badgeNotifs" class="badge">0</span></h3>
+              <button onclick="window.location.href='notifications.html'" class="btn-view-all">View All</button>
+            </div>
+            <div class="card-body" id="dashboardNotifications" style="overflow-y: auto; max-height: 250px;"></div>
+          </div>
+        </div>
+
+      </section>
     </main>
-
   </div>
 
   <script src="component.js"></script>
 
   <script>
-    loadLayout("admin-dashboard");
+    loadLayout("admin");
 
-    const user =
-      JSON.parse(localStorage.getItem("user")) ||
-      JSON.parse(sessionStorage.getItem("user"));
-
+    const user = JSON.parse(localStorage.getItem("user")) || JSON.parse(sessionStorage.getItem("user"));
     if (!user || user.role !== "admin") {
       window.location.href = "login.html";
     }
 
-    function logout() {
-      localStorage.removeItem("user");
-      sessionStorage.removeItem("user");
-      window.location.href = "login.html";
+    let dashChart;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      fetchDashboardData();
+    });
+
+    function fetchDashboardData() {
+      fetch(`http://localhost:3000/api/admin/dashboard?userId=${user.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) {
+            console.error("Failed to fetch dashboard data:", data.message);
+            return;
+          }
+
+          // 1. Populate KPIs and Badges
+          const pendingCount = data.kpis.pendingBookings || 0;
+          document.getElementById("kpiPending").textContent = pendingCount;
+          document.getElementById("badgeRequests").textContent = pendingCount; 
+          
+          document.getElementById("kpiUsers").textContent = data.kpis.activeUsers || 0;
+          document.getElementById("kpiFacilities").textContent = data.kpis.totalFacilities || 0;
+          document.getElementById("kpiKeys").textContent = data.kpis.unreturnedKeys || 0;
+
+          document.getElementById("badgeNotifs").textContent = data.kpis.unreadNotifications || 0;
+
+          // 2. Populate Recent Bookings Table
+          const tbody = document.getElementById("recentBookingsBody");
+          tbody.innerHTML = "";
+          if (data.recentBookings.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='3' style='text-align: center; color: #9ca3af; padding: 20px;'>No recent bookings</td></tr>";
+          } else {
+            data.recentBookings.forEach(b => {
+              tbody.innerHTML += `
+                <tr>
+                  <td>${b.user_name}</td>
+                  <td>${b.facility_name}</td>
+                  <td><span style="font-weight: 500;">${formatStatus(b.booking_status)}</span></td>
+                </tr>
+              `;
+            });
+          }
+
+          // 3. Populate Notifications (generating standard .notif-item)
+          const notifDiv = document.getElementById("dashboardNotifications");
+          notifDiv.innerHTML = "";
+          if (data.recentNotifications.length === 0) {
+            notifDiv.innerHTML = "<p style='padding: 10px 0; color: #9ca3af;'>No recent notifications.</p>";
+          } else {
+            data.recentNotifications.forEach(n => {
+              const dateObj = new Date(n.created_at);
+              const formattedDate = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              
+              notifDiv.innerHTML += `
+                <div class="notif-item">
+                  <div class="notif-title">${n.title}</div>
+                  <div class="notif-date">${formattedDate}</div>
+                  <div class="notif-msg">${n.message}</div>
+                </div>
+              `;
+            });
+          }
+
+          // 4. Render Chart
+          renderChart(data.facilityUsage);
+        })
+        .catch(err => console.error("Error loading dashboard:", err));
+    }
+
+    function renderChart(usageData) {
+      const labels = usageData.map(d => d.facility_name);
+      const values = usageData.map(d => Number(d.total_bookings));
+
+      if (dashChart) dashChart.destroy();
+
+      dashChart = new Chart(document.getElementById("dashboardChart"), {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Total Bookings",
+            data: values,
+            backgroundColor: "#3f63d8",
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { 
+            legend: { display: false } 
+          },
+          scales: { 
+            y: { 
+              beginAtZero: true, 
+              ticks: { precision: 0 } 
+            } 
+          }
+        }
+      });
+    }
+
+    function formatStatus(val) {
+      if (!val) return "-";
+      return val.replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
     }
   </script>
-
 </body>
 </html>

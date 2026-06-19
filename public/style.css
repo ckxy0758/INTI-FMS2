@@ -2177,6 +2177,90 @@ body.sidebar-collapsed .main-content {
   width: 100%;
 }
 
+/* =========================================
+   Admin Dashboard Unified Layout
+   ========================================= */
+
+/* Rows to hold cards */
+.admin-top-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  align-items: stretch;
+}
+
+.admin-bottom-row {
+    width: 97%;  /*need to fix */
+    margin-top: 20px;
+}
+
+/* Force cards to share space equally and grow to equal height */
+.admin-top-row .report-card {
+  flex: 1;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure the notification report card stretches fully */
+.admin-bottom-row .report-card {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* KPI Cards */
+.dashboard-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.kpi-card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kpi-content { display: flex; flex-direction: column; }
+.kpi-card span { font-size: 14px; color: #6b7280; font-weight: 500; }
+.kpi-card strong { font-size: 24px; margin-top: 5px; }
+
+/* Color coding for KPI icons */
+.kpi-icon-container { padding: 12px; border-radius: 8px; font-size: 22px; display: flex; align-items: center; justify-content: center; }
+#card-pending .kpi-icon-container { background: rgba(245, 158, 11, 0.15); color: #b45309; }
+#card-pending strong { color: #b45309; }
+#card-users .kpi-icon-container { background: rgba(59, 130, 246, 0.15); color: #1d4ed8; }
+#card-users strong { color: #1d4ed8; }
+#card-facilities .kpi-icon-container { background: rgba(139, 92, 246, 0.15); color: #6d28d9; }
+#card-facilities strong { color: #6d28d9; }
+#card-keys .kpi-icon-container { background: rgba(239, 68, 68, 0.15); color: #b91c1c; }
+#card-keys strong { color: #b91c1c; }
+
+/* Components */
+.btn-view-all { padding: 6px 12px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; text-decoration: none; }
+.badge { background: #ef4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 8px; font-weight: bold; }
+
+/* Notifications inside report-card */
+#dashboardNotifications { max-height: 250px; overflow-y: auto; }
+.notif-item { padding: 15px 0; border-bottom: 1px solid #e5e7eb; }
+.notif-item:last-child { border-bottom: none; }
+.notif-title { font-weight: 600; font-size: 14px; color: #111827; }
+.notif-date { font-size: 11px; color: #9ca3af; margin: 4px 0; }
+.notif-msg { font-size: 13px; color: #4b5563; }
+
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 12px; background: #f9fafb; font-size: 13px; color: #6b7280; }
+td { padding: 12px; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1000px) {
   .facility-grid {
