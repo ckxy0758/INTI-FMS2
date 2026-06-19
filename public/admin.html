@@ -97,7 +97,7 @@
   <script src="component.js"></script>
 
   <script>
-    loadLayout("admin");
+    loadLayout("admin-dashboard");
 
     const user = JSON.parse(localStorage.getItem("user")) || JSON.parse(sessionStorage.getItem("user"));
     if (!user || user.role !== "admin") {

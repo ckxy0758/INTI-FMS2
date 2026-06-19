@@ -37,7 +37,7 @@
 
         <input type="date" id="dateFilter" onchange="applyBookingFilters()">
 
-        <button class="export-btn" onclick="alert('Export feature can be added later.')">
+        <button class="export-btn" onclick="exportToCSV()">
           ⬇ Export
         </button>
 
@@ -85,6 +85,7 @@
     }
 
     let allBookings = [];
+    let currentFilteredBookings = []; // Added to track currently visible data for export
     let currentStatusFilter = "all";
 
     loadBookings();
@@ -103,6 +104,7 @@
           }
 
           allBookings = data.bookings;
+          currentFilteredBookings = allBookings; // Initialize current filter list
           loadFacilityFilter();
           renderBookings(allBookings);
         })
@@ -183,6 +185,7 @@
         });
       }
 
+      currentFilteredBookings = filtered; // Save the newly filtered list for exports
       renderBookings(filtered);
     }
 
@@ -297,10 +300,65 @@
             alert(data.message);
             loadBookings();
         });
-}
+    }
 
     function viewBooking(id) {
       alert("Booking details page can be connected later. Booking ID: " + id);
+    }
+
+    // NEW FUNCTION: Export Data to CSV (Opens in Sheets/Excel)
+    function exportToCSV() {
+      if (currentFilteredBookings.length === 0) {
+        alert("There is no data to export.");
+        return;
+      }
+
+      // 1. Define Spreadsheet Headers
+      let csvContent = "ID,User Name,Role,Facility,Date,Start Time,End Time,Purpose,Status\n";
+
+      // 2. Loop through the currently filtered array and map the values
+      currentFilteredBookings.forEach(booking => {
+        
+        // Helper function to handle commas and text line breaks inside Excel cells properly
+        const escapeCSV = (str) => {
+          if (str === null || str === undefined) return '""';
+          const stringStr = String(str);
+          return '"' + stringStr.replace(/"/g, '""') + '"'; 
+        };
+
+        const row = [
+          escapeCSV(booking.booking_id),
+          escapeCSV(booking.user_name),
+          escapeCSV(formatRole(booking.user_role)),
+          escapeCSV(booking.facility_name),
+          escapeCSV(formatDate(booking.booking_date)),
+          escapeCSV(formatTime(booking.start_time)),
+          escapeCSV(formatTime(booking.end_time)),
+          escapeCSV(booking.purpose || "N/A"),
+          escapeCSV(formatStatus(booking.booking_status))
+        ];
+
+        csvContent += row.join(",") + "\n";
+      });
+
+      // 3. Create a downloadable Blob out of the CSV format
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      
+      // 4. Trigger standard browser download
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        
+        // Set dynamic filename based on today's date
+        const today = new Date().toISOString().slice(0, 10);
+        link.setAttribute("download", `INTI_Bookings_Export_${today}.csv`);
+        
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     }
 
     function formatRole(role) {
@@ -325,27 +383,22 @@
     }
 
     function formatDate(dateValue) {
-    const [year, month, day] = dateValue.split("-");
-
-    const date = new Date(year, month - 1, day);
-
-    return date.toLocaleDateString("en-MY", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-    });
+      const [year, month, day] = dateValue.split("-");
+      const date = new Date(year, month - 1, day);
+      return date.toLocaleDateString("en-MY", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric"
+      });
     }
 
     function formatTime(time) {
       if (!time) return "-";
-
       const [hour, minute] = time.split(":");
       let h = parseInt(hour);
       const ampm = h >= 12 ? "PM" : "AM";
-
       h = h % 12;
       if (h === 0) h = 12;
-
       return `${h}:${minute} ${ampm}`;
     }
 
