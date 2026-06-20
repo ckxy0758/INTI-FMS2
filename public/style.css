@@ -1,13 +1,17 @@
 /* ===== GLOBAL ===== */
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: 'Poppins', sans-serif;
   background: #f8f9fb;
   color: #111827;
 }
 
 button {
-  font-family: inherit;
+  font-family: 'Poppins', sans-serif;
+}
+
+input, select, textarea {
+  font-family: 'Poppins', sans-serif;
 }
 
 /* ===== LOGIN BACKGROUND ===== */
@@ -238,36 +242,49 @@ button {
   min-height: calc(100vh - 64px);
   background: #ffffff;
   border-right: 1px solid #e5e7eb;
-  padding: 22px 14px;
+  padding: 22px 12px;
   box-sizing: border-box;
 }
 
 .sidebar a {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 13px 14px;
-  margin-bottom: 4px;
-  border-radius: 10px;
-  color: #6b7280;
+  line-height: 1;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 10px 25px 10px 13px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  color: #374151;
   text-decoration: none;
-  font-weight: 700;
-  font-size: 15px;
+  font-weight: 600;
+  font-size: 14px;
   transition: 0.2s;
-  border-left: 3px solid transparent;
+  border-left: 5px solid transparent;
+}
+
+.sidebar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-icon svg {
+  display: block;
 }
 
 .sidebar a svg {
-  color: #9ca3af;
-  width: 22px;
-  height: 22px;
+  color: #6B7280;
+  width: 24px;
+  height: 24px;
 }
 
 .sidebar a.active {
   background: #fde8e7;
   color: #D12E26;
   border-left: 5px solid #D12E26;
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .sidebar a.active svg {
@@ -277,7 +294,7 @@ button {
 .sidebar a:hover:not(.active) {
   background: #fde8e7;
   color: #374151;
-  border-left: 3px solid transparent;
+  border-left: 5px solid transparent;
 }
 
 .sidebar a:hover:not(.active) svg {
@@ -615,41 +632,6 @@ button {
   color: #ffffff;
   font-weight: bold;
   cursor: pointer;
-}
-
-.sidebar a {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  border-radius: 8px;
-  color: #4b5563;
-  text-decoration: none;
-  font-weight: 700;
-  transition: 0.2s;
-}
-
-.sidebar a svg {
-  color: #4b5563;
-}
-
-.sidebar a.active {
-  background: #fde8e7;
-  color: #D12E26;
-}
-
-.sidebar a.active svg {
-  color: #D12E26;
-}
-
-.sidebar a:hover {
-  background: #fde8e7;
-  color: #D12E26;
-}
-
-.sidebar a:hover svg {
-  color: #D12E26;
 }
 
 .facility-inline-icon {
