@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>Student Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -34,7 +35,7 @@
 
         <label>Filter By:</label>
 
-        <input type="date" id="filterDate">
+        <input type="text" id="filterDate" placeholder="Select Date" readonly>
 
         <select id="filterType">
           <option value="">Facility Type</option>
@@ -56,10 +57,10 @@
 
   <!-- COMPONENT -->
   <script src="component.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
   <!-- ===== SCRIPT ===== -->
   <script>
-
     loadLayout("facilities");
 
     const user =
@@ -79,14 +80,6 @@
       const now = new Date();
 
       return selectedDateTime < now;
-    }
-
-    setMinimumDate();
-
-    function setMinimumDate() {
-      const today = new Date().toISOString().split("T")[0];
-
-      document.getElementById("filterDate").setAttribute("min", today);
     }
 
     loadFacilities();
@@ -242,10 +235,6 @@
       .getElementById("filterType")
       .addEventListener("change", applyFilters);
 
-    document
-      .getElementById("filterDate")
-      .addEventListener("change", applyFilters);
-
     function applyFilters() {
 
       const type =
@@ -273,6 +262,62 @@
       } */
     }
 
+    /* ===== DATE PICKER ===== */
+    flatpickr("#filterDate", {
+    dateFormat: "d/m/Y",
+    minDate: "today",
+    defaultDate: "today",
+    disableMobile: true,
+    locale: { firstDayOfWeek: 1 },
+    onOpen: function(selectedDates, dateStr, instance) {
+    setTimeout(function() {
+      const cal = instance.calendarContainer;
+      const input = document.getElementById("filterDate");
+      const rect = input.getBoundingClientRect();
+      cal.style.position = "fixed";
+      cal.style.top = (rect.bottom + 6) + "px";
+      cal.style.left = rect.left + "px";
+      cal.style.zIndex = "9999";
+    }, 0);
+  },
+    onReady: function(selectedDates, dateStr, instance) {
+      const cal = instance.calendarContainer;
+      cal.style.zIndex = "9999";
+
+      const monthsEl = cal.querySelector(".flatpickr-months");
+      const prevBtn = cal.querySelector(".flatpickr-prev-month");
+      const nextBtn = cal.querySelector(".flatpickr-next-month");
+      monthsEl.insertBefore(prevBtn, monthsEl.firstChild);
+      monthsEl.appendChild(nextBtn);
+
+      const bottomRow = document.createElement("div");
+      bottomRow.className = "fp-bottom-row";
+      bottomRow.innerHTML = `
+        <button class="fp-cancel-btn" type="button">Cancel</button>
+        <button class="fp-apply-btn" type="button">Today</button>
+      `;
+      cal.appendChild(bottomRow);
+
+      bottomRow.querySelector(".fp-cancel-btn").addEventListener("click", () => {
+        instance.clear();
+        instance.close();
+        applyFilters();
+      });
+
+      bottomRow.querySelector(".fp-apply-btn").addEventListener("click", () => {
+      instance.setDate(new Date());
+      instance.close();
+      applyFilters();
+    });
+    },
+    onChange: function(selectedDates, dateStr, instance) {
+    }
+  });
+
+    window.addEventListener("scroll", function() {
+    const fp = document.getElementById("filterDate")._flatpickr;
+    if (fp) fp.close();
+  }, true);
     /* ===== TIME FORMAT ===== */
 
     function formatTime(time) {
@@ -301,6 +346,8 @@
 
       window.location.href = "login.html";
     }
+
+    
 
   </script>
 
