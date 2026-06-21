@@ -257,7 +257,7 @@ input, select, textarea {
   border-radius: 12px;
   color: #374151;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 14px;
   transition: 0.2s;
   border-left: 5px solid transparent;
@@ -309,12 +309,13 @@ input, select, textarea {
 .page-title {
   font-size: 30px;
   color: #D12E26;
+  font-weight: 700;
   margin: 0 0 8px;
 }
 
 .page-subtitle {
   color: #6b7280;
-  font-weight: 600;
+  font-weight: 400;
   margin-bottom: 28px;
 }
 
@@ -337,6 +338,29 @@ input, select, textarea {
 #filterDate:focus {
   outline: none;
   border-color: #D12E26 !important;
+}
+
+.date-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 180px;
+  box-sizing: border-box;
+}
+
+.date-input-wrapper svg {
+  position: absolute;
+  right: 12px;  /* change left to right */
+  left: auto;
+  color: #D12E26;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.date-input-wrapper input {
+  width: 100% !important;
+  padding-left: 14px !important;   /* remove left padding */
+  padding-right: 36px !important;  /* add right padding so text doesn't overlap icon */
 }
 
 .flatpickr-months .flatpickr-month {
@@ -710,6 +734,17 @@ span.flatpickr-weekday {
 }
 
 /* ===== FACILITY GRID ===== */
+.facility-info p {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #4b5563;
+  line-height: 1;
+}
+
 .facility-grid {
   display: grid;
 
@@ -721,6 +756,7 @@ span.flatpickr-weekday {
 
 .facility-card {
   background: #ffffff;
+  font-weight: 700;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 14px rgba(0,0,0,0.05);
@@ -757,17 +793,6 @@ span.flatpickr-weekday {
 .facility-info h3 {
   margin: 0 0 10px;
   font-size: 17px;
-}
-
-.facility-info p {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 12px 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: #4b5563;
-  line-height: 1;
 }
 
 .facility-info p span:last-child {
@@ -1086,14 +1111,12 @@ span.flatpickr-weekday {
 }
 
 .activity-info h3 {
-  margin: 0 0 6px;
+  margin: 0 !important;
   font-size: 20px;
 }
 
-.activity-info p {
-  margin: 7px 0;
-  color: #4b5563;
-  font-weight: 600;
+.activity-info-row {
+  margin: 4px 0 !important;
 }
 
 .activity-red {
@@ -1175,10 +1198,11 @@ span.flatpickr-weekday {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 9px 0;
+  margin: 2px 0;
   color: #4b5563;
-  font-weight: 700;
-  line-height: 1.3;
+  font-weight: 400;
+  line-height: 1.5;
+  font-size: 15px;
 }
 
 .activity-info-icon {
@@ -1201,6 +1225,7 @@ span.flatpickr-weekday {
 .activity-info-text {
   display: flex;
   align-items: center;
+  font-weight: 400;
 }
 
 .notification-header-row {
