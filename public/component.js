@@ -38,8 +38,8 @@ function loadLayout(activePage) {
   `;
 
   if (role === "admin") {
-    document.getElementById("appSidebar").innerHTML = `
-      <aside class="sidebar">
+  document.getElementById("appSidebar").innerHTML = `
+    <aside class="sidebar admin-sidebar">
 
         <a href="admin.html"
         class="${activePage === "admin-dashboard" ? "active" : ""}">

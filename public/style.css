@@ -2550,9 +2550,32 @@ body.sidebar-collapsed .main-content {
   width: 100%;
 }
 
+/* ===== ADMIN SIDEBAR ===== */
+.admin-sidebar {
+  width: 220px !important;
+}
+
+body:has(.admin-sidebar) .main-content {
+  margin-left: 220px;
+}
+
+body.sidebar-collapsed .admin-sidebar {
+  width: 70px !important;
+}
+
+body.sidebar-collapsed:has(.admin-sidebar) .main-content {
+  margin-left: 70px;
+}
+
+.admin-sidebar a {
+  white-space: normal;
+  line-height: 1.3;
+}
+
 /* =========================================
    Admin Dashboard Unified Layout
-   ========================================= */
+   =========================================
+ */
 
 /* Rows to hold cards */
 .admin-top-row {
