@@ -1085,9 +1085,9 @@ span.flatpickr-weekday {
 
 .activity-card {
   display: grid;
-  grid-template-columns: 120px 1.4fr 1.5fr 140px;
+  grid-template-columns: 110px minmax(180px, 1fr) minmax(220px, 1.8fr) 130px;
   align-items: center;
-  gap: 22px;
+  gap: 16px;
   background: #ffffff;
   padding: 16px;
   margin-bottom: 18px;
@@ -1111,12 +1111,27 @@ span.flatpickr-weekday {
 }
 
 .activity-info h3 {
-  margin: 0 !important;
-  font-size: 20px;
+  margin: 0px !important;
+  font-size: 18px;
+}
+
+.activity-info {
+  min-width: 0;
+}
+
+.activity-info-details {
+  margin-top: 10px;
 }
 
 .activity-info-row {
-  margin: 4px 0 !important;
+  white-space: nowrap !important;
+  margin: 6px 0px !important;
+}
+
+.activity-info-text {
+  display: flex;
+  align-items: center;
+  font-weight: 400;
 }
 
 .activity-red {
@@ -1126,46 +1141,61 @@ span.flatpickr-weekday {
 
 .progress-wrapper {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  gap: 0;
 }
 
 .progress-step {
   text-align: center;
-  color: #9ca3af;
-  font-size: 12px;
-  font-weight: 700;
+  color: #6B7280;
+  font-size: 13px;
+  font-weight: 400;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 30px;
 }
 
 .progress-step .circle {
-  width: 32px;
-  height: 32px;
-  background: #e5e7eb;
+  width: 40px;
+  height: 40px;
+  background: #E5E7EB;
   color: #ffffff;
-  border-radius: 50%;
-  line-height: 32px;
-  margin: 0 auto 6px;
-  font-weight: 800;
+  border-radius: 999px;
+  line-height: 40px;
+  margin: 0 0 10px 0;
+  font-weight: 700;
+  font-size: 20px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .progress-step.active {
-  color: #D12E26;
+  color: #F64F54;
 }
 
 .progress-step.active .circle {
-  background: #D12E26;
+  background: linear-gradient(180deg, #F64F54 53%, #DC2626 100%);
 }
 
 .progress-line {
-  width: 90px;
-  height: 4px;
-  background: #e5e7eb;
-  margin: 0 8px 24px;
-  border-radius: 10px;
+  width: 70px;
+  height: 0;
+  border: 3px solid #E5E7EB;
+  margin-top: 20px;
+  flex-shrink: 0;
+  border-radius: 3px;
 }
 
 .progress-line.active-line {
-  background: #D12E26;
+  border-color: #F64F54;
+}
+
+.cancelled-step .circle {
+  background: #DC2626 !important;
+  color: white;
 }
 
 .activity-actions {
@@ -1197,18 +1227,19 @@ span.flatpickr-weekday {
 .activity-info p {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 2px 0;
+  gap: 8px;
+  margin: 0px 0;
   color: #4b5563;
   font-weight: 400;
   line-height: 1.5;
   font-size: 15px;
+  white-space: normal;
 }
 
 .activity-info-icon {
-  width: 24px;
-  min-width: 24px;
-  height: 24px;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
