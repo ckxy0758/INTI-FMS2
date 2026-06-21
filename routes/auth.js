@@ -1750,4 +1750,39 @@ function createKeyReturnReminders(callback) {
   db.query(sql, callback);
 }
 
+// GET CURRENT BOOKING ID FOR QR REDIRECT
+// SINGLE, CLEAN ROUTE: Handle QR Code current booking lookup
+router.get("/bookings/current-booking/:facility_id/:user_id", (req, res) => {
+  const facilityId = req.params.facility_id;
+  const userId = req.params.user_id;
+
+  // This query finds the reservation happening RIGHT NOW
+  const sql = `
+    SELECT booking_id 
+    FROM bookings 
+    WHERE user_id = ? 
+    AND facility_id = ? 
+    AND booking_status = 'reserved'
+    AND booking_date = CURDATE()
+    AND CURTIME() BETWEEN start_time AND end_time
+    LIMIT 1
+  `;
+
+  db.query(sql, [userId, facilityId], (err, result) => {
+    if (err) {
+      console.error("Database error in current-booking:", err);
+      return res.json({ success: false, message: "Database error" });
+    }
+    
+    if (result.length === 0) {
+      return res.json({ 
+        success: false, 
+        message: "No active reservation found for this cubicle at this time." 
+      });
+    }
+
+    return res.json({ success: true, booking_id: result[0].booking_id });
+  });
+});
+
 module.exports = router;

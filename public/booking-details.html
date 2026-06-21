@@ -2,7 +2,6 @@
 <html>
 <head>
   <title>Booking Details</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 
@@ -18,7 +17,6 @@
       <h1 class="page-title">Booking Details</h1>
 
       <div class="booking-details-layout">
-
         <div class="booking-detail-card" id="bookingLeftCard">
           Loading booking details...
         </div>
@@ -26,7 +24,6 @@
         <div class="booking-action-card" id="bookingRightCard">
           Loading action...
         </div>
-
       </div>
 
     </main>
@@ -37,6 +34,7 @@
   <script>
     loadLayout("activities");
 
+    // 1. Authenticate User
     const user =
       JSON.parse(localStorage.getItem("user")) ||
       JSON.parse(sessionStorage.getItem("user"));
@@ -45,6 +43,7 @@
       window.location.href = "login.html";
     }
 
+    // 2. Read the Booking ID from the URL (This is how the QR scanner passes the user here!)
     const params = new URLSearchParams(window.location.search);
     const bookingId = params.get("id");
 
@@ -56,6 +55,7 @@
 
     loadBookingDetails();
 
+    // 3. Fetch Data  
     function loadBookingDetails() {
       fetch(`/api/bookings/${bookingId}`)
         .then(res => res.json())
@@ -69,12 +69,27 @@
           currentBooking = data.booking;
           renderBookingDetails(currentBooking);
           renderActionPanel(currentBooking);
+
+          // --- AUTO CHECK-IN LOGIC ---
+          const params = new URLSearchParams(window.location.search);
+          // Only auto-check-in if the URL has the flag AND the status is reserved
+          if (params.get("auto_checkin") === "true" && currentBooking.booking_status === "reserved") {
+              // Add a tiny delay to ensure the UI is rendered
+              setTimeout(() => {
+                  if(isWithinCheckInWindow(currentBooking)) {
+                      checkInCubicle();
+                  } else {
+                      alert("Auto-check-in failed: Not within the 15-minute window.");
+                  }
+              }, 500);
+          }
         })
         .catch(() => {
           alert("Failed to load booking details.");
         });
     }
 
+    // 4. Render Left Side (Information)
     function renderBookingDetails(booking) {
       document.getElementById("bookingLeftCard").innerHTML = `
         <div class="booking-detail-header">
@@ -107,18 +122,13 @@
       `;
     }
 
+    // 5. Render Right Side (Action Buttons)
     function renderActionPanel(booking) {
       const card = document.getElementById("bookingRightCard");
+      const status = booking.booking_status ? booking.booking_status.trim().toLowerCase() : "";
 
-      const facilityName = booking.facility_name
-        ? booking.facility_name.trim().toLowerCase()
-        : "";
-
-      const status = booking.booking_status
-        ? booking.booking_status.trim().toLowerCase()
-        : "";
-
-    if (booking.booking_flow_type === "direct_reservation") {
+      // Cubicle Flow
+      if (booking.booking_flow_type === "direct_reservation") {
         const canCheckIn = isWithinCheckInWindow(booking);
 
         card.innerHTML = `
@@ -137,8 +147,7 @@
             status === "reserved" || status === "pending"
               ? canCheckIn
                 ? `<button class="action-main-btn full-width-btn" onclick="checkInCubicle()">Check In</button>`
-                : `<button class="action-main-btn full-width-btn" disabled style="opacity:0.5; cursor:not-allowed;">Check In Not Available Yet
-                </button>`
+                : `<button class="action-main-btn full-width-btn" disabled style="opacity:0.5; cursor:not-allowed;">Check In Not Available Yet</button>`
               : ""
           }
 
@@ -149,7 +158,8 @@
         return;
       }
 
-    if (booking.booking_flow_type === "staff_key_approval") {
+      // Key Approval Flow
+      if (booking.booking_flow_type === "staff_key_approval") {
         card.innerHTML = `
           <h2>Key Return</h2>
           <p>Please return the key after using the facility.</p>
@@ -163,12 +173,8 @@
             status === "key_collected"
               ? `<button class="action-main-btn full-width-btn" onclick="returnKey()">Returned Key</button>`
               : status === "completed"
-                ? `<button class="action-main-btn full-width-btn" disabled style="opacity:0.5; cursor:not-allowed;">
-                    Key Already Returned
-                  </button>`
-                : `<button class="action-main-btn full-width-btn" disabled style="opacity:0.5; cursor:not-allowed;">
-                    Return Key Not Available Yet
-                  </button>`
+                ? `<button class="action-main-btn full-width-btn" disabled style="opacity:0.5; cursor:not-allowed;">Key Already Returned</button>`
+                : `<button class="action-main-btn full-width-btn" disabled style="opacity:0.5; cursor:not-allowed;">Return Key Not Available Yet</button>`
           }
 
           <button class="action-secondary-btn" onclick="window.location.href='activities.html'">
@@ -178,6 +184,7 @@
         return;
       }
 
+      // Default Pending Flow
       card.innerHTML = `
         <h2>Booking Status</h2>
         <p>Your booking request is being processed.</p>
@@ -193,22 +200,18 @@
       `;
     }
 
+    // 6. Action Functions
     function checkInCubicle() {
       fetch(`/api/bookings/${bookingId}/check-in`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          user_id: user.id
-        })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id })
       })
       .then(res => res.json())
       .then(data => {
         alert(data.message);
-
         if (data.success) {
-          loadBookingDetails();
+          loadBookingDetails(); // Refresh the page to show new status!
         }
       })
       .catch(() => {
@@ -219,17 +222,12 @@
     function returnKey() {
       fetch(`/api/bookings/${bookingId}/return-key`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          user_id: user.id
-        })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id })
       })
       .then(res => res.json())
       .then(data => {
         alert(data.message);
-
         if (data.success) {
           loadBookingDetails();
         }
@@ -239,27 +237,19 @@
       });
     }
 
+    // 7. Utility Functions
     function formatStatus(booking) {
-      const facilityName = booking.facility_name
-        ? booking.facility_name.trim().toLowerCase()
-        : "";
+      const bookingStatus = booking.booking_status ? booking.booking_status.trim().toLowerCase() : "";
+      const paymentStatus = booking.payment_status ? booking.payment_status.trim().toLowerCase() : "";
 
-      const bookingStatus = booking.booking_status
-        ? booking.booking_status.trim().toLowerCase()
-        : "";
-
-      const paymentStatus = booking.payment_status
-        ? booking.payment_status.trim().toLowerCase()
-        : "";
-
-    if (booking.booking_flow_type === "direct_reservation") {
+      if (booking.booking_flow_type === "direct_reservation") {
         if (bookingStatus === "reserved") return "Cubicle Reserved";
         if (bookingStatus === "checked_in") return "Checked In";
         if (bookingStatus === "expired") return "Reservation Expired";
         if (bookingStatus === "completed") return "Completed";
       }
 
-    if (booking.booking_flow_type === "staff_key_approval") {
+      if (booking.booking_flow_type === "staff_key_approval") {
         if (bookingStatus === "pending") return "Submitted";
         if (bookingStatus === "approved") return "Approved";
         if (bookingStatus === "key_collected") return "Key Collected";
@@ -282,19 +272,12 @@
     }
 
     function isWithinCheckInWindow(booking) {
-      const bookingDate = booking.booking_date;
-      const startTime = booking.start_time;
-
-      const startDateTime = new Date(`${bookingDate}T${startTime}`);
-
+      const startDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
       const checkInStart = new Date(startDateTime);
       checkInStart.setMinutes(checkInStart.getMinutes() - 15);
-
       const checkInEnd = new Date(startDateTime);
       checkInEnd.setMinutes(checkInEnd.getMinutes() + 15);
-
       const now = new Date();
-
       return now >= checkInStart && now <= checkInEnd;
     }
 
@@ -318,20 +301,14 @@
       let h = date.getHours();
       const minute = String(date.getMinutes()).padStart(2, "0");
       const ampm = h >= 12 ? "PM" : "AM";
-
       h = h % 12;
       if (h === 0) h = 12;
-
       return `${h}:${minute} ${ampm}`;
     }
 
     function formatDate(dateValue) {
-      const date = new Date(dateValue);
-
-      return date.toLocaleDateString("en-MY", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
+      return new Date(dateValue).toLocaleDateString("en-MY", {
+        day: "2-digit", month: "short", year: "numeric"
       });
     }
 
@@ -339,10 +316,8 @@
       const [hour, minute] = time.split(":");
       let h = parseInt(hour);
       const ampm = h >= 12 ? "PM" : "AM";
-
       h = h % 12;
       if (h === 0) h = 12;
-
       return `${h}:${minute} ${ampm}`;
     }
 

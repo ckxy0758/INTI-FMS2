@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Scanning...</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding-top: 20%; background-color: #f4f7f6; }
+    .loader { margin: 20px auto; border: 4px solid #f3f3f3; border-top: 4px solid #0056b3; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <h2>Finding your booking...</h2>
+  <div class="loader"></div>
+  <p id="errorMessage" style="color: red;"></p>
+
+  <script>
+    // 1. Get Facility ID from the URL first
+    const urlParams = new URLSearchParams(window.location.search);
+    const facilityId = urlParams.get('facility_id');
+
+    // 2. Check if user is logged in
+    const user = JSON.parse(localStorage.getItem("user")) || JSON.parse(sessionStorage.getItem("user"));
+    
+    if (!user) {
+      alert("Please log in to the Facility Management System first to check in.");
+      
+      // FIX: Pass the facilityId back to the login page so it can return the user here
+      if (facilityId) {
+        window.location.href = `login.html?return_to=${encodeURIComponent('scan.html?facility_id=' + facilityId)}`;
+      } else {
+        window.location.href = "login.html";
+      }
+      
+    } else {
+      // 3. If user is logged in, continue with the booking lookup
+      if (!facilityId) {
+        document.getElementById("errorMessage").innerText = "Invalid QR Code.";
+      } else {
+        // Ask the server for the correct Booking ID
+        fetch(`/api/bookings/current-booking/${facilityId}/${user.id}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              // Redirect to their specific booking details page
+            window.location.replace(`booking-details.html?id=${data.booking_id}&auto_checkin=true`);
+            } else {
+              document.getElementById("errorMessage").innerText = data.message;
+            }
+          })
+          .catch(err => {
+            document.getElementById("errorMessage").innerText = "System error. Please try again.";
+          });
+      }
+    }
+  </script>
+</body>
+</html>
