@@ -19,11 +19,20 @@
       <label>Email</label>
       <input type="email" id="email" placeholder="username@roles.newinti.edu.my">
 
-      <div class="password-row">
-        <label>Password</label>
-        <a href="#">Forgot Password?</a>
+      <div class="password-wrapper">
+        <div class="password-row">
+          <label>Password</label>
+          <a href="#">Forgot Password?</a>
+        </div>
+
+        <div class="password-input">
+          <input type="password" id="password" placeholder="********">
+
+          <span class="toggle-eye" onclick="togglePassword()">
+            <img src="images/eye-open.png" class="eye-icon" id="eyeIcon">
+          </span>
+        </div>
       </div>
-      <input type="password" id="password" placeholder="********">
 
     <div class="remember-row">
     <label class="custom-checkbox">
@@ -110,6 +119,22 @@
           message.innerText = "Server connection failed";
         });
       }
+
+
+    function togglePassword() {
+      const password = document.getElementById("password");
+      const eye = document.getElementById("eyeIcon");
+
+      const hidden = password.type === "password";
+
+      if (hidden) {
+        password.type = "text";
+        eye.src = "images/eye-close.png"; // closed eye
+      } else {
+        password.type = "password";
+        eye.src = "images/eye-open.png";  // open eye
+      }
+    }
   </script>
 
 </body>
