@@ -28,9 +28,7 @@ function loadLayout(activePage) {
       <div class="logo-area">
         <div class="menu-icon">☰</div>
 
-        <div class="logo-text">
-          <span class="logo-star">✱</span> INTI
-        </div>
+        <img src="images/Inti_Logo.png" style="height: 36px; object-fit: contain;">
 
         <div class="system-title">
           Facilities Management System

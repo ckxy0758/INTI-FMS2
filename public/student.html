@@ -37,14 +37,34 @@
 
         <input type="text" id="filterDate" placeholder="Select Date" readonly>
 
-        <select id="filterType">
-          <option value="">Facility Type</option>
-          <option value="Laboratory">Laboratory</option>
-          <option value="Sports Facility">Sports Facility</option>
-          <option value="Study Space">Study Space</option>
-          <option value="Music Facility">Music Facility</option>
-          <option value="Other">Other</option>
-        </select>
+        <div class="custom-dropdown" id="typeDropdown">
+        <button class="custom-dropdown-btn" onclick="toggleDropdown()">
+          <span id="dropdownLabel">Facility Type</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="custom-dropdown-menu" id="dropdownMenu">
+          <label class="dropdown-item">
+            <input type="checkbox" value="Laboratory">
+            <span>Laboratory</span>
+          </label>
+          <label class="dropdown-item">
+            <input type="checkbox" value="Sports Facility">
+            <span>Sports Facility</span>
+          </label>
+          <label class="dropdown-item">
+            <input type="checkbox" value="Study Space">
+            <span>Study Space</span>
+          </label>
+          <label class="dropdown-item">
+            <input type="checkbox" value="Music Facility">
+            <span>Music Facility</span>
+          </label>
+          <label class="dropdown-item">
+            <input type="checkbox" value="Other">
+            <span>Other</span>
+          </label>
+        </div>
+      </div>
 
       </div>
 
@@ -230,26 +250,41 @@
     }
 
     /* ===== FILTERS ===== */
+    function toggleDropdown() {
+      document.getElementById("dropdownMenu").classList.toggle("open");
+      document.querySelector(".custom-dropdown-btn").classList.toggle("active");
+    }
 
-    document
-      .getElementById("filterType")
-      .addEventListener("change", applyFilters);
+    document.addEventListener("click", function(e) {
+      const dropdown = document.getElementById("typeDropdown");
+      if (dropdown && !dropdown.contains(e.target)) {
+        document.getElementById("dropdownMenu").classList.remove("open");
+        document.querySelector(".custom-dropdown-btn").classList.remove("active");
+      }
+    });
+
+    document.querySelectorAll(".dropdown-item input").forEach(cb => {
+      cb.addEventListener("change", function() {
+        const checked = [...document.querySelectorAll(".dropdown-item input:checked")]
+          .map(c => c.value);
+        const label = checked.length === 0 ? "Facility Type" : checked.join(", ");
+        document.getElementById("dropdownLabel").textContent =
+          label.length > 20 ? label.substring(0, 20) + "..." : label;
+        applyFilters();
+      });
+    });
 
     function applyFilters() {
-
-      const type =
-        document.getElementById("filterType").value;
-
+      const checked = [...document.querySelectorAll(".dropdown-item input:checked")]
+        .map(c => c.value);
       let filtered = [...allFacilities];
-
-      if (type) {
-
+      if (checked.length > 0) {
         filtered = filtered.filter(facility =>
-          facility.facility_type === type
+          checked.includes(facility.facility_type)
         );
       }
-
       renderFacilities(filtered);
+    }
 
       /*
       const date = document.getElementById("filterDate").value;
@@ -260,7 +295,6 @@
         document.getElementById("filterTime").value = "";
         return;
       } */
-    }
 
     /* ===== DATE PICKER ===== */
     flatpickr("#filterDate", {
