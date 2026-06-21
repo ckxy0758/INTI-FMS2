@@ -47,43 +47,6 @@ input, select, textarea {
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  cursor: pointer;
-
-  position: relative; /* IMPORTANT */
-}
-
-/* Tooltip box */
-.help-tooltip {
-  position: absolute;
-  top: 140%;
-  right: 0;
-
-  width: 280px;
-  background: #ffffff;
-  color: #374151;
-  border: 1px solid #e5e7eb;
-  border-left: 4px solid #D12E26;
-  border-radius: 10px;
-
-  padding: 12px;
-  font-size: 12px;
-  line-height: 1.5;
-
-  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-5px);
-  transition: 0.2s ease;
-
-  z-index: 9999;
-}
-
-/* Show on hover */
-.help-icon:hover .help-tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
 }
 
 /* ===== LOGIN HERO ===== */
@@ -126,7 +89,8 @@ input, select, textarea {
   font-weight: 600;
 }
 
-.login-card input[type="email"] {
+.login-card input[type="email"],
+.login-card input[type="password"] {
   width: 100%;
   height: 50px;
   padding: 0 15px;
@@ -135,6 +99,7 @@ input, select, textarea {
   margin-bottom: 20px;
   box-sizing: border-box;
   font-size: 15px;
+  line-height: 50px;
 }
 
 .password-row {
@@ -215,55 +180,6 @@ input, select, textarea {
 #message {
   margin-top: 15px;
   text-align: center;
-}
-
-/* ===== PASSWORD TOGGLE ===== */
-
-.password-input {
-  position: relative;
-  width: 100%;
-}
-
-.password-input input {
-  width: 100%;
-  height: 50px;
-  padding: 0 45px 0 15px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-sizing: border-box;
-  font-size: 15px;
-  margin: 0; /* IMPORTANT */
-}
-
-.password-wrapper {
-  margin-bottom: 20px;
-}
-
-.toggle-eye {
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 24px;
-  height: 24px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  cursor: pointer;
-  user-select: none;
-  color: #6b7280;
-}
-
-.eye-icon {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-}
-
-.toggle-eye:hover {
-  color: #D12E26;
 }
 
 /* ===== DASHBOARD HEADER ===== */
@@ -818,17 +734,6 @@ span.flatpickr-weekday {
 }
 
 /* ===== FACILITY GRID ===== */
-.facility-info p {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 12px 0;
-  font-size: 15px;
-  font-weight: 500;
-  color: #4b5563;
-  line-height: 1;
-}
-
 .facility-grid {
   display: grid;
 
@@ -877,6 +782,17 @@ span.flatpickr-weekday {
 .facility-info h3 {
   margin: 0 0 10px;
   font-size: 17px;
+}
+
+.facility-info p {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #4b5563;
+  line-height: 1;
 }
 
 .facility-info p span:last-child {
@@ -1169,9 +1085,9 @@ span.flatpickr-weekday {
 
 .activity-card {
   display: grid;
-  grid-template-columns: 110px minmax(180px, 1fr) minmax(220px, 1.8fr) 130px;
+  grid-template-columns: 120px 1.4fr 1.5fr 140px;
   align-items: center;
-  gap: 16px;
+  gap: 22px;
   background: #ffffff;
   padding: 16px;
   margin-bottom: 18px;
@@ -1195,27 +1111,14 @@ span.flatpickr-weekday {
 }
 
 .activity-info h3 {
-  margin: 0px !important;
-  font-size: 18px;
+  margin: 0 0 6px;
+  font-size: 20px;
 }
 
-.activity-info {
-  min-width: 0;
-}
-
-.activity-info-details {
-  margin-top: 10px;
-}
-
-.activity-info-row {
-  white-space: nowrap !important;
-  margin: 6px 0px !important;
-}
-
-.activity-info-text {
-  display: flex;
-  align-items: center;
-  font-weight: 400;
+.activity-info p {
+  margin: 7px 0;
+  color: #4b5563;
+  font-weight: 600;
 }
 
 .activity-red {
@@ -1225,61 +1128,46 @@ span.flatpickr-weekday {
 
 .progress-wrapper {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  gap: 0;
 }
 
 .progress-step {
   text-align: center;
-  color: #6B7280;
-  font-size: 13px;
-  font-weight: 400;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 30px;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .progress-step .circle {
-  width: 40px;
-  height: 40px;
-  background: #E5E7EB;
+  width: 32px;
+  height: 32px;
+  background: #e5e7eb;
   color: #ffffff;
-  border-radius: 999px;
-  line-height: 40px;
-  margin: 0 0 10px 0;
-  font-weight: 700;
-  font-size: 20px;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 1;
+  border-radius: 50%;
+  line-height: 32px;
+  margin: 0 auto 6px;
+  font-weight: 800;
 }
 
 .progress-step.active {
-  color: #F64F54;
+  color: #D12E26;
 }
 
 .progress-step.active .circle {
-  background: linear-gradient(180deg, #F64F54 53%, #DC2626 100%);
+  background: #D12E26;
 }
 
 .progress-line {
-  width: 70px;
-  height: 0;
-  border: 3px solid #E5E7EB;
-  margin-top: 20px;
-  flex-shrink: 0;
-  border-radius: 3px;
+  width: 90px;
+  height: 4px;
+  background: #e5e7eb;
+  margin: 0 8px 24px;
+  border-radius: 10px;
 }
 
 .progress-line.active-line {
-  border-color: #F64F54;
-}
-
-.cancelled-step .circle {
-  background: #DC2626 !important;
-  color: white;
+  background: #D12E26;
 }
 
 .activity-actions {
@@ -1311,19 +1199,17 @@ span.flatpickr-weekday {
 .activity-info p {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0px 0;
+  gap: 10px;
+  margin: 9px 0;
   color: #4b5563;
-  font-weight: 400;
-  line-height: 1.5;
-  font-size: 15px;
-  white-space: normal;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .activity-info-icon {
-  width: 20px;
-  min-width: 20px;
-  height: 20px;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1340,7 +1226,6 @@ span.flatpickr-weekday {
 .activity-info-text {
   display: flex;
   align-items: center;
-  font-weight: 400;
 }
 
 .notification-header-row {
@@ -2843,4 +2728,3 @@ td { padding: 12px; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
     padding: 22px;
   }
 }
-

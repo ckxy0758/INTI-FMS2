@@ -148,20 +148,24 @@
         : "";
 
       if (bookingStatus === "cancelled") {
-      return `
-        <div class="progress-wrapper">
-          <div class="progress-step active">
-            <div class="circle">1</div>
-            <span>Waiting List</span>
+        return `
+          <div class="progress-wrapper">
+
+            <div class="progress-step active">
+              <div class="circle">1</div>
+              <span>Submitted</span>
+            </div>
+
+            <div class="progress-line active-line"></div>
+
+            <div class="progress-step active cancelled-step">
+              <div class="circle">2</div>
+              <span>Cancelled</span>
+            </div>
+
           </div>
-          <div class="progress-line active-line"></div>
-          <div class="progress-step active cancelled-step">
-            <div class="circle">2</div>
-            <span>Cancelled</span>
-          </div>
-        </div>
-      `;
-    }
+        `;
+      }
 
       if (activity.booking_flow_type === "direct_reservation") {
         if (bookingStatus === "expired") {
@@ -240,9 +244,9 @@
       }
 
       let step = 1;
-      let step1Text = "Waiting List";
-      let step2Text = "Approved";
-      let step3Text = "Attendance Confirmed";
+      let step1Text = "Submitted";
+      let step2Text = "Waiting List";
+      let step3Text = "Approved";
 
       const paymentRequired =
         activity.payment_required === 1 ||
@@ -269,15 +273,12 @@
           step2Text = "Payment Verified";
         }
       } else {
-        if (bookingStatus === "pending" || bookingStatus === "waiting" || bookingStatus === "waitlist") {
-          step = 1;
+        if (bookingStatus === "waiting" || bookingStatus === "waitlist") {
+          step = 2;
+          step2Text = "Waiting List";
         }
 
         if (bookingStatus === "approved") {
-          step = 2;
-        }
-
-        if (bookingStatus === "completed") {
           step = 3;
         }
       }
