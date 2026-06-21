@@ -1756,19 +1756,33 @@ router.get("/bookings/current-booking/:facility_id/:user_id", (req, res) => {
   const facilityId = req.params.facility_id;
   const userId = req.params.user_id;
 
-  // This query finds the reservation happening RIGHT NOW
+  // 1. GET EXACT LOCAL TIME FROM NODE.JS
+  const now = new Date();
+  
+  // Format Date to YYYY-MM-DD
+  const localDate = now.getFullYear() + '-' + 
+                    String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(now.getDate()).padStart(2, '0');
+                    
+  // Format Time to HH:MM:SS
+  const localTime = String(now.getHours()).padStart(2, '0') + ':' + 
+                    String(now.getMinutes()).padStart(2, '0') + ':' + 
+                    String(now.getSeconds()).padStart(2, '0');
+
+  // 2. We inject localDate and localTime directly into the query
   const sql = `
     SELECT booking_id 
     FROM bookings 
     WHERE user_id = ? 
     AND facility_id = ? 
     AND booking_status = 'reserved'
-    AND booking_date = CURDATE()
-    AND CURTIME() BETWEEN start_time AND end_time
+    AND booking_date = ?
+    AND ? BETWEEN start_time AND end_time
     LIMIT 1
   `;
 
-  db.query(sql, [userId, facilityId], (err, result) => {
+  // 3. Pass all 4 variables to the database query
+  db.query(sql, [userId, facilityId, localDate, localTime], (err, result) => {
     if (err) {
       console.error("Database error in current-booking:", err);
       return res.json({ success: false, message: "Database error" });

@@ -15,35 +15,30 @@
   <p id="errorMessage" style="color: red;"></p>
 
   <script>
-    // 1. Get Facility ID from the URL first
+    // 1. ALWAYS get the parameters first
     const urlParams = new URLSearchParams(window.location.search);
     const facilityId = urlParams.get('facility_id');
 
-    // 2. Check if user is logged in
+    // 2. CHECK LOGIN FIRST - Before anything else
     const user = JSON.parse(localStorage.getItem("user")) || JSON.parse(sessionStorage.getItem("user"));
     
     if (!user) {
       alert("Please log in to the Facility Management System first to check in.");
-      
-      // FIX: Pass the facilityId back to the login page so it can return the user here
       if (facilityId) {
         window.location.href = `login.html?return_to=${encodeURIComponent('scan.html?facility_id=' + facilityId)}`;
       } else {
         window.location.href = "login.html";
       }
-      
     } else {
-      // 3. If user is logged in, continue with the booking lookup
+      // 3. ONLY if logged in, do the fetch
       if (!facilityId) {
         document.getElementById("errorMessage").innerText = "Invalid QR Code.";
       } else {
-        // Ask the server for the correct Booking ID
         fetch(`/api/bookings/current-booking/${facilityId}/${user.id}`)
           .then(res => res.json())
           .then(data => {
             if (data.success) {
-              // Redirect to their specific booking details page
-            window.location.replace(`booking-details.html?id=${data.booking_id}&auto_checkin=true`);
+              window.location.replace(`booking-details.html?id=${data.booking_id}&auto_checkin=true`);
             } else {
               document.getElementById("errorMessage").innerText = data.message;
             }
