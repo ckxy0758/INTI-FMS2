@@ -434,7 +434,7 @@ input, select, textarea {
 
 .date-input-wrapper svg {
   position: absolute;
-  right: 12px;  /* change left to right */
+  right: 12px;
   left: auto;
   color: #D12E26;
   pointer-events: none;
@@ -443,8 +443,8 @@ input, select, textarea {
 
 .date-input-wrapper input {
   width: 100% !important;
-  padding-left: 14px !important;   /* remove left padding */
-  padding-right: 36px !important;  /* add right padding so text doesn't overlap icon */
+  padding-left: 14px !important;
+  padding-right: 36px !important;
 }
 
 .flatpickr-months .flatpickr-month {
@@ -455,6 +455,7 @@ input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: static;
 }
 
 .flatpickr-current-month {
@@ -462,12 +463,15 @@ input, select, textarea {
   font-weight: 700;
   color: #111827;
   font-family: 'Poppins', sans-serif;
-  position: static;
-  width: auto;
+  position: static !important;
+  width: auto !important;
   padding: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 3px;
+  white-space: nowrap;
+  margin: 0 auto;
 }
 
 .flatpickr-current-month .flatpickr-monthDropdown-months {
@@ -480,6 +484,20 @@ input, select, textarea {
   padding: 0;
   margin: 0;
   cursor: pointer;
+  width: 100px !important;
+  text-align: center !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+.flatpickr-current-month .numInputWrapper {
+  width: auto !important;
+  display: inline-flex;
+  align-items: center;
+}
+
+.flatpickr-current-month .numInputWrapper span {
+  display: none;
 }
 
 .flatpickr-current-month input.cur-year {
@@ -487,6 +505,13 @@ input, select, textarea {
   font-size: 17px;
   color: #111827;
   font-family: 'Poppins', sans-serif;
+  width: 100px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-align: center !important;
 }
 
 .flatpickr-prev-month,
@@ -496,7 +521,7 @@ input, select, textarea {
   transform: none !important;
   background: transparent !important;
   border-radius: 8px !important;
-  padding: 4px 8px !important;
+  padding: 4px 4px !important;
   height: 40px !important;
   display: flex !important;
   align-items: center !important;
@@ -533,6 +558,7 @@ span.flatpickr-weekday {
   font-size: 13px;
   font-family: 'Poppins', sans-serif;
 }
+
 .flatpickr-day {
   margin: 2px !important;
 }
@@ -598,7 +624,7 @@ span.flatpickr-weekday {
 }
 
 .flatpickr-calendar {
-  width: 300px !important;
+  width: 330px !important;
   border-radius: 16px !important;
   box-shadow: 0 8px 30px rgba(0,0,0,0.12) !important;
   border: 1px solid #e5e7eb !important;
@@ -636,6 +662,11 @@ span.flatpickr-weekday {
   background: #D12E26 !important;
   color: #ffffff !important;
   border: none !important;
+}
+
+.flatpickr-monthDropdown-months {
+  -webkit-appearance: none !important;
+  appearance: none !important;
 }
 
 /* ===== FLATPICKR BOTTOM ROW ===== */
@@ -680,15 +711,6 @@ span.flatpickr-weekday {
 
 .fp-apply-btn:hover {
   background: #b92720;
-}
-
-.flatpickr-current-month .numInputWrapper span {
-  display: none;
-}
-
-.flatpickr-monthDropdown-months {
-  -webkit-appearance: none !important;
-  appearance: none !important;
 }
 
 /* ===== CUSTOM DROPDOWN ===== */
