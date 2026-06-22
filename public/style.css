@@ -1556,7 +1556,7 @@ span.flatpickr-weekday {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 14px;
-  padding: 26px;
+  padding: 20px;
   display: flex;
   align-items: center;
   gap: 28px;
@@ -1579,15 +1579,16 @@ span.flatpickr-weekday {
 }
 
 .profile-info h2 {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 24px;
   color: #111827;
+  font-weight: 700;
 }
 
 .profile-info p {
-  margin: 6px 0;
+  margin: 4px 0 5px 0;
   color: #374151;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 /* ===== FIX FACILITY DETAILS META ALIGNMENT ===== */
