@@ -127,6 +127,47 @@ router.post("/change-password", (req, res) => {
   });
 });
 
+router.post("/forgot-password", (req, res) => {
+
+  const { email, newPassword } = req.body;
+
+  if (!email || !newPassword) {
+    return res.json({
+      success: false,
+      message: "Please fill in all fields"
+    });
+  }
+
+  const sql = `
+    UPDATE users
+    SET password = ?, must_change_password = FALSE
+    WHERE email = ?
+    AND status = 'active'
+  `;
+
+  db.query(sql, [newPassword, email], (err, result) => {
+
+    if (err) {
+      return res.json({
+        success: false,
+        message: "Database error"
+      });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.json({
+        success: false,
+        message: "Email not found"
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Password updated successfully"
+    });
+  });
+});
+
 router.put("/users/:id/deactivate", (req, res) => {
   const userId = req.params.id;
 
