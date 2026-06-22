@@ -447,29 +447,19 @@ router.get("/facilities/:id/available-slots", (req, res) => {
 
   updateCubicleBookingStatuses(() => {
     if (!selectedDate) {
-      return res.json({
-        success: false,
-        message: "Date is required",
-        slots: []
-      });
+      return res.json({ success: false, message: "Date is required", slots: [] });
     }
 
     const dayNumber = new Date(selectedDate).getDay();
-
     if (dayNumber === 0 || dayNumber === 6) {
-      return res.json({
-        success: true,
-        message: "Bookings are not available on Saturday and Sunday",
-        slots: []
-      });
+      return res.json({ success: true, message: "Bookings are not available on Saturday and Sunday", slots: [] });
     }
 
-    const selectedDay = new Date(selectedDate).toLocaleDateString("en-US", {
-      weekday: "long"
-    });
+    const selectedDay = new Date(selectedDate).toLocaleDateString("en-US", { weekday: "long" });
 
+    // FIX: Added 'facility_name' so we can check for the Music Room specifically
     const facilitySql = `
-      SELECT operating_start, operating_end
+      SELECT facility_name, operating_start, operating_end, booking_flow_type
       FROM facilities
       WHERE facility_id = ?
       LIMIT 1
@@ -477,11 +467,7 @@ router.get("/facilities/:id/available-slots", (req, res) => {
 
     db.query(facilitySql, [facilityId], (facilityErr, facilityResult) => {
       if (facilityErr || facilityResult.length === 0) {
-        return res.json({
-          success: false,
-          message: "Facility not found",
-          slots: []
-        });
+        return res.json({ success: false, message: "Facility not found", slots: [] });
       }
 
       const facility = facilityResult[0];
@@ -491,89 +477,72 @@ router.get("/facilities/:id/available-slots", (req, res) => {
         FROM bookings
         WHERE facility_id = ?
         AND booking_date = ?
-        AND booking_status IN (
-          'pending',
-          'pending_payment',
-          'payment_submitted',
-          'approved',
-          'reserved',
-          'checked_in',
-          'key_collected'
-        )
+        AND booking_status IN ('pending', 'pending_payment', 'payment_submitted', 'approved', 'reserved', 'checked_in', 'key_collected')
       `;
 
       db.query(bookingSql, [facilityId, selectedDate], (bookingErr, bookingResult) => {
         if (bookingErr) {
-          return res.json({
-            success: false,
-            message: "Failed to check bookings",
-            slots: []
-          });
+          return res.json({ success: false, message: "Failed to check bookings", slots: [] });
         }
 
         const timetableSql = `
           SELECT start_time, end_time
           FROM class_timetable
-          WHERE facility_id = ?
-          AND day_of_week = ?
+          WHERE facility_id = ? AND day_of_week = ?
         `;
 
         db.query(timetableSql, [facilityId, selectedDay], (timetableErr, timetableResult) => {
           if (timetableErr) {
-            console.log("Timetable load error:", timetableErr);
-
-            return res.json({
-              success: false,
-              message: "Failed to check class timetable",
-              slots: []
-            });
+            return res.json({ success: false, message: "Failed to check class timetable", slots: [] });
           }
 
           const slots = [];
-
           const operatingStart = Number(facility.operating_start.substring(0, 2));
           const operatingEnd = Number(facility.operating_end.substring(0, 2));
 
           if (isNaN(operatingStart) || isNaN(operatingEnd) || operatingStart >= operatingEnd) {
-            return res.json({
-              success: false,
-              message: "Invalid operating hours for this facility",
-              slots: []
-            });
+            return res.json({ success: false, message: "Invalid operating hours", slots: [] });
           }
 
           const today = new Date().toISOString().split("T")[0];
-
+          const now = new Date();
+          
           const minimumBookingTime = new Date();
-          minimumBookingTime.setMinutes(minimumBookingTime.getMinutes() + 30);
+          minimumBookingTime.setMinutes(minimumBookingTime.getMinutes() + 30); // For normal facilities
 
           for (let hour = operatingStart; hour < operatingEnd; hour++) {
+
+            // --- NEW LOGIC: MUSIC ROOM CLEANING TIME ---
+            // dayNumber 2 = Tuesday, 5 = Friday
+            // hour 9 = 9:00 AM to 10:00 AM slot
+            if (facility.facility_name === 'Music Room' && (dayNumber === 2 || dayNumber === 5) && hour === 9) {
+                continue; // Skip this time slot entirely!
+            }
+            // -------------------------------------------
+
             const startTime = `${String(hour).padStart(2, "0")}:00:00`;
             const endTime = `${String(hour + 1).padStart(2, "0")}:00:00`;
 
-            const slotDateTime = new Date(`${selectedDate}T${startTime}`);
+            const slotStartDateTime = new Date(`${selectedDate}T${startTime}`);
+            const slotEndDateTime = new Date(`${selectedDate}T${endTime}`);
 
-            if (selectedDate === today && slotDateTime < minimumBookingTime) {
-              continue;
+            if (selectedDate === today) {
+                if (facility.booking_flow_type === 'direct_reservation') {
+                    // CUBICLE: Hide the slot if there is less than 30 minutes left before it ends
+                    const minsLeft = (slotEndDateTime - now) / 60000;
+                    if (minsLeft < 30) {
+                        continue;
+                    }
+                } else {
+                    // NORMAL: Hide if start time doesn't meet the 30-min advance rule
+                    if (slotStartDateTime < minimumBookingTime) {
+                        continue;
+                    }
+                }
             }
 
-            const isBooked = bookingResult.some(booking => {
-              return isTimeOverlap(
-                startTime,
-                endTime,
-                booking.start_time,
-                booking.end_time
-              );
-            });
-
-            const isClassTime = timetableResult.some(classSlot => {
-              return isTimeOverlap(
-                startTime,
-                endTime,
-                classSlot.start_time,
-                classSlot.end_time
-              );
-            });
+            const isBooked = bookingResult.some(booking => isTimeOverlap(startTime, endTime, booking.start_time, booking.end_time));
+            const isClassTime = timetableResult.some(classSlot => isTimeOverlap(startTime, endTime, classSlot.start_time, classSlot.end_time));
 
             if (!isBooked && !isClassTime) {
               slots.push({
@@ -584,10 +553,7 @@ router.get("/facilities/:id/available-slots", (req, res) => {
             }
           }
 
-          return res.json({
-            success: true,
-            slots: slots
-          });
+          return res.json({ success: true, slots: slots });
         });
       });
     });
@@ -648,10 +614,10 @@ function releaseExpiredCubicleBookings(callback) {
     UPDATE bookings b
     JOIN facilities f ON b.facility_id = f.facility_id
     SET b.booking_status = 'expired'
-    WHERE LOWER(TRIM(f.facility_name)) LIKE 'cubicle%'
+    WHERE f.booking_flow_type = 'direct_reservation'
     AND b.booking_status = 'reserved'
     AND NOW() > DATE_ADD(
-      TIMESTAMP(b.booking_date, b.start_time),
+      GREATEST(TIMESTAMP(b.booking_date, b.start_time), b.created_at),
       INTERVAL 15 MINUTE
     )
   `;
@@ -733,6 +699,7 @@ router.post("/bookings", (req, res) => {
     });
   }
 
+  /*Deleted
   const now = new Date();
 
   if (start < now) {
@@ -741,6 +708,8 @@ router.post("/bookings", (req, res) => {
       message: "You cannot book a date or time that has already passed"
     });
   }
+
+  */
 
   const duration_hours = (end - start) / (1000 * 60 * 60);
 
@@ -759,8 +728,26 @@ router.post("/bookings", (req, res) => {
       });
     }
 
+
   const bookingFlowType = facilityResult[0].booking_flow_type || "normal_approval";
   const facilityName = facilityResult[0].facility_name;
+  const now = new Date();
+
+// --- NEW LOGIC: Validation based on Facility Type ---
+    if (bookingFlowType === 'direct_reservation') {
+        // Cubicle: Allow booking ongoing slots, but block if less than 30 mins remain!
+        const minsLeft = (end - now) / 60000;
+        if (minsLeft < 30) {
+            return res.json({ success: false, message: "It is too late to book this time slot (less than 30 minutes remaining)." });
+        }
+    } else {
+        // Normal Facilities: 30 minutes advance rule
+        const minAdvance = new Date(now.getTime() + 30 * 60000);
+        if (start < minAdvance) {
+            return res.json({ success: false, message: "You must book at least 30 minutes in advance" });
+        }
+    }
+  // ---------------------------------------------------
 
   let bookingStatus = "pending";
   let paymentRequired = 0;
@@ -1225,69 +1212,43 @@ router.put("/bookings/:id/check-in", (req, res) => {
 
   const sql = `
     SELECT 
-      booking_id,
-      user_id,
+      booking_id, user_id,
       DATE_FORMAT(booking_date, '%Y-%m-%d') AS booking_date,
       TIME_FORMAT(start_time, '%H:%i:%s') AS start_time,
       TIME_FORMAT(end_time, '%H:%i:%s') AS end_time,
-      booking_status
+      booking_status, created_at
     FROM bookings
-    WHERE booking_id = ?
-    AND user_id = ?
-    LIMIT 1
+    WHERE booking_id = ? AND user_id = ? LIMIT 1
   `;
 
   db.query(sql, [bookingId, user_id], (err, result) => {
-    if (err || result.length === 0) {
-      return res.json({
-        success: false,
-        message: "Booking not found"
-      });
-    }
-
+    // ... keep error checks ...
     const booking = result[0];
-
-    const bookingStatus = booking.booking_status
-      ? booking.booking_status.trim().toLowerCase()
-      : "";
+    const bookingStatus = booking.booking_status ? booking.booking_status.trim().toLowerCase() : "";
 
     if (bookingStatus !== "reserved") {
-      return res.json({
-        success: false,
-        message: "This booking is not available for check-in"
-      });
+      return res.json({ success: false, message: "This booking is not available for check-in" });
     }
 
     const startDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
+    const createdAt = new Date(booking.created_at);
     const now = new Date();
 
-    const checkInStart = new Date(startDateTime);
+    // --- NEW LOGIC: Walk-in Grace Period ---
+    // If they booked AFTER the start time, base the 15 mins on the time they booked
+    const baseTime = createdAt > startDateTime ? createdAt : startDateTime;
+
+    const checkInStart = new Date(baseTime);
     checkInStart.setMinutes(checkInStart.getMinutes() - 15);
 
-    const checkInEnd = new Date(startDateTime);
+    const checkInEnd = new Date(baseTime);
     checkInEnd.setMinutes(checkInEnd.getMinutes() + 15);
 
-    console.log("Check-in debug:", {
-      bookingId,
-      booking_date: booking.booking_date,
-      start_time: booking.start_time,
-      now,
-      checkInStart,
-      checkInEnd
-    });
-
     if (now < checkInStart) {
-      return res.json({
-        success: false,
-        message: "Check-in is not open yet"
-      });
+      return res.json({ success: false, message: "Check-in is not open yet" });
     }
-
     if (now > checkInEnd) {
-      return res.json({
-        success: false,
-        message: "Check-in time has expired"
-      });
+      return res.json({ success: false, message: "Check-in time has expired" });
     }
 
     const updateSql = `
@@ -1322,6 +1283,7 @@ router.get("/bookings/:id", (req, res) => {
         b.user_id,
         b.facility_id,
         b.program,
+        b.created_at,
         DATE_FORMAT(b.booking_date, '%Y-%m-%d') AS booking_date,
         TIME_FORMAT(b.start_time, '%H:%i:%s') AS start_time,
         TIME_FORMAT(b.end_time, '%H:%i:%s') AS end_time,

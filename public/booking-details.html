@@ -137,7 +137,7 @@
 
           <div class="action-box">
             <strong>Check-in Window</strong>
-            <h3>${getCheckInStartTime(booking.start_time)} - ${getCheckInEndTime(booking.start_time)}</h3>
+            <h3>${getCheckInStartTime(booking)} - ${getCheckInEndTime(booking)}</h3>
             <p>For ${formatTime(booking.start_time)} booking</p>
           </div>
 
@@ -273,29 +273,38 @@
 
     function isWithinCheckInWindow(booking) {
       const startDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
-      const checkInStart = new Date(startDateTime);
+      const createdAt = new Date(booking.created_at);
+      
+      // If booked late, base window on creation time
+      const baseTime = createdAt > startDateTime ? createdAt : startDateTime;
+
+      const checkInStart = new Date(baseTime);
       checkInStart.setMinutes(checkInStart.getMinutes() - 15);
-      const checkInEnd = new Date(startDateTime);
+      const checkInEnd = new Date(baseTime);
       checkInEnd.setMinutes(checkInEnd.getMinutes() + 15);
+      
       const now = new Date();
       return now >= checkInStart && now <= checkInEnd;
     }
 
-    function getCheckInStartTime(startTime) {
-      const [hour, minute] = startTime.split(":").map(Number);
-      const date = new Date();
-      date.setHours(hour);
-      date.setMinutes(minute - 15);
-      return formatTimeFromDate(date);
+    function getCheckInStartTime(booking) {
+      const startDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
+      const createdAt = new Date(booking.created_at);
+      const baseTime = createdAt > startDateTime ? createdAt : startDateTime;
+
+      baseTime.setMinutes(baseTime.getMinutes() - 15);
+      return formatTimeFromDate(baseTime);
     }
 
-    function getCheckInEndTime(startTime) {
-      const [hour, minute] = startTime.split(":").map(Number);
-      const date = new Date();
-      date.setHours(hour);
-      date.setMinutes(minute + 15);
-      return formatTimeFromDate(date);
+    function getCheckInEndTime(booking) {
+      const startDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
+      const createdAt = new Date(booking.created_at);
+      const baseTime = createdAt > startDateTime ? createdAt : startDateTime;
+
+      baseTime.setMinutes(baseTime.getMinutes() + 15);
+      return formatTimeFromDate(baseTime);
     }
+
 
     function formatTimeFromDate(date) {
       let h = date.getHours();
