@@ -68,9 +68,9 @@ input, select, textarea {
   padding: 12px;
   font-size: 12px;
   line-height: 1.5;
+  text-align: justify;
 
   box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-
   opacity: 0;
   visibility: hidden;
   transform: translateY(-5px);
