@@ -2854,3 +2854,49 @@ input[type="password"]::-webkit-reveal {
 .back-link:hover {
   text-decoration: underline;
 }
+
+/* =========================
+   FORGOT PASSWORD PAGE ONLY
+   ========================= */
+
+.forgot-password-page .login-card {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 28px; 
+}
+
+/* Title */
+.forgot-password-page .login-card h1 {
+  margin: 0 0 4px 0;
+}
+
+/* Subtitle */
+.forgot-password-page .login-card p {
+  margin: 0 0 14px 0;
+}
+
+/* Labels */
+.forgot-password-page .login-card label {
+  margin: 10px 0 4px;
+}
+
+/* Email field */
+.forgot-password-page #email {
+  margin-bottom: 12px;
+}
+
+/* Password blocks */
+.forgot-password-page .password-input {
+  margin-bottom: 12px;
+}
+
+/* Button */
+.forgot-password-page .login-card button {
+  margin-top: 12px;
+}
+
+/* Message */
+.forgot-password-page #message {
+  margin-top: 12px;
+  font-size: 14px;
+}
