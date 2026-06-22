@@ -47,6 +47,43 @@ input, select, textarea {
   align-items: center;
   justify-content: center;
   font-weight: bold;
+  cursor: pointer;
+
+  position: relative; /* IMPORTANT */
+}
+
+/* Tooltip box */
+.help-tooltip {
+  position: absolute;
+  top: 140%;
+  right: 0;
+
+  width: 280px;
+  background: #ffffff;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #D12E26;
+  border-radius: 10px;
+
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-5px);
+  transition: 0.2s ease;
+
+  z-index: 9999;
+}
+
+/* Show on hover */
+.help-icon:hover .help-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
 
 /* ===== LOGIN HERO ===== */
