@@ -39,6 +39,7 @@
           <option value="collected">Key Collected</option>
           <option value="returned">Returned</option>
           <option value="overdue">Overdue</option>
+          <option value="late">Late (Returned Late)</option>
         </select>
       </div>
 
@@ -152,8 +153,15 @@
           }
 
           if (statusValue === "returned") {
-            return item.key_status === "returned" ||
-                   item.booking_status === "completed";
+            return (
+              (item.key_status === "returned" ||
+              item.booking_status === "completed") &&
+              !isLate(item)
+            );
+          }
+
+          if (statusValue === "late") {
+            return isLate(item);
           }
 
           return item.key_status === statusValue;
@@ -164,6 +172,10 @@
     }
 
     function getKeyStatusText(item) {
+      if (isLate(item)) {
+        return `<span class="key-late">Late - Returned Late</span>`;
+      }
+      
       if (
         item.key_status === "returned" ||
         item.booking_status === "completed"
@@ -246,6 +258,15 @@
       const now = new Date();
 
       return now > endDateTime;
+    }
+
+    function isLate(item) {
+      if (!item.key_returned_at) return false;
+
+      const endDateTime = new Date(`${item.booking_date}T${item.end_time}`);
+      const returnedTime = new Date(item.key_returned_at);
+
+      return returnedTime > endDateTime;
     }
 
     function getTimeLeft(item) {
