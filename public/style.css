@@ -2990,6 +2990,11 @@ body.sidebar-collapsed .main-content {
   font-weight: 800;
 }
 
+.key-late {
+  color: #7c3aed;
+  font-weight: 800;
+}
+
 .notification-card {
   cursor: pointer;
 }

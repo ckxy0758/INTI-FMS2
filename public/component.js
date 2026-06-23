@@ -128,7 +128,7 @@ function loadLayout(activePage) {
 
         <br><br>
 
-        <a href="#" onclick="logout()">
+        <a href="login.html" onclick="logout()">
           <span class="sidebar-icon">
             <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="currentColor">
               <path d="M216-120q-27 0-46.5-19.5T150-186v-588q0-27 19.5-46.5T216-840h294v80H216v588h294v80H216Zm444-160-56-58 102-102H360v-80h346L604-622l56-58 200 200-200 200Z"/>
