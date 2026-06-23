@@ -25,7 +25,6 @@
 
         <div class="manage-user-toolbar">
           <div class="user-search-box">
-            <span>🔍</span>
             <input 
               type="text" 
               id="facilitySearch" 
@@ -47,32 +46,48 @@
 
         <div class="facility-form-card">
 
-          <h2 id="formTitle">Selected Facility</h2>
+          <h2 id="formTitle" class="facility-selected-title">
+            Selected Facility: <span id="facilityNameText">Facility Name</span>
+          </h2>
           <hr>
 
           <div class="facility-photo-row">
-            <img id="facilityPreview" src="images/bg-image-2.jpeg" class="facility-edit-image">
 
-            <label class="facility-upload-box">
-              📷
-              <span>Edit Room Photo</span>
-              <small>JPG, PNG up to 5MB</small>
-              <input type="file" id="imageFile" accept="image/*" onchange="previewImage(event)" hidden>
-            </label>
+          <div id="facilityImageBox" class="facility-image-box">
+
+            <img id="facilityPreview"
+                class="facility-edit-image"
+                style="display:none;">
+
+            <div id="facilityNoImage" class="facility-empty-state">
+              <h3>No Image Uploaded</h3>
+              <p>Upload a facility photo to display a preview here.</p>
+            </div>
+
           </div>
+
+          <label class="facility-upload-box">
+            <span class="upload-title">Add Photo</span>
+            <small class="upload-subtitle">JPG or PNG up to 5MB</small>
+            <p class="upload-hint">Click here to upload</p>
+
+            <input type="file" id="imageFile" accept="image/*" onchange="previewImage(event)" hidden>
+          </label>
+
+        </div>
 
           <input type="hidden" id="facility_id">
 
           <div class="facility-form-grid">
 
-            <div>
+            <div class="facility-full-row">
               <label>Facility Name</label>
               <input type="text" id="facility_name">
             </div>
 
-            <div>
+            <div class="facility-full-row">
               <label>Description</label>
-              <input type="text" id="description">
+              <input type="text" id="description" placeholder="Enter facility description...">
             </div>
 
             <div>
@@ -137,11 +152,19 @@
 
           </div>
 
-          <label>Facility Rules</label>
-          <textarea id="rules"></textarea>
+          <div class="facility-textarea-grid">
 
-          <label>Additional Information</label>
-          <textarea id="additional_info"></textarea>
+            <div class="facility-field">
+              <label>Facility Rules</label>
+              <textarea id="rules" placeholder="Enter facility rules..."></textarea>
+            </div>
+
+            <div class="facility-field">
+              <label>Additional Information</label>
+              <textarea id="additional_info" placeholder="Enter additional information..."></textarea>
+            </div>
+
+          </div>
 
           <div class="facility-form-grid">
             <div>
@@ -199,17 +222,20 @@
           </div>
 
           <div class="facility-form-actions">
-            <button class="delete-facility-btn" type="button" onclick="backToFacilityList()">
+            <button class="back-facility-btn" type="button" onclick="backToFacilityList()">
               Back
             </button>
 
-            <button class="delete-facility-btn" id="deleteBtn" type="button" onclick="deleteFacility()">
-              Delete Facility
-            </button>
+            <div class="right-action-buttons">
+              <button class="delete-facility-btn" id="deleteBtn" type="button" onclick="deleteFacility()">
+                Delete Facility
+              </button>
 
-            <button class="create-account-btn" type="button" onclick="saveFacility()">
-              Save Changes
-            </button>
+              <button class="save-facility-btn" type="button" onclick="saveFacility()">
+                Save Changes
+              </button>
+            </div>
+
           </div>
 
           <p id="facilityMessage"></p>
@@ -308,15 +334,24 @@
             >
 
             <div class="admin-facility-info">
-              <h3>${facility.facility_name}</h3>
-              <p>${facility.description || "No description available"}</p>
-              <p>📍 Location: ${facility.location || "-"}</p>
-              <p>🕒 Time: ${formatTime(facility.operating_start)} - ${formatTime(facility.operating_end)}</p>
-              <p>📌 Flow: ${formatBookingFlow(facility.booking_flow_type)}</p>
-            </div>
+            <h3>${facility.facility_name}</h3>
+            <p class="facility-desc">${facility.description || "No description available"}</p>
+            <p class="facility-meta">
+              <img src="images/location.svg" width="20" height="20" style="vertical-align: middle; margin-right: 4px;">
+              Location: ${facility.location || "-"}
+            </p>
+            <p class="facility-meta">
+              <img src="images/clock.svg" width="20" height="20" style="vertical-align: middle; margin-right: 4px;">
+              Time: ${formatTime(facility.operating_start)} - ${formatTime(facility.operating_end)}
+            </p>
+            <p class="facility-meta">
+              <img src="images/flow.svg" width="20" height="20" style="vertical-align: middle; margin-right: 4px;">
+              Flow: ${formatBookingFlow(facility.booking_flow_type)}
+            </p>
+          </div>
 
             <button class="facility-edit-btn" onclick="editFacility(${facility.facility_id})">
-              ✎
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#D12E26" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
             </button>
 
           </div>
@@ -341,7 +376,7 @@
       document.getElementById("facilityListPage").style.display = "none";
       document.getElementById("facilityFormPage").style.display = "block";
 
-      document.getElementById("formTitle").innerText = "Add New Facility";
+      document.getElementById("facilityNameText").innerText = "New Facility";
       document.getElementById("deleteBtn").style.display = "none";
 
       clearFacilityForm();
@@ -358,7 +393,7 @@
       document.getElementById("facilityListPage").style.display = "none";
       document.getElementById("facilityFormPage").style.display = "block";
 
-      document.getElementById("formTitle").innerText = `Selected Facility: ${facility.facility_name}`;
+      document.getElementById("facilityNameText").innerText = facility.facility_name;
       document.getElementById("deleteBtn").style.display = "inline-block";
 
       document.getElementById("facility_id").value = facility.facility_id;
@@ -378,8 +413,11 @@
       document.getElementById("visible_to").value = facility.visible_to || "both";
       document.getElementById("key_required").value = String(facility.key_required || 0);
 
-      document.getElementById("facilityPreview").src = facility.image_path || "images/bg-image-2.jpeg";
-      imageBase64 = facility.image_path || "";
+      document.getElementById("facilityPreview").src = "";
+      document.getElementById("facilityPreview").style.display = "none";
+      document.getElementById("facilityNoImage").style.display = "flex";
+
+      imageBase64 = "";
 
       const equipment = facility.equipment || "";
 
@@ -452,7 +490,9 @@
       document.getElementById("equipmentOptions").style.display = "none";
       clearEquipmentFields();
 
-      document.getElementById("facilityPreview").src = "images/bg-image-2.jpeg";
+      document.getElementById("facilityPreview").style.display = "none";
+    document.getElementById("facilityPreview").src = "";
+    document.getElementById("facilityNoImage").style.display = "block";
       document.getElementById("facilityMessage").innerText = "";
       imageBase64 = "";
     }
@@ -490,6 +530,8 @@
 
         imageBase64 = canvas.toDataURL("image/jpeg", 0.7);
         document.getElementById("facilityPreview").src = imageBase64;
+        document.getElementById("facilityPreview").style.display = "block";
+        document.getElementById("facilityNoImage").style.display = "none";
       };
       img.src = e.target.result;
     };
@@ -562,7 +604,7 @@
         visible_to: visibleTo,
         key_required: keyRequired,
         equipment: getEquipmentText(),
-        image_path: imageBase64 || "images/bg-image-2.jpeg"
+        image_path: imageBase64
       };
 
       if (
