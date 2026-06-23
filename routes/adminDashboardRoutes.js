@@ -9,7 +9,7 @@ router.get("/admin/dashboard", (req, res) => {
   // 1. Fetch all 4 KPIs efficiently in a single query
   const kpiSql = `
     SELECT 
-      (SELECT COUNT(*) FROM bookings WHERE booking_status IN ('pending', 'payment_submitted')) AS pendingBookings,
+      (SELECT COUNT(*) FROM bookings WHERE booking_status IN ('pending', 'pending_payment')) AS pendingBookings,
       (SELECT COUNT(*) FROM users WHERE status = 'active') AS activeUsers,
       (SELECT COUNT(*) FROM facilities) AS totalFacilities,
       (SELECT COUNT(*) FROM bookings WHERE key_status = 'collected') AS unreturnedKeys
