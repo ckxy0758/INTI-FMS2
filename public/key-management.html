@@ -24,7 +24,6 @@
 
       <div class="manage-user-toolbar">
         <div class="user-search-box">
-          <span>🔍</span>
           <input 
             type="text" 
             id="keySearch" 
@@ -107,14 +106,32 @@
             <div class="key-card-info">
               <h3>${item.facility_name} Key</h3>
 
-              <p>👤 <strong>Holder:</strong> ${item.holder_name}</p>
-              <p>📅 <strong>Date:</strong> ${formatDate(item.booking_date)}</p>
-              <p>🕒 <strong>Start Time:</strong> ${formatTime(item.start_time)}</p>
-              <p>🕘 <strong>End Time:</strong> ${formatTime(item.end_time)}</p>
+              <p>
+                <img class="key-info-icon" src="images/person_24dp_D12E26_FILL0_wght400_GRAD0_opsz24.svg" alt="">
+                <strong>Holder:</strong> ${item.holder_name}
+              </p>
+
+              <p>
+                <img class="key-info-icon" src="images/calendar_month_24dp_D12E26_FILL0_wght400_GRAD0_opsz24.svg" alt="">
+                <strong>Date:</strong> ${formatDate(item.booking_date)}
+              </p>
+
+              <p>
+                <img class="key-info-icon" src="images/clock_loader_10_24dp_D12E26_FILL0_wght400_GRAD0_opsz24.svg" alt="">
+                <strong>Start Time:</strong> ${formatTime(item.start_time)}
+              </p>
+
+              <p>
+                <img class="key-info-icon" src="images/clock_loader_60_24dp_D12E26_FILL0_wght400_GRAD0_opsz24.svg" alt="">
+                <strong>End Time:</strong> ${formatTime(item.end_time)}
+              </p>
 
               ${
                 item.key_returned_at
-                  ? `<p>✅ <strong>Returned At:</strong> ${formatReturnedTime(item.key_returned_at)}</p>`
+                  ? `<p>
+                      <img class="key-info-icon" src="images/done_all_24dp_D12E26_FILL0_wght400_GRAD0_opsz24.svg" alt="">
+                      <strong>Returned At:</strong> ${formatReturnedTime(item.key_returned_at)}
+                    </p>`
                   : ""
               }
             </div>
@@ -222,8 +239,12 @@
       }
 
       return `
-        <button class="key-more-btn" onclick="viewKeyRecord(${item.booking_id})">
-          ›
+        <button class="key-more-btn" onclick="viewKeyRecord(${item.booking_id})" title="View Details">
+          <img 
+            src="images/arrow_forward_ios_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg"
+            class="key-arrow-icon"
+            alt="View Details"
+          >
         </button>
       `;
     }
