@@ -2770,7 +2770,7 @@ body.sidebar-collapsed .main-content {
   border-radius: 12px;
   background: #ffffff;
   color: #6b7280;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 
   display: inline-flex;
@@ -2875,34 +2875,86 @@ body.sidebar-collapsed .main-content {
 
 .booking-action-icons {
   text-align: center;
+  vertical-align: middle;
   white-space: nowrap;
 }
 
-.booking-action-icons button {
-  margin: 0 8px;
+.action-icon-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  height: 32px;
 }
 
 .approve-icon,
-.reject-icon,
-.more-btn {
-  border: none;
-  background: transparent;
-  font-size: 26px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.approve-icon {
-  color: #3f9b39; /* green correct icon */
-}
-
 .reject-icon {
-  color: #d12e26; /* red wrong icon */
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  line-height: 0;
+  transition: 0.2s ease;
+}
+
+.approve-img {
+  width: 25px;
+  height: 25px;
+  display: block;
+}
+
+.reject-img {
+  width: 22px;
+  height: 22px;
+  display: block;
+
+  filter: brightness(0) saturate(100%) invert(22%) sepia(96%) saturate(2363%) hue-rotate(346deg) brightness(91%) contrast(92%);
+}
+
+.approve-icon:hover {
+  background: #e8f7e8;
+}
+
+.reject-icon:hover {
+  background: #fde8e7;
 }
 
 .more-btn {
+  width: 36px;
+  height: 32px;
+  padding: 0;
+
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+
   color: #111827;
-  letter-spacing: 2px;
+  cursor: pointer;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  transition: 0.2s ease;
+}
+
+.more-btn svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.more-btn:hover {
+  background: #f3f4f6;
+  color: #D12E26;
 }
 
 .booking-footer {
