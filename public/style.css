@@ -895,7 +895,7 @@ span.flatpickr-weekday {
 .facility-info p {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
   margin: 12px 0;
   font-size: 15px;
   font-weight: 500;
@@ -1135,9 +1135,9 @@ span.flatpickr-weekday {
 }
 
 .facility-inline-icon {
-  width: 24px;
-  min-width: 24px;
-  height: 24px;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
 
   display: flex;
   align-items: center;
@@ -1174,7 +1174,7 @@ span.flatpickr-weekday {
   background: #ffffff;
   border-radius: 8px;
   color: #111827;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -1188,7 +1188,7 @@ span.flatpickr-weekday {
   padding: 12px 18px;
   border: 1.5px solid #e5e7eb;
   border-radius: 8px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .activity-card {
@@ -3353,3 +3353,427 @@ input[type="password"]::-webkit-reveal {
   margin-top: 12px;
   font-size: 14px;
 }
+
+/* ===== REPORTS & ANALYTICS PAGE FIX ===== */
+
+.admin-dashboard {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+/* Fix report rows */
+.admin-top-row {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 24px !important;
+  margin-bottom: 24px !important;
+  align-items: stretch !important;
+}
+
+.admin-bottom-row {
+  width: 100% !important;
+  margin: 0 0 24px 0 !important;
+}
+
+/* Fix card size */
+.admin-top-row .report-card,
+.admin-bottom-row .report-card,
+.report-card {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+
+  background: #ffffff !important;
+  border: 1px solid #e1e5ec !important;
+  border-radius: 18px !important;
+  padding: 24px !important;
+  margin: 0 !important;
+
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.report-card:hover {
+  border-color: #D12E26 !important;
+}
+
+/* Header inside card */
+.card-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  gap: 16px !important;
+  margin-bottom: 22px !important;
+}
+
+.card-header h3,
+.report-card h3 {
+  margin: 0 !important;
+  font-size: 17px !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: #111827 !important;
+  font-weight: 600 !important;
+  line-height: 1.45 !important;
+  max-width: 230px !important;
+}
+
+/* Filter row */
+.mini-filters {
+  display: flex !important;
+  gap: 10px !important;
+  justify-content: flex-end !important;
+  flex-wrap: wrap !important;
+}
+
+.mini-filters select,
+.card-header select {
+  height: 40px !important;
+  max-width: 170px !important;
+
+  border: 1px solid #d9dee8 !important;
+  background: #ffffff !important;
+  color: #374151 !important;
+
+  padding: 0 34px 0 12px !important;
+  border-radius: 10px !important;
+
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  font-family: 'Poppins', sans-serif !important;
+  cursor: pointer !important;
+}
+
+/* Apply button */
+.mini-filter-btn {
+  height: 40px !important;
+  padding: 0 18px !important;
+
+  border: none !important;
+  border-radius: 10px !important;
+  background: #D12E26 !important;
+  color: #ffffff !important;
+
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  font-family: 'Poppins', sans-serif !important;
+
+  cursor: pointer !important;
+}
+
+.mini-filter-btn:hover {
+  background: #e12920 !important;
+}
+
+/* Chart area */
+.card-body {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.report-card canvas {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* KPI cards */
+.kpi-row {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 16px !important;
+  text-align: center !important;
+  margin-bottom: 20px !important;
+}
+
+.kpi-row div {
+  background: #f9fafb !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 14px !important;
+  padding: 16px !important;
+}
+
+.kpi-row span {
+  display: block !important;
+  font-size: 12px !important;
+  color: #6b7280 !important;
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+}
+
+.kpi-row strong {
+  display: block !important;
+  margin-top: 8px !important;
+  font-size: 26px !important;
+  color: #D12E26 !important;
+  font-weight: 800 !important;
+}
+
+/* Insight boxes */
+.insight-box,
+.warning-box,
+.revenue-box {
+  border-radius: 14px !important;
+  padding: 18px !important;
+  margin-top: 16px !important;
+}
+
+.insight-box {
+  background: #eef3ff !important;
+}
+
+.warning-box {
+  background: #fff1f1 !important;
+}
+
+.revenue-box {
+  background: #f9fafb !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.insight-box span,
+.warning-box span,
+.revenue-box span,
+.small-stat-grid span {
+  display: block !important;
+  font-size: 13px !important;
+  color: #6b7280 !important;
+  font-weight: 600 !important;
+}
+
+.insight-box strong,
+.warning-box strong,
+.revenue-box strong {
+  display: block !important;
+  margin-top: 8px !important;
+  font-size: 24px !important;
+  font-weight: 800 !important;
+}
+
+.insight-box strong {
+  color: #315bdc !important;
+}
+
+.warning-box strong {
+  color: #D12E26 !important;
+}
+
+.revenue-box strong {
+  color: #111827 !important;
+}
+
+/* Small payment boxes */
+.small-stat-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 14px !important;
+  margin-top: 16px !important;
+}
+
+.small-stat-grid div {
+  background: #ffffff !important;
+  border: 1px solid #e1e5ec !important;
+  border-radius: 14px !important;
+  padding: 16px !important;
+}
+
+.small-stat-grid strong {
+  display: block !important;
+  margin-top: 8px !important;
+  font-size: 22px !important;
+  color: #111827 !important;
+  font-weight: 800 !important;
+}
+
+/* Stop horizontal scrollbar */
+.main-content {
+  overflow-x: hidden !important;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .admin-top-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .card-header {
+    flex-direction: column !important;
+  }
+
+  .mini-filters {
+    justify-content: flex-start !important;
+  }
+
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ===== REPORT FILTER ALIGNMENT FIX 2 ===== */
+
+.card-header {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 14px !important;
+  margin-bottom: 22px !important;
+}
+
+.card-header h3,
+.report-card h3 {
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+
+  font-size: 17px !important;
+  line-height: 1.35 !important;
+  font-weight: 700 !important;
+
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: #111827 !important;
+}
+
+/* Filters stay inside card */
+.mini-filters {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)) !important;
+  gap: 12px !important;
+  align-items: center !important;
+  justify-content: stretch !important;
+}
+
+/* Select boxes */
+.mini-filters select,
+.card-header select {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 44px !important;
+
+  border: 1px solid #d9dee8 !important;
+  border-radius: 12px !important;
+  background-color: #ffffff !important;
+
+  color: #374151 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+
+  padding: 0 34px 0 14px !important;
+  box-sizing: border-box !important;
+}
+
+/* Apply button same height */
+.mini-filter-btn {
+  width: 100% !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  background: #D12E26 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+/* ===== REPORT APPLY BUTTON POSITION FIX ===== */
+
+.mini-filters {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  width: 100% !important;
+}
+
+/* Make all filter dropdowns same size */
+.mini-filters select,
+.card-header select {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Put Apply button on its own row */
+.mini-filter-btn {
+  grid-column: 1 / -1 !important;
+  justify-self: end !important;
+
+  width: 120px !important;
+  height: 40px !important;
+
+  margin-top: 4px !important;
+
+  border-radius: 12px !important;
+  background: #D12E26 !important;
+  color: #ffffff !important;
+
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+
+/* Reduce report Apply button font weight */
+.mini-filter-btn,
+.report-apply-btn {
+  font-weight: 500 !important;
+}
+
+/* ===== REPORT DROPDOWN ARROW ALIGNMENT ===== */
+
+.mini-filters select,
+.card-header select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+
+  height: 44px !important;
+  padding: 0 42px 0 14px !important;
+
+  background-color: #ffffff !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 18px !important;
+
+  box-sizing: border-box !important;
+}
+
+/* ===== ACTIVITIES PAGE FONT WEIGHT FIX ===== */
+
+/* Tabs: All / Upcoming / Past / Cancelled */
+.activity-filter {
+  font-weight: 500 !important;
+}
+
+/* Sort dropdown */
+#sortActivities {
+  font-weight: 500 !important;
+}
+
+/* Facility title inside activity card */
+.activity-info h3 {
+  font-weight: 600 !important;
+}
+
+/* Description, date, time text */
+.activity-info p {
+  font-weight: 500 !important;
+}
+
+/* Date / Time label text */
+.activity-info-text,
+.activity-info p span {
+  font-weight: 500 !important;
+}
+
+/* Reservation status text */
+.activity-status,
+.expired-text,
+.cancelled-text {
+  font-weight: 600 !important;
+}
+
+/* View Details / Modify buttons */
+.activity-actions button,
+.activity-actions .outline-btn,
+.activity-actions .solid-btn {
+  font-weight: 600 !important;
+}
+
