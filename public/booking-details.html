@@ -35,17 +35,18 @@
   <script>
     const source = new URLSearchParams(window.location.search).get("source");
 
-        // Determine which sidebar tab should be highlighted based on the URL
-        let activeSidebarMenu = "activities"; // Default for students and staff
+    // Determine which sidebar tab should be highlighted based on the URL
+    let activeSidebarMenu = "activities"; // Default for students and staff
 
-        if (source === "key-management") {
-          activeSidebarMenu = "key-management";
-        } else if (source === "manage-bookings") {
-          activeSidebarMenu = "manage-bookings";
-        }
+    if (source === "key-management") {
+      activeSidebarMenu = "key-management";
+    } else if (source === "manage-bookings") {
+      activeSidebarMenu = "manage-bookings";
+    }
 
-        // Load the layout and highlight the correct tab
-        loadLayout(activeSidebarMenu);
+    // Load the layout and highlight the correct tab
+    loadLayout(activeSidebarMenu);
+    
     // 1. Authenticate User
     const user =
       JSON.parse(localStorage.getItem("user")) ||
@@ -141,7 +142,7 @@
 
       console.log("Current User Role:", user.role); 
 
- // ==========================================
+      // ==========================================
       // ADMIN SPECIFIC LOGIC 
       // ==========================================
       if (user.role === "admin") {
@@ -153,7 +154,6 @@
         if (source === "key-management") {
           backButtonHtml = `<button class="action-secondary-btn full-width-btn" style="margin-top: 15px;" onclick="window.location.href='key-management.html'">Back to Key Management</button>`;
         } else if (source === "manage-bookings") {
-          // ---> THIS LINE IS NEW <---
           backButtonHtml = `<button class="action-secondary-btn full-width-btn" style="margin-top: 15px;" onclick="window.location.href='manage-bookings.html'">Back to Manage Bookings</button>`;
         }
 
@@ -181,7 +181,7 @@
 
         card.innerHTML = `
           <h2>Cubicle Check In</h2>
-          <p>Please check in when you arrive at the cubicle.</p>
+          <p>Please scan the QR code located at your cubicle to check in.</p>
 
           <div class="action-box">
             <strong>Check-in Window</strong>
@@ -194,7 +194,7 @@
           ${
             status === "reserved" || status === "pending"
               ? canCheckIn
-                ? `<button class="action-main-btn full-width-btn" onclick="checkInCubicle()">Check In</button>`
+                ? `<button class="action-main-btn full-width-btn" disabled style="opacity:0.6; cursor:not-allowed;" title="Please use the QR scanner">Check In (Scan QR Code)</button>`
                 : `<button class="action-main-btn full-width-btn" disabled style="opacity:0.5; cursor:not-allowed;">Check In Not Available Yet</button>`
               : ""
           }
