@@ -304,7 +304,8 @@
     }
 
     function viewBooking(id) {
-      alert("Booking details page can be connected later. Booking ID: " + id);
+      // ---> CHANGED: Now properly routes to the shared details page, setting the source flag!
+      window.location.href = `booking-details.html?id=${id}&source=manage-bookings`;
     }
 
     // NEW FUNCTION: Export Data to CSV (Opens in Sheets/Excel)

@@ -35,8 +35,17 @@
   <script>
     const source = new URLSearchParams(window.location.search).get("source");
 
-    loadLayout(source === "key-management" ? "key-management" : "activities");
+        // Determine which sidebar tab should be highlighted based on the URL
+        let activeSidebarMenu = "activities"; // Default for students and staff
 
+        if (source === "key-management") {
+          activeSidebarMenu = "key-management";
+        } else if (source === "manage-bookings") {
+          activeSidebarMenu = "manage-bookings";
+        }
+
+        // Load the layout and highlight the correct tab
+        loadLayout(activeSidebarMenu);
     // 1. Authenticate User
     const user =
       JSON.parse(localStorage.getItem("user")) ||
@@ -46,12 +55,12 @@
       window.location.href = "login.html";
     }
 
-    // 2. Read the Booking ID from the URL (This is how the QR scanner passes the user here!)
+    // 2. Read the Booking ID from the URL
     const params = new URLSearchParams(window.location.search);
     const bookingId = params.get("id");
 
     if (!bookingId) {
-      window.location.href = "activities.html";
+      window.location.href = user.role === "admin" ? "admin.html" : "activities.html";
     }
 
     let currentBooking = null;
@@ -65,7 +74,7 @@
         .then(data => {
           if (!data.success) {
             alert(data.message);
-            window.location.href = "activities.html";
+            window.location.href = user.role === "admin" ? "key-management.html" : "activities.html";
             return;
           }
 
@@ -73,18 +82,18 @@
           renderBookingDetails(currentBooking);
           renderActionPanel(currentBooking);
 
-          // --- AUTO CHECK-IN LOGIC ---
-          const params = new URLSearchParams(window.location.search);
-          // Only auto-check-in if the URL has the flag AND the status is reserved
-          if (params.get("auto_checkin") === "true" && currentBooking.booking_status === "reserved") {
-              // Add a tiny delay to ensure the UI is rendered
-              setTimeout(() => {
-                  if(isWithinCheckInWindow(currentBooking)) {
-                      checkInCubicle();
-                  } else {
-                      alert("Auto-check-in failed: Not within the 15-minute window.");
-                  }
-              }, 500);
+          // --- AUTO CHECK-IN LOGIC (Only runs for Students/Staff) ---
+          if (user.role !== "admin") {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get("auto_checkin") === "true" && currentBooking.booking_status === "reserved") {
+                setTimeout(() => {
+                    if(isWithinCheckInWindow(currentBooking)) {
+                        checkInCubicle();
+                    } else {
+                        alert("Auto-check-in failed: Not within the 15-minute window.");
+                    }
+                }, 500);
+            }
           }
         })
         .catch(() => {
@@ -130,6 +139,42 @@
       const card = document.getElementById("bookingRightCard");
       const status = booking.booking_status ? booking.booking_status.trim().toLowerCase() : "";
 
+      console.log("Current User Role:", user.role); 
+
+ // ==========================================
+      // ADMIN SPECIFIC LOGIC 
+      // ==========================================
+      if (user.role === "admin") {
+        console.log("Admin View Triggered!"); 
+
+        let backButtonHtml = `<button class="action-secondary-btn full-width-btn" style="margin-top: 15px;" onclick="window.history.back()">Go Back</button>`;
+        
+        // Custom back button depending on where the Admin came from
+        if (source === "key-management") {
+          backButtonHtml = `<button class="action-secondary-btn full-width-btn" style="margin-top: 15px;" onclick="window.location.href='key-management.html'">Back to Key Management</button>`;
+        } else if (source === "manage-bookings") {
+          // ---> THIS LINE IS NEW <---
+          backButtonHtml = `<button class="action-secondary-btn full-width-btn" style="margin-top: 15px;" onclick="window.location.href='manage-bookings.html'">Back to Manage Bookings</button>`;
+        }
+
+        card.innerHTML = `
+          <h2>Admin Record View</h2>
+          <p>You are viewing this booking record as a system administrator.</p>
+
+          <div class="action-box">
+            <strong>Current Status</strong>
+            <h3>${formatStatus(booking)}</h3>
+          </div>
+
+          ${backButtonHtml}
+        `;
+        return; // CRITICAL: This completely stops the Student/Staff code below from running!
+      }
+
+      // ==========================================
+      // STUDENT / STAFF LOGIC
+      // ==========================================
+
       // Cubicle Flow
       if (booking.booking_flow_type === "direct_reservation") {
         const canCheckIn = isWithinCheckInWindow(booking);
@@ -154,7 +199,7 @@
               : ""
           }
 
-          <button class="action-secondary-btn" onclick="window.location.href='activities.html'">
+          <button class="action-secondary-btn full-width-btn" style="margin-top: 15px;" onclick="window.location.href='activities.html'">
             Back to Activities
           </button>
         `;
@@ -180,7 +225,7 @@
                 : `<button class="action-main-btn full-width-btn" disabled style="opacity:0.5; cursor:not-allowed;">Return Key Not Available Yet</button>`
           }
 
-          <button class="action-secondary-btn" onclick="window.location.href='activities.html'">
+          <button class="action-secondary-btn full-width-btn" style="margin-top: 15px;" onclick="window.location.href='activities.html'">
             Back to Activities
           </button>
         `;
@@ -197,7 +242,7 @@
           <h3>${formatStatus(booking)}</h3>
         </div>
 
-        <button class="action-secondary-btn" onclick="window.location.href='activities.html'">
+        <button class="action-secondary-btn full-width-btn" style="margin-top: 15px;" onclick="window.location.href='activities.html'">
           Back to Activities
         </button>
       `;
@@ -214,7 +259,7 @@
       .then(data => {
         alert(data.message);
         if (data.success) {
-          loadBookingDetails(); // Refresh the page to show new status!
+          loadBookingDetails(); 
         }
       })
       .catch(() => {
@@ -278,7 +323,6 @@
       const startDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
       const createdAt = new Date(booking.created_at);
       
-      // If booked late, base window on creation time
       const baseTime = createdAt > startDateTime ? createdAt : startDateTime;
 
       const checkInStart = new Date(baseTime);
@@ -307,7 +351,6 @@
       baseTime.setMinutes(baseTime.getMinutes() + 15);
       return formatTimeFromDate(baseTime);
     }
-
 
     function formatTimeFromDate(date) {
       let h = date.getHours();

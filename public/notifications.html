@@ -4,6 +4,12 @@
   <title>Notifications</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* This stops the mouse cursor from looking like a clickable link */
+    .notification-card {
+      cursor: default !important;
+    }
+  </style>
 </head>
 
 <body class="dashboard-body">
@@ -108,11 +114,9 @@
         list.innerHTML += `<h3 class="notification-group-title">${group}</h3>`;
 
         grouped[group].forEach(item => {
+          // REMOVED the onclick="openNotification(...)" from here!
           list.innerHTML += `
-            <div 
-                class="notification-card ${item.is_read == 0 ? "unread" : ""}"
-                onclick="openNotification(${item.booking_id}, '${item.notification_type}')"
-              >
+            <div class="notification-card ${item.is_read == 0 ? "unread" : ""}">
               <div class="notification-icon">
                 🔔
               </div>
@@ -193,16 +197,6 @@
             loadNotifications();
           }
         });
-    }
-
-    function openNotification(bookingId, notificationType) {
-      if (!bookingId) return;
-
-      if (user.role === "admin" && notificationType === "admin_booking") {
-        window.location.href = "manage-bookings.html";
-      } else {
-        window.location.href = `booking-details.html?id=${bookingId}`;
-      }
     }
 
     function logout() {
