@@ -36,7 +36,7 @@
     const source = new URLSearchParams(window.location.search).get("source");
 
     // Determine which sidebar tab should be highlighted based on the URL
-    let activeSidebarMenu = "activities"; // Default for students and staff
+    let activeSidebarMenu = "activities"; 
 
     if (source === "key-management") {
       activeSidebarMenu = "key-management";
@@ -44,7 +44,6 @@
       activeSidebarMenu = "manage-bookings";
     }
 
-    // Load the layout and highlight the correct tab
     loadLayout(activeSidebarMenu);
     
     // 1. Authenticate User
@@ -83,15 +82,23 @@
           renderBookingDetails(currentBooking);
           renderActionPanel(currentBooking);
 
-          // --- AUTO CHECK-IN LOGIC (Only runs for Students/Staff) ---
+          // --- AUTO CHECK-IN & AUTO KEY RETURN LOGIC ---
           if (user.role !== "admin") {
             const params = new URLSearchParams(window.location.search);
-            if (params.get("auto_checkin") === "true" && currentBooking.booking_status === "reserved") {
+            
+            if (params.get("auto_checkin") === "true") {
                 setTimeout(() => {
-                    if(isWithinCheckInWindow(currentBooking)) {
-                        checkInCubicle();
-                    } else {
-                        alert("Auto-check-in failed: Not within the 15-minute window.");
+                    // Scenario A: Cubicle Check-in
+                    if (currentBooking.booking_flow_type === "direct_reservation" && currentBooking.booking_status === "reserved") {
+                        if(isWithinCheckInWindow(currentBooking)) {
+                            checkInCubicle();
+                        } else {
+                            alert("Auto-check-in failed: Not within the 15-minute window.");
+                        }
+                    } 
+                    // Scenario B: Lab Key Return
+                    else if (currentBooking.booking_flow_type === "staff_key_approval" && currentBooking.booking_status === "key_collected") {
+                        returnKey();
                     }
                 }, 500);
             }
@@ -140,17 +147,10 @@
       const card = document.getElementById("bookingRightCard");
       const status = booking.booking_status ? booking.booking_status.trim().toLowerCase() : "";
 
-      console.log("Current User Role:", user.role); 
-
-      // ==========================================
       // ADMIN SPECIFIC LOGIC 
-      // ==========================================
       if (user.role === "admin") {
-        console.log("Admin View Triggered!"); 
-
         let backButtonHtml = `<button class="action-secondary-btn full-width-btn" style="margin-top: 15px;" onclick="window.history.back()">Go Back</button>`;
         
-        // Custom back button depending on where the Admin came from
         if (source === "key-management") {
           backButtonHtml = `<button class="action-secondary-btn full-width-btn" style="margin-top: 15px;" onclick="window.location.href='key-management.html'">Back to Key Management</button>`;
         } else if (source === "manage-bookings") {
@@ -168,12 +168,10 @@
 
           ${backButtonHtml}
         `;
-        return; // CRITICAL: This completely stops the Student/Staff code below from running!
+        return; 
       }
 
-      // ==========================================
       // STUDENT / STAFF LOGIC
-      // ==========================================
 
       // Cubicle Flow
       if (booking.booking_flow_type === "direct_reservation") {
@@ -206,11 +204,11 @@
         return;
       }
 
-      // Key Approval Flow
+      // Key Approval Flow (UPDATED FOR SCANNER)
       if (booking.booking_flow_type === "staff_key_approval") {
         card.innerHTML = `
           <h2>Key Return</h2>
-          <p>Please return the key after using the facility.</p>
+          <p>Please scan the QR code at the facility desk to return the key.</p>
 
           <div class="action-box">
             <strong>Current Status</strong>
@@ -219,7 +217,7 @@
 
           ${
             status === "key_collected"
-              ? `<button class="action-main-btn full-width-btn" onclick="returnKey()">Returned Key</button>`
+              ? `<button class="action-main-btn full-width-btn" disabled style="opacity:0.6; cursor:not-allowed;" title="Please use the QR scanner">Return Key (Scan QR Code)</button>`
               : status === "completed"
                 ? `<button class="action-main-btn full-width-btn" disabled style="opacity:0.5; cursor:not-allowed;">Key Already Returned</button>`
                 : `<button class="action-main-btn full-width-btn" disabled style="opacity:0.5; cursor:not-allowed;">Return Key Not Available Yet</button>`

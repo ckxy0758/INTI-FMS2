@@ -1741,7 +1741,7 @@ function createKeyReturnReminders(callback) {
 }
 
 // GET CURRENT BOOKING ID FOR QR REDIRECT
-// SINGLE, CLEAN ROUTE: Handle QR Code current booking lookup
+// SINGLE, CLEAN ROUTE: Handle QR Code current booking lookup for Cubicles AND Key Returns
 router.get("/bookings/current-booking/:facility_id/:user_id", (req, res) => {
   const facilityId = req.params.facility_id;
   const userId = req.params.user_id;
@@ -1759,19 +1759,21 @@ router.get("/bookings/current-booking/:facility_id/:user_id", (req, res) => {
                     String(now.getMinutes()).padStart(2, '0') + ':' + 
                     String(now.getSeconds()).padStart(2, '0');
 
-  // 2. We inject localDate and localTime directly into the query
+  // 2. Modified SQL: Finds a reserved cubicle today OR any unreturned key for this facility
   const sql = `
-    SELECT booking_id 
-    FROM bookings 
-    WHERE user_id = ? 
-    AND facility_id = ? 
-    AND booking_status = 'reserved'
-    AND booking_date = ?
-    AND ? BETWEEN start_time AND end_time
+    SELECT b.booking_id 
+    FROM bookings b
+    JOIN facilities f ON b.facility_id = f.facility_id
+    WHERE b.user_id = ? 
+    AND b.facility_id = ? 
+    AND (
+      (b.booking_status = 'reserved' AND b.booking_date = ? AND ? BETWEEN b.start_time AND b.end_time)
+      OR 
+      (b.booking_status = 'key_collected' AND b.key_status = 'collected' AND f.booking_flow_type = 'staff_key_approval')
+    )
     LIMIT 1
   `;
 
-  // 3. Pass all 4 variables to the database query
   db.query(sql, [userId, facilityId, localDate, localTime], (err, result) => {
     if (err) {
       console.error("Database error in current-booking:", err);
@@ -1781,7 +1783,7 @@ router.get("/bookings/current-booking/:facility_id/:user_id", (req, res) => {
     if (result.length === 0) {
       return res.json({ 
         success: false, 
-        message: "No active reservation found for this cubicle at this time." 
+        message: "No active reservation or key return found for this facility at this time." 
       });
     }
 
