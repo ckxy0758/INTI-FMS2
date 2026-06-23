@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>Manage Bookings - Facility Management System</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -32,14 +33,37 @@
 
       <div class="booking-toolbar">
 
-        <select id="facilityFilter" onchange="applyBookingFilters()">
-          <option value="">Filter By: Facility</option>
-        </select>
+        <label>Filter By:</label>
 
-        <input type="date" id="dateFilter" onchange="applyBookingFilters()">
+        <div class="date-input-wrapper">
+          <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor">
+            <path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Z"/>
+          </svg>
+
+          <input type="text" id="filterDate" placeholder="Select Date" readonly>
+        </div>
+
+        <div class="custom-dropdown" id="bookingFacilityDropdown">
+          <button class="custom-dropdown-btn" type="button" onclick="toggleBookingFacilityDropdown()">
+            <span id="bookingFacilityLabel">Facility</span>
+
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+
+          <div class="custom-dropdown-menu" id="bookingFacilityMenu"></div>
+        </div>
 
         <button class="export-btn" onclick="exportToCSV()">
-          ⬇ Export
+          <img 
+            src="images/download_24dp_6B7280_FILL0_wght400_GRAD0_opsz24.svg" 
+            class="export-icon"
+            alt="Export icon"
+          >
+          <span>Export</span>
         </button>
 
       </div>
@@ -73,6 +97,7 @@
   </div>
 
   <script src="component.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
   <script>
     loadLayout("manage-bookings");
@@ -119,19 +144,67 @@
     }
 
     function loadFacilityFilter() {
-      const facilityFilter = document.getElementById("facilityFilter");
+      const facilityMenu = document.getElementById("bookingFacilityMenu");
 
       const facilities = [
         ...new Set(allBookings.map(item => item.facility_name))
       ];
 
-      facilityFilter.innerHTML = `<option value="">Filter By: Facility</option>`;
+      facilityMenu.innerHTML = "";
 
       facilities.forEach(name => {
-        facilityFilter.innerHTML += `
-          <option value="${name}">${name}</option>
+        facilityMenu.innerHTML += `
+          <label class="dropdown-item">
+            <input type="checkbox" value="${name}">
+            <span>${name}</span>
+          </label>
         `;
       });
+
+      document.querySelectorAll("#bookingFacilityMenu input").forEach(cb => {
+        cb.addEventListener("change", function() {
+          updateBookingFacilityLabel();
+          applyBookingFilters();
+        });
+      });
+    }
+
+    function toggleBookingFacilityDropdown() {
+      document.getElementById("bookingFacilityMenu").classList.toggle("open");
+      document.querySelector("#bookingFacilityDropdown .custom-dropdown-btn").classList.toggle("active");
+    }
+
+    document.addEventListener("click", function(e) {
+      const dropdown = document.getElementById("bookingFacilityDropdown");
+
+      if (dropdown && !dropdown.contains(e.target)) {
+        document.getElementById("bookingFacilityMenu").classList.remove("open");
+        document.querySelector("#bookingFacilityDropdown .custom-dropdown-btn").classList.remove("active");
+      }
+    });
+
+    function getSelectedBookingFacilities() {
+      return [...document.querySelectorAll("#bookingFacilityMenu input:checked")]
+        .map(cb => cb.value);
+    }
+
+    function updateBookingFacilityLabel() {
+      const checked = getSelectedBookingFacilities();
+
+      const label =
+        checked.length === 0
+          ? "Facility"
+          : checked.join(", ");
+
+      document.getElementById("bookingFacilityLabel").textContent =
+        label.length > 20 ? label.substring(0, 20) + "..." : label;
+    }
+
+    function convertDisplayDateToSQL(dateValue) {
+      if (!dateValue) return "";
+
+      const [day, month, year] = dateValue.split("/");
+      return `${year}-${month}-${day}`;
     }
 
     function filterBookings(type, event) {
@@ -147,8 +220,9 @@
     }
 
     function applyBookingFilters() {
-      const facilityValue = document.getElementById("facilityFilter").value;
-      const dateValue = document.getElementById("dateFilter").value;
+      const facilityValues = getSelectedBookingFacilities();
+      const displayDate = document.getElementById("filterDate").value;
+      const dateValue = convertDisplayDateToSQL(displayDate);
 
       let filtered = [...allBookings];
 
@@ -176,8 +250,10 @@
         });
       }
 
-      if (facilityValue) {
-        filtered = filtered.filter(item => item.facility_name === facilityValue);
+      if (facilityValues.length > 0) {
+        filtered = filtered.filter(item =>
+          facilityValues.includes(item.facility_name)
+        );
       }
 
       if (dateValue) {
@@ -215,17 +291,23 @@
             <td>
               <strong>${booking.user_name}</strong>
               <br>
-              <span>${formatRole(booking.user_role)}</span>
+              <span class="booking-role role-${booking.user_role}">
+                ${formatRole(booking.user_role)}
+              </span>
             </td>
 
             <td>
               <strong>${booking.facility_name}</strong>
             </td>
 
-            <td>
-              <strong>${formatDate(booking.booking_date)}</strong>
-              <br>
-              ${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}
+            <td class="booking-date-time">
+              <span class="booking-date-text">
+                ${formatDate(booking.booking_date)}
+              </span>
+
+              <span class="booking-time-text">
+                ${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}
+              </span>
             </td>
 
             <td>
@@ -237,9 +319,11 @@
             </td>
 
             <td>
-              <button class="more-btn" onclick="viewBooking(${booking.booking_id})">•••</button>
-            </td>
-          </tr>
+              <button class="more-btn" onclick="viewBooking(${booking.booking_id})" title="View Details">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                  <path d="M240-400q-33 0-56.5-23.5T160-480q0-33 23.5-56.5T240-560q33 0 56.5 23.5T320-480q0 33-23.5 56.5T240-400Zm240 0q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm240 0q-33 0-56.5-23.5T640-480q0-33 23.5-56.5T720-560q33 0 56.5 23.5T800-480q0 33-23.5 56.5T720-400Z"/>
+                </svg>
+              </button>
         `;
       });
 
@@ -252,9 +336,24 @@
 
       if (status === "pending" || status === "pending_payment") {
         return `
-          <button class="approve-icon" title="Approve" onclick="approveBooking(${booking.booking_id})">✓</button>
-        <button class="reject-icon" title="Cancel" onclick="cancelBooking(${booking.booking_id})">×</button>
-        `;
+        <div class="action-icon-group">
+          <button class="approve-icon" title="Approve" onclick="approveBooking(${booking.booking_id})">
+            <img 
+              src="images/check_24dp_3FB50D_FILL0_wght400_GRAD0_opsz24.svg" 
+              class="approve-img"
+              alt="Approve"
+            >
+          </button>
+
+          <button class="reject-icon" title="Cancel" onclick="cancelBooking(${booking.booking_id})">
+            <img 
+              src="images/close_24dp_3FB50D_FILL0_wght400_GRAD0_opsz24.svg" 
+              class="reject-img"
+              alt="Cancel"
+            >
+          </button>
+        </div>
+      `;
       }
 
       if (status === "approved") {
@@ -362,6 +461,68 @@
         document.body.removeChild(link);
       }
     }
+
+    flatpickr("#filterDate", {
+      dateFormat: "d/m/Y",
+      disableMobile: true,
+      locale: { firstDayOfWeek: 1 },
+
+      onOpen: function(selectedDates, dateStr, instance) {
+        setTimeout(function() {
+          const cal = instance.calendarContainer;
+          const input = document.getElementById("filterDate");
+          const rect = input.getBoundingClientRect();
+
+          cal.style.position = "fixed";
+          cal.style.top = (rect.bottom + 6) + "px";
+          cal.style.left = rect.left + "px";
+          cal.style.zIndex = "9999";
+        }, 0);
+      },
+
+      onReady: function(selectedDates, dateStr, instance) {
+        const cal = instance.calendarContainer;
+        cal.style.zIndex = "9999";
+
+        const monthsEl = cal.querySelector(".flatpickr-months");
+        const prevBtn = cal.querySelector(".flatpickr-prev-month");
+        const nextBtn = cal.querySelector(".flatpickr-next-month");
+
+        monthsEl.insertBefore(prevBtn, monthsEl.firstChild);
+        monthsEl.appendChild(nextBtn);
+
+        const bottomRow = document.createElement("div");
+        bottomRow.className = "fp-bottom-row";
+
+        bottomRow.innerHTML = `
+          <button class="fp-cancel-btn" type="button">Cancel</button>
+          <button class="fp-apply-btn" type="button">Today</button>
+        `;
+
+        cal.appendChild(bottomRow);
+
+        bottomRow.querySelector(".fp-cancel-btn").addEventListener("click", () => {
+          instance.clear();
+          instance.close();
+          applyBookingFilters();
+        });
+
+        bottomRow.querySelector(".fp-apply-btn").addEventListener("click", () => {
+          instance.setDate(new Date());
+          instance.close();
+          applyBookingFilters();
+        });
+      },
+
+      onChange: function() {
+        applyBookingFilters();
+      }
+    });
+
+    window.addEventListener("scroll", function() {
+      const fp = document.getElementById("filterDate")._flatpickr;
+      if (fp) fp.close();
+    }, true);
 
     function formatRole(role) {
       if (role === "student") return "Student";
