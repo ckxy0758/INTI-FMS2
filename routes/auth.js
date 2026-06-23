@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'courneyk8570@gmail.com',
-    pass: '' 
+    pass: ''  //please remove this password before sending to AI
   }
 });
 
@@ -798,7 +798,7 @@ function updateCubicleBookingStatuses(callback) {
   });
 }
 
-/* ===== SUBMIT BOOKING WITH PAYMENT LOGIC ===== */
+/* ===== SUBMIT BOOKING WITH TRANSACTION AND ROW LOCKING (CAPACITY CHECK) ===== */
 router.post("/bookings", (req, res) => {
   const {
     user_id,
@@ -810,319 +810,201 @@ router.post("/bookings", (req, res) => {
     purpose
   } = req.body;
 
-  if (
-    !user_id ||
-    !facility_id ||
-    !program ||
-    !booking_date ||
-    !start_time ||
-    !end_time
-  ) {
-    return res.json({
-      success: false,
-      message: "Please fill in all required booking details"
-    });
+  // Basic Validation
+  if (!user_id || !facility_id || !program || !booking_date || !start_time || !end_time) {
+    return res.json({ success: false, message: "Please fill in all required booking details" });
   }
 
   const bookingDayNumber = new Date(booking_date).getDay();
-
   if (bookingDayNumber === 0 || bookingDayNumber === 6) {
-    return res.json({
-      success: false,
-      message: "Bookings are not allowed on Saturday and Sunday"
-    });
+    return res.json({ success: false, message: "Bookings are not allowed on Saturday and Sunday" });
   }
 
   const start = new Date(`${booking_date}T${start_time}`);
   const end = new Date(`${booking_date}T${end_time}`);
 
   if (start >= end) {
-    return res.json({
-      success: false,
-      message: "End time must be later than start time"
-    });
+    return res.json({ success: false, message: "End time must be later than start time" });
   }
-
-  /*Deleted
-  const now = new Date();
-
-  if (start < now) {
-    return res.json({
-      success: false,
-      message: "You cannot book a date or time that has already passed"
-    });
-  }
-  */
 
   const duration_hours = (end - start) / (1000 * 60 * 60);
 
-  // 1. UPDATE QUERY TO FETCH max_people
-  const facilitySql = `
-    SELECT facility_name, booking_flow_type, max_people
-    FROM facilities
-    WHERE facility_id = ?
-    LIMIT 1
-  `;
-
-  db.query(facilitySql, [facility_id], (facilityErr, facilityResult) => {
-    if (facilityErr || facilityResult.length === 0) {
-      return res.json({
-        success: false,
-        message: "Facility not found"
-      });
+  // GET A DEDICATED CONNECTION FOR THE TRANSACTION
+  db.getConnection((connErr, connection) => {
+    if (connErr) {
+      console.error("Connection pool error:", connErr);
+      return res.json({ success: false, message: "Database connection failed" });
     }
 
-    const bookingFlowType = facilityResult[0].booking_flow_type || "normal_approval";
-    const facilityName = facilityResult[0].facility_name;
-    // 2. PULL CAPACITY LIMIT FROM DATABASE (Defaults to 1 if NULL)
-    const maxCapacity = facilityResult[0].max_people || 1; 
-    const now = new Date();
-
-    // --- NEW LOGIC: Validation based on Facility Type ---
-    if (bookingFlowType === 'direct_reservation') {
-        // Cubicle: Allow booking ongoing slots, but block if less than 30 mins remain!
-        const minsLeft = (end - now) / 60000;
-        if (minsLeft < 30) {
-            return res.json({ success: false, message: "It is too late to book this time slot (less than 30 minutes remaining)." });
-        }
-    } else {
-        // Normal Facilities: 30 minutes advance rule
-        const minAdvance = new Date(now.getTime() + 30 * 60000);
-        if (start < minAdvance) {
-            return res.json({ success: false, message: "You must book at least 30 minutes in advance" });
-        }
-    }
-    // ---------------------------------------------------
-
-    let bookingStatus = "pending";
-    let paymentRequired = 0;
-    let paymentStatus = "not_required";
-    let paymentAmount = 0.00;
-    let keyStatus = "not_required";
-
-    if (bookingFlowType === "normal_approval") {
-      bookingStatus = "pending";
-      paymentRequired = 0;
-      paymentStatus = "not_required";
-      paymentAmount = 0.00;
-      keyStatus = "not_required";
-    }
-
-    if (bookingFlowType === "payment_required") {
-      bookingStatus = "pending_payment";
-      paymentRequired = 1;
-      paymentStatus = "pending_payment";
-      paymentAmount = 5.00;
-      keyStatus = "not_required";
-    }
-
-    if (bookingFlowType === "direct_reservation") {
-      bookingStatus = "reserved";
-      paymentRequired = 0;
-      paymentStatus = "not_required";
-      paymentAmount = 0.00;
-      keyStatus = "not_required";
-    }
-
-    if (bookingFlowType === "staff_key_approval") {
-      bookingStatus = "pending";
-      paymentRequired = 0;
-      paymentStatus = "not_required";
-      paymentAmount = 0.00;
-      keyStatus = "pending_collection";
-    }
-
-    // 3. CHECK OVERLAPPING BOOKINGS
-    const checkSql = `
-      SELECT booking_id
-      FROM bookings
-      WHERE facility_id = ?
-      AND booking_date = ?
-      AND booking_status IN (
-        'pending',
-        'pending_payment',
-        'payment_submitted',
-        'approved',
-        'reserved',
-        'checked_in',
-        'key_collected'
-      )
-      AND (? < end_time AND ? > start_time) 
-    `;
-
-    // Note: We inject start_time and end_time to check for actual overlaps
-    db.query(checkSql, [facility_id, booking_date, start_time, end_time], (checkErr, checkResult) => {
-      if (checkErr) {
-        return res.json({
-          success: false,
-          message: "Failed to check booking availability"
-        });
+    // START TRANSACTION
+    connection.beginTransaction((transactionErr) => {
+      if (transactionErr) {
+        connection.release();
+        return res.json({ success: false, message: "Failed to start transaction" });
       }
 
-      // 4. REJECT ONLY IF EXISTING BOOKINGS REACH OR EXCEED CAPACITY
-      if (checkResult.length >= maxCapacity) {
-        return res.json({
-          success: false,
-          message: `This time slot has reached its maximum capacity of ${maxCapacity} pax. Please try another slot.`
-        });
-      }
-
-      const sql = `
-        INSERT INTO bookings
-        (
-          user_id,
-          facility_id,
-          program,
-          booking_date,
-          start_time,
-          end_time,
-          duration_hours,
-          purpose,
-          booking_status,
-          key_status,
-          payment_required,
-          payment_status,
-          payment_amount
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      // 1. SELECT FOR UPDATE - Locks this specific facility row so no one else can book it simultaneously
+      const facilitySql = `
+        SELECT facility_name, booking_flow_type, max_people 
+        FROM facilities 
+        WHERE facility_id = ? 
+        FOR UPDATE
       `;
 
-      db.query(
-        sql,
-        [
-          user_id,
-          facility_id,
-          program,
-          booking_date,
-          start_time,
-          end_time,
-          duration_hours,
-          purpose || "",
-          bookingStatus,
-          keyStatus,
-          paymentRequired,
-          paymentStatus,
-          paymentAmount
-        ],
-        (err, result) => {
-          if (err) {
-            console.log("Booking insert error:", err);
+      connection.query(facilitySql, [facility_id], (facilityErr, facilityResult) => {
+        if (facilityErr || facilityResult.length === 0) {
+          return connection.rollback(() => {
+            connection.release();
+            res.json({ success: false, message: "Facility not found" });
+          });
+        }
 
-            return res.json({
-              success: false,
-              message: "Booking submission failed",
-              error: err.message
+        const facilityName = facilityResult[0].facility_name;
+        const bookingFlowType = facilityResult[0].booking_flow_type || "normal_approval";
+        const maxCapacity = facilityResult[0].max_people || 1; 
+        const now = new Date();
+
+        // --- Validation based on Facility Type ---
+        if (bookingFlowType === 'direct_reservation') {
+            const minsLeft = (end - now) / 60000;
+            if (minsLeft < 30) {
+                return connection.rollback(() => {
+                  connection.release();
+                  res.json({ success: false, message: "It is too late to book this time slot (less than 30 minutes remaining)." });
+                });
+            }
+        } else {
+            const minAdvance = new Date(now.getTime() + 30 * 60000);
+            if (start < minAdvance) {
+                return connection.rollback(() => {
+                  connection.release();
+                  res.json({ success: false, message: "You must book at least 30 minutes in advance" });
+                });
+            }
+        }
+
+        // --- Setup Status Variables ---
+        let bookingStatus = "pending";
+        let paymentRequired = 0;
+        let paymentStatus = "not_required";
+        let paymentAmount = 0.00;
+        let keyStatus = "not_required";
+
+        if (bookingFlowType === "normal_approval") {
+          // Defaults are fine
+        } else if (bookingFlowType === "payment_required") {
+          bookingStatus = "pending_payment";
+          paymentRequired = 1;
+          paymentStatus = "pending_payment";
+          paymentAmount = 5.00;
+        } else if (bookingFlowType === "direct_reservation") {
+          bookingStatus = "reserved";
+        } else if (bookingFlowType === "staff_key_approval") {
+          keyStatus = "pending_collection";
+        }
+
+        // 2. CHECK EXISTING CAPACITY (Other users are locked out from doing this until we finish)
+        const checkSql = `
+          SELECT booking_id FROM bookings
+          WHERE facility_id = ? AND booking_date = ?
+          AND booking_status IN ('pending', 'pending_payment', 'payment_submitted', 'approved', 'reserved', 'checked_in', 'key_collected')
+          AND (? < end_time AND ? > start_time) 
+        `;
+
+        connection.query(checkSql, [facility_id, booking_date, start_time, end_time], (checkErr, checkResult) => {
+          if (checkErr) {
+            return connection.rollback(() => {
+              connection.release();
+              res.json({ success: false, message: "Failed to check booking availability" });
             });
           }
 
-          const bookingId = result.insertId;
-
-          const requiresAdminReview = [
-            "normal_approval",
-            "payment_required",
-            "staff_key_approval"
-          ];
-
-          if (requiresAdminReview.includes(bookingFlowType)) {
-
-            const adminNotificationSql = `
-              INSERT INTO notifications
-              (
-                user_id,
-                booking_id,
-                title,
-                message,
-                notification_type,
-                is_read
-              )
-              SELECT
-                user_id,
-                ?,
-                ?,
-                ?,
-                'admin_booking',
-                0
-              FROM users
-              WHERE role = 'admin'
-              AND status = 'active'
-            `;
-
-            db.query(
-              adminNotificationSql,
-              [
-                bookingId,
-                "New Booking Request",
-                `A new booking request for ${facilityName} has been submitted and requires review.`
-              ],
-              (adminNotificationErr) => {
-                if (adminNotificationErr) {
-                  console.log("Admin notification insert error:", adminNotificationErr);
-                }
-              }
-            );
-
+          // 3. REJECT IF CAPACITY MET
+          if (checkResult.length >= maxCapacity) {
+            return connection.rollback(() => {
+              connection.release();
+              res.json({ success: false, message: `This time slot has reached its maximum capacity of ${maxCapacity} pax. Please try another slot.` });
+            });
           }
 
-          const notificationSql = `
-            INSERT INTO notifications
-            (
-              user_id,
-              booking_id,
-              title,
-              message,
-              notification_type,
-              is_read
-            )
-            VALUES (?, ?, ?, ?, ?, 0)
+          // 4. INSERT THE NEW BOOKING
+          const insertSql = `
+            INSERT INTO bookings 
+            (user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose, booking_status, key_status, payment_required, payment_status, payment_amount) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `;
 
-          let notificationTitle = "Booking Submitted";
-          let notificationMessage = `Your booking request of ${facilityName} has been submitted successfully.`;
+          connection.query(
+            insertSql, 
+            [user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose || "", bookingStatus, keyStatus, paymentRequired, paymentStatus, paymentAmount], 
+            (insertErr, insertResult) => {
+            
+            if (insertErr) {
+              return connection.rollback(() => {
+                connection.release();
+                res.json({ success: false, message: "Booking submission failed", error: insertErr.message });
+              });
+            }
 
-          if (bookingFlowType === "payment_required") {
-            notificationTitle = "Payment Required";
-            notificationMessage = `Your booking request of ${facilityName} has been submitted. Please proceed to AFM to make payment.`;
-          }
+            const bookingId = insertResult.insertId;
 
-          if (bookingFlowType === "direct_reservation") {
-            notificationTitle = "Reservation Successful";
-            notificationMessage = `Your reservation of ${facilityName} has been successful.`;
-          }
-
-          if (bookingFlowType === "staff_key_approval") {
-            notificationTitle = "Booking Submitted";
-            notificationMessage = `Your booking of ${facilityName} has been submitted. Please wait for admin approval.`;
-          }
-
-          db.query(
-            notificationSql,
-            [
-              user_id,
-              bookingId,
-              notificationTitle,
-              notificationMessage,
-              "booking"
-            ],
-            (notificationErr) => {
-              if (notificationErr) {
-                console.log("Notification insert error:", notificationErr);
+            // 5. COMMIT THE TRANSACTION (Unlocks the row so the next person can book)
+            connection.commit((commitErr) => {
+              if (commitErr) {
+                return connection.rollback(() => {
+                  connection.release();
+                  res.json({ success: false, message: "Failed to finalize booking" });
+                });
               }
 
+              // Release connection back to the pool
+              connection.release();
+
+              // ==========================================
+              // NOTIFICATIONS (Run via normal db.query outside the transaction lock)
+              // ==========================================
+              const requiresAdminReview = ["normal_approval", "payment_required", "staff_key_approval"];
+
+              if (requiresAdminReview.includes(bookingFlowType)) {
+                const adminNotificationSql = `
+                  INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
+                  SELECT user_id, ?, 'New Booking Request', ?, 'admin_booking', 0
+                  FROM users WHERE role = 'admin' AND status = 'active'
+                `;
+                db.query(adminNotificationSql, [bookingId, `A new booking request for ${facilityName} has been submitted and requires review.`]);
+              }
+
+              let notificationTitle = "Booking Submitted";
+              let notificationMessage = `Your booking request of ${facilityName} has been submitted successfully.`;
+
+              if (bookingFlowType === "payment_required") {
+                notificationTitle = "Payment Required";
+                notificationMessage = `Your booking request of ${facilityName} has been submitted. Please proceed to AFM to make payment.`;
+              } else if (bookingFlowType === "direct_reservation") {
+                notificationTitle = "Reservation Successful";
+                notificationMessage = `Your reservation of ${facilityName} has been successful.`;
+              } else if (bookingFlowType === "staff_key_approval") {
+                notificationMessage = `Your booking of ${facilityName} has been submitted. Please wait for admin approval.`;
+              }
+
+              db.query(`INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) VALUES (?, ?, ?, ?, ?, 0)`, 
+                [user_id, bookingId, notificationTitle, notificationMessage, "booking"]
+              );
+
+              // 6. RETURN SUCCESS
               return res.json({
                 success: true,
-                message: paymentRequired === 1
-                  ? "Booking request submitted. Please proceed to AFM to make payment."
-                  : "Booking request submitted successfully.",
+                message: paymentRequired === 1 ? "Booking request submitted. Please proceed to AFM to make payment." : "Booking request submitted successfully.",
                 booking_id: bookingId,
                 booking_status: bookingStatus,
                 payment_required: paymentRequired,
                 payment_status: paymentStatus,
                 payment_amount: paymentAmount
               });
-            }
-          );
-        }
-      );
+            });
+          });
+        });
+      });
     });
   });
 });
