@@ -33,7 +33,9 @@
   <script src="component.js"></script>
 
   <script>
-    loadLayout("key-management");
+    const source = new URLSearchParams(window.location.search).get("source");
+
+    loadLayout(source === "key-management" ? "key-management" : "activities");
 
     // 1. Authenticate User
     const user =
