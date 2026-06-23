@@ -118,13 +118,33 @@ router.get("/admin/reports", (req, res) => {
           const keyAnalyticsSql = `
             SELECT
               COUNT(*) AS total_key_bookings,
-              SUM(CASE WHEN b.key_status = 'returned' THEN 1 ELSE 0 END) AS returned_keys,
-              SUM(CASE WHEN b.key_status = 'collected' THEN 1 ELSE 0 END) AS collected_keys,
-              SUM(CASE 
-                WHEN b.key_status = 'collected'
-                AND CONCAT(b.booking_date, ' ', b.end_time) < NOW()
-                THEN 1 ELSE 0 
-              END) AS overdue_keys
+
+              SUM(
+                CASE
+                  WHEN b.key_status = 'returned'
+                  THEN 1
+                  ELSE 0
+                END
+              ) AS returned_keys,
+
+              SUM(
+                CASE
+                  WHEN b.key_status = 'returned'
+                  AND b.key_returned_at > CONCAT(b.booking_date, ' ', b.end_time)
+                  THEN 1
+                  ELSE 0
+                END
+              ) AS late_returns,
+
+              SUM(
+                CASE
+                  WHEN b.key_status = 'collected'
+                  AND CONCAT(b.booking_date, ' ', b.end_time) < NOW()
+                  THEN 1
+                  ELSE 0
+                END
+              ) AS overdue_keys
+
             FROM bookings b
             JOIN facilities f ON b.facility_id = f.facility_id
             JOIN users u ON b.user_id = u.user_id

@@ -174,7 +174,7 @@
               <div class="kpi-row">
                 <div><span>Total Bookings</span><strong id="totalKeyBookings">0</strong></div>
                 <div><span>Returned Keys</span><strong id="returnedKeys">0</strong></div>
-                <div><span>Collected Keys</span><strong id="collectedKeys">0</strong></div>
+                <div><span>Late Returns</span><strong id="lateReturns">0</strong></div>
                 <div><span>Overdue</span><strong id="overdueKeys">0</strong></div>
               </div>
               <div style="position: relative; min-height: 250px; margin-top: 15px;">
@@ -520,13 +520,13 @@
     function renderKeyAnalytics(data) {
       document.getElementById("totalKeyBookings").textContent = data.total_key_bookings || 0;
       document.getElementById("returnedKeys").textContent = data.returned_keys || 0;
-      document.getElementById("collectedKeys").textContent = data.collected_keys || 0;
+      document.getElementById("lateReturns").textContent =data.late_returns || 0;
       document.getElementById("overdueKeys").textContent = data.overdue_keys || 0;
 
-      const labels = ["Returned", "Collected", "Overdue"];
+      const labels = ["Returned", "Late Return", "Overdue"];
       const values = [
         Number(data.returned_keys || 0),
-        Number(data.collected_keys || 0),
+        Number(data.late_returns || 0),
         Number(data.overdue_keys || 0)
       ];
 
