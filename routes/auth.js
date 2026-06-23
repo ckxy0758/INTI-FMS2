@@ -11,37 +11,51 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'courneyk8570@gmail.com',
-    pass: 'cymadlhuhzxbifbw' 
+    pass: 'arqtwnqjlctariaw' 
   }
 });
 
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
-  // IMPORTANT: We no longer check the password in the SQL query.
-  // We only look for the active user by email.
   const sql = "SELECT * FROM users WHERE email = ? AND status = 'active'";
 
   db.query(sql, [email], (err, result) => {
     if (err) {
-      return res.json({
-        success: false,
-        message: "Database error"
-      });
+      return res.json({ success: false, message: "Database error" });
     }
 
     // If the user exists
     if (result.length === 1) {
       const user = result[0];
 
-      // Use bcrypt to compare the typed password with the hashed password in DB
-      bcrypt.compare(password, user.password, (compareErr, isMatch) => {
-        if (compareErr) {
-          return res.json({ success: false, message: "Error verifying credentials" });
-        }
+      // Check if the password in the database is a bcrypt hash (starts with $2)
+      const isHashed = user.password.startsWith("$2");
 
-        if (isMatch) {
-          // Passwords match! Log them in.
+      if (isHashed) {
+        // --- NEW SECURE ACCOUNTS ---
+        bcrypt.compare(password, user.password, (compareErr, isMatch) => {
+          if (compareErr) return res.json({ success: false, message: "Error verifying credentials" });
+          
+          if (isMatch) {
+            return res.json({
+              success: true,
+              user: {
+                id: user.user_id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                must_change_password: user.must_change_password
+              }
+            });
+          } else {
+            return res.json({ success: false, message: "Invalid email or password" });
+          }
+        });
+      } else {
+        // --- OLD PLAIN-TEXT ACCOUNTS (Legacy) ---
+        // Direct string comparison for accounts created before the bcrypt upgrade
+        if (password === user.password) {
           return res.json({
             success: true,
             user: {
@@ -53,19 +67,12 @@ router.post("/login", (req, res) => {
             }
           });
         } else {
-          // Passwords do not match
-          return res.json({
-            success: false,
-            message: "Invalid email or password"
-          });
+          return res.json({ success: false, message: "Invalid email or password" });
         }
-      });
+      }
     } else {
       // User not found or inactive
-      return res.json({
-        success: false,
-        message: "Invalid email or password"
-      });
+      return res.json({ success: false, message: "Invalid email or password" });
     }
   });
 });
