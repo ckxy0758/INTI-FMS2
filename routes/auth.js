@@ -1,13 +1,28 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const crypto = require("crypto"); // Built into Node.js
+const bcrypt = require("bcrypt");
+const nodemailer = require("nodemailer");
+
+// --- Configure your email transporter ---
+// Note: Replace with your actual SMTP credentials (e.g., Gmail, SendGrid)
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'courneyk8570@gmail.com',
+    pass: 'cymadlhuhzxbifbw' 
+  }
+});
 
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
-  const sql = "SELECT * FROM users WHERE email = ? AND password = ? AND status = 'active'";
+  // IMPORTANT: We no longer check the password in the SQL query.
+  // We only look for the active user by email.
+  const sql = "SELECT * FROM users WHERE email = ? AND status = 'active'";
 
-  db.query(sql, [email, password], (err, result) => {
+  db.query(sql, [email], (err, result) => {
     if (err) {
       return res.json({
         success: false,
@@ -15,20 +30,38 @@ router.post("/login", (req, res) => {
       });
     }
 
+    // If the user exists
     if (result.length === 1) {
       const user = result[0];
 
-      return res.json({
-        success: true,
-        user: {
-          id: user.user_id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          must_change_password: user.must_change_password
+      // Use bcrypt to compare the typed password with the hashed password in DB
+      bcrypt.compare(password, user.password, (compareErr, isMatch) => {
+        if (compareErr) {
+          return res.json({ success: false, message: "Error verifying credentials" });
+        }
+
+        if (isMatch) {
+          // Passwords match! Log them in.
+          return res.json({
+            success: true,
+            user: {
+              id: user.user_id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              must_change_password: user.must_change_password
+            }
+          });
+        } else {
+          // Passwords do not match
+          return res.json({
+            success: false,
+            message: "Invalid email or password"
+          });
         }
       });
     } else {
+      // User not found or inactive
       return res.json({
         success: false,
         message: "Invalid email or password"
@@ -54,26 +87,40 @@ router.post("/users", (req, res) => {
     });
   }
 
+  // The raw password that will be given to the user
   const defaultPassword = user_code;
 
-  const sql = `
-    INSERT INTO users 
-    (name, user_code, email, password, role, status, must_change_password)
-    VALUES (?, ?, ?, ?, ?, 'active', TRUE)
-  `;
-
-  db.query(sql, [name, user_code, email, defaultPassword, role], (err) => {
-    if (err) {
+  // Hash the default password before saving to the database
+  // The '10' is the salt rounds (standard security level)
+  bcrypt.hash(defaultPassword, 10, (hashErr, hashedPassword) => {
+    if (hashErr) {
       return res.json({
         success: false,
-        message: "User already exists or database error"
+        message: "Error securing password"
       });
     }
 
-    return res.json({
-      success: true,
-      message: `Account created successfully. Temporary password: ${defaultPassword}. Please tell the user to change password after first login.`,
-      temporaryPassword: defaultPassword
+    const sql = `
+      INSERT INTO users 
+      (name, user_code, email, password, role, status, must_change_password)
+      VALUES (?, ?, ?, ?, ?, 'active', TRUE)
+    `;
+
+    // Insert the HASHED password, not the default text
+    db.query(sql, [name, user_code, email, hashedPassword, role], (err) => {
+      if (err) {
+        return res.json({
+          success: false,
+          message: "User already exists or database error"
+        });
+      }
+
+      // Return the plain text defaultPassword so the admin can tell the user
+      return res.json({
+        success: true,
+        message: `Account created successfully. Temporary password: ${defaultPassword}. Please tell the user to change password after first login.`,
+        temporaryPassword: defaultPassword
+      });
     });
   });
 });
@@ -128,42 +175,98 @@ router.post("/change-password", (req, res) => {
 });
 
 router.post("/forgot-password", (req, res) => {
+  const { email } = req.body;
 
-  const { email, newPassword } = req.body;
-
-  if (!email || !newPassword) {
-    return res.json({
-      success: false,
-      message: "Please fill in all fields"
-    });
+  if (!email) {
+    return res.json({ success: false, message: "Email is required" });
   }
 
-  const sql = `
-    UPDATE users
-    SET password = ?, must_change_password = FALSE
-    WHERE email = ?
-    AND status = 'active'
-  `;
-
-  db.query(sql, [newPassword, email], (err, result) => {
-
-    if (err) {
-      return res.json({
-        success: false,
-        message: "Database error"
-      });
+  // 1. Check if user exists
+  const checkUserSql = "SELECT * FROM users WHERE email = ? AND status = 'active'";
+  
+  db.query(checkUserSql, [email], (err, result) => {
+    if (err) return res.json({ success: false, message: "Database error" });
+    
+    if (result.length === 0) {
+      // Return success anyway to prevent email enumeration (fishing for valid emails)
+      return res.json({ success: true, message: "If the email exists, a reset link was sent." });
     }
 
-    if (result.affectedRows === 0) {
-      return res.json({
-        success: false,
-        message: "Email not found"
+    // 2. Generate a secure random token and expiration (1 hour)
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
+
+    // 3. Store token in database
+    const insertTokenSql = `
+      INSERT INTO password_resets (email, token, expires_at) 
+      VALUES (?, ?, ?)
+    `;
+
+    db.query(insertTokenSql, [email, token, expiresAt], (insertErr) => {
+      if (insertErr) {
+        console.error("Token insert error:", insertErr);
+        return res.json({ success: false, message: "Failed to process request" });
+      }
+
+      // 4. Send the email
+      const resetLink = `http://localhost:3000/reset-password.html?token=${token}`; // Update frontend URL as needed
+      
+      const mailOptions = {
+        from: 'no-reply@yourdomain.com',
+        to: email,
+        subject: 'Password Reset Request',
+        text: `You requested a password reset. Click the link to set a new password: ${resetLink}\n\nThis link expires in 1 hour.`
+      };
+
+      transporter.sendMail(mailOptions, (mailErr) => {
+        if (mailErr) {
+          console.error("Email error:", mailErr);
+          return res.json({ success: false, message: "Failed to send email" });
+        }
+        
+        return res.json({ success: true, message: "If the email exists, a reset link was sent." });
       });
+    });
+  });
+});
+
+router.post("/reset-password", (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res.json({ success: false, message: "Token and new password are required" });
+  }
+
+  // 1. Verify token exists and is not expired
+  const verifySql = "SELECT email FROM password_resets WHERE token = ? AND expires_at > NOW()";
+  
+  db.query(verifySql, [token], (err, result) => {
+    if (err) return res.json({ success: false, message: "Database error" });
+
+    if (result.length === 0) {
+      return res.json({ success: false, message: "Invalid or expired reset token" });
     }
 
-    return res.json({
-      success: true,
-      message: "Password updated successfully"
+    const email = result[0].email;
+
+    // 2. Hash the new password using bcrypt
+    bcrypt.hash(newPassword, 10, (hashErr, hashedPassword) => {
+      if (hashErr) return res.json({ success: false, message: "Error securing password" });
+
+      // 3. Update the user's password
+      const updatePasswordSql = "UPDATE users SET password = ?, must_change_password = FALSE WHERE email = ?";
+      
+      db.query(updatePasswordSql, [hashedPassword, email], (updateErr) => {
+        if (updateErr) return res.json({ success: false, message: "Failed to update password" });
+
+        // 4. Delete the used token to prevent reuse
+        const deleteTokenSql = "DELETE FROM password_resets WHERE email = ?";
+        db.query(deleteTokenSql, [email], (deleteErr) => {
+          if (deleteErr) console.error("Failed to clean up token:", deleteErr);
+          
+          return res.json({ success: true, message: "Password has been successfully reset" });
+        });
+      });
     });
   });
 });
