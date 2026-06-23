@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'courneyk8570@gmail.com',
-    pass: 'arqtwnqjlctariaw' 
+    pass: '' 
   }
 });
 
@@ -608,9 +608,9 @@ router.get("/facilities/:id/available-slots", (req, res) => {
 
     const selectedDay = new Date(selectedDate).toLocaleDateString("en-US", { weekday: "long" });
 
-    // FIX: Added 'facility_name' so we can check for the Music Room specifically
+    // 1. ADDED max_people TO THIS QUERY
     const facilitySql = `
-      SELECT facility_name, operating_start, operating_end, booking_flow_type
+      SELECT facility_name, operating_start, operating_end, booking_flow_type, max_people
       FROM facilities
       WHERE facility_id = ?
       LIMIT 1
@@ -622,6 +622,8 @@ router.get("/facilities/:id/available-slots", (req, res) => {
       }
 
       const facility = facilityResult[0];
+      // 2. DEFINE THE CAPACITY LIMIT FROM DATABASE (Defaults to 1 if blank)
+      const maxCapacity = facility.max_people || 1; 
 
       const bookingSql = `
         SELECT start_time, end_time
@@ -632,9 +634,7 @@ router.get("/facilities/:id/available-slots", (req, res) => {
       `;
 
       db.query(bookingSql, [facilityId, selectedDate], (bookingErr, bookingResult) => {
-        if (bookingErr) {
-          return res.json({ success: false, message: "Failed to check bookings", slots: [] });
-        }
+        if (bookingErr) return res.json({ success: false, message: "Failed to check bookings", slots: [] });
 
         const timetableSql = `
           SELECT start_time, end_time
@@ -643,9 +643,7 @@ router.get("/facilities/:id/available-slots", (req, res) => {
         `;
 
         db.query(timetableSql, [facilityId, selectedDay], (timetableErr, timetableResult) => {
-          if (timetableErr) {
-            return res.json({ success: false, message: "Failed to check class timetable", slots: [] });
-          }
+          if (timetableErr) return res.json({ success: false, message: "Failed to check class timetable", slots: [] });
 
           const slots = [];
           const operatingStart = Number(facility.operating_start.substring(0, 2));
@@ -657,45 +655,40 @@ router.get("/facilities/:id/available-slots", (req, res) => {
 
           const today = new Date().toISOString().split("T")[0];
           const now = new Date();
-          
           const minimumBookingTime = new Date();
-          minimumBookingTime.setMinutes(minimumBookingTime.getMinutes() + 30); // For normal facilities
+          minimumBookingTime.setMinutes(minimumBookingTime.getMinutes() + 30); 
 
           for (let hour = operatingStart; hour < operatingEnd; hour++) {
-
-            // --- NEW LOGIC: MUSIC ROOM CLEANING TIME ---
-            // dayNumber 2 = Tuesday, 5 = Friday
-            // hour 9 = 9:00 AM to 10:00 AM slot
             if (facility.facility_name === 'Music Room' && (dayNumber === 2 || dayNumber === 5) && hour === 9) {
-                continue; // Skip this time slot entirely!
+                continue; 
             }
-            // -------------------------------------------
 
             const startTime = `${String(hour).padStart(2, "0")}:00:00`;
             const endTime = `${String(hour + 1).padStart(2, "0")}:00:00`;
-
             const slotStartDateTime = new Date(`${selectedDate}T${startTime}`);
             const slotEndDateTime = new Date(`${selectedDate}T${endTime}`);
 
             if (selectedDate === today) {
                 if (facility.booking_flow_type === 'direct_reservation') {
-                    // CUBICLE: Hide the slot if there is less than 30 minutes left before it ends
                     const minsLeft = (slotEndDateTime - now) / 60000;
-                    if (minsLeft < 30) {
-                        continue;
-                    }
+                    if (minsLeft < 30) continue;
                 } else {
-                    // NORMAL: Hide if start time doesn't meet the 30-min advance rule
-                    if (slotStartDateTime < minimumBookingTime) {
-                        continue;
-                    }
+                    if (slotStartDateTime < minimumBookingTime) continue;
                 }
             }
 
-            const isBooked = bookingResult.some(booking => isTimeOverlap(startTime, endTime, booking.start_time, booking.end_time));
+            // 3. NEW LOGIC: COUNT HOW MANY TIMES THIS SLOT IS BOOKED
+            let bookedPaxCount = 0;
+            bookingResult.forEach(booking => {
+              if (isTimeOverlap(startTime, endTime, booking.start_time, booking.end_time)) {
+                bookedPaxCount++;
+              }
+            });
+
             const isClassTime = timetableResult.some(classSlot => isTimeOverlap(startTime, endTime, classSlot.start_time, classSlot.end_time));
 
-            if (!isBooked && !isClassTime) {
+            // 4. ONLY PUSH SLOT IF CURRENT BOOKINGS ARE LESS THAN MAX CAPACITY
+            if (bookedPaxCount < maxCapacity && !isClassTime) {
               slots.push({
                 start_time: startTime,
                 end_time: endTime,
@@ -859,17 +852,17 @@ router.post("/bookings", (req, res) => {
       message: "You cannot book a date or time that has already passed"
     });
   }
-
   */
 
   const duration_hours = (end - start) / (1000 * 60 * 60);
 
-    const facilitySql = `
-      SELECT facility_name, booking_flow_type
-      FROM facilities
-      WHERE facility_id = ?
-      LIMIT 1
-    `;
+  // 1. UPDATE QUERY TO FETCH max_people
+  const facilitySql = `
+    SELECT facility_name, booking_flow_type, max_people
+    FROM facilities
+    WHERE facility_id = ?
+    LIMIT 1
+  `;
 
   db.query(facilitySql, [facility_id], (facilityErr, facilityResult) => {
     if (facilityErr || facilityResult.length === 0) {
@@ -879,12 +872,13 @@ router.post("/bookings", (req, res) => {
       });
     }
 
+    const bookingFlowType = facilityResult[0].booking_flow_type || "normal_approval";
+    const facilityName = facilityResult[0].facility_name;
+    // 2. PULL CAPACITY LIMIT FROM DATABASE (Defaults to 1 if NULL)
+    const maxCapacity = facilityResult[0].max_people || 1; 
+    const now = new Date();
 
-  const bookingFlowType = facilityResult[0].booking_flow_type || "normal_approval";
-  const facilityName = facilityResult[0].facility_name;
-  const now = new Date();
-
-// --- NEW LOGIC: Validation based on Facility Type ---
+    // --- NEW LOGIC: Validation based on Facility Type ---
     if (bookingFlowType === 'direct_reservation') {
         // Cubicle: Allow booking ongoing slots, but block if less than 30 mins remain!
         const minsLeft = (end - now) / 60000;
@@ -898,52 +892,52 @@ router.post("/bookings", (req, res) => {
             return res.json({ success: false, message: "You must book at least 30 minutes in advance" });
         }
     }
-  // ---------------------------------------------------
+    // ---------------------------------------------------
 
-  let bookingStatus = "pending";
-  let paymentRequired = 0;
-  let paymentStatus = "not_required";
-  let paymentAmount = 0.00;
-  let keyStatus = "not_required";
+    let bookingStatus = "pending";
+    let paymentRequired = 0;
+    let paymentStatus = "not_required";
+    let paymentAmount = 0.00;
+    let keyStatus = "not_required";
 
-  if (bookingFlowType === "normal_approval") {
-    bookingStatus = "pending";
-    paymentRequired = 0;
-    paymentStatus = "not_required";
-    paymentAmount = 0.00;
-    keyStatus = "not_required";
-  }
+    if (bookingFlowType === "normal_approval") {
+      bookingStatus = "pending";
+      paymentRequired = 0;
+      paymentStatus = "not_required";
+      paymentAmount = 0.00;
+      keyStatus = "not_required";
+    }
 
-  if (bookingFlowType === "payment_required") {
-    bookingStatus = "pending_payment";
-    paymentRequired = 1;
-    paymentStatus = "pending_payment";
-    paymentAmount = 5.00;
-    keyStatus = "not_required";
-  }
+    if (bookingFlowType === "payment_required") {
+      bookingStatus = "pending_payment";
+      paymentRequired = 1;
+      paymentStatus = "pending_payment";
+      paymentAmount = 5.00;
+      keyStatus = "not_required";
+    }
 
-  if (bookingFlowType === "direct_reservation") {
-    bookingStatus = "reserved";
-    paymentRequired = 0;
-    paymentStatus = "not_required";
-    paymentAmount = 0.00;
-    keyStatus = "not_required";
-  }
+    if (bookingFlowType === "direct_reservation") {
+      bookingStatus = "reserved";
+      paymentRequired = 0;
+      paymentStatus = "not_required";
+      paymentAmount = 0.00;
+      keyStatus = "not_required";
+    }
 
-  if (bookingFlowType === "staff_key_approval") {
-    bookingStatus = "pending";
-    paymentRequired = 0;
-    paymentStatus = "not_required";
-    paymentAmount = 0.00;
-    keyStatus = "pending_collection";
-  }
+    if (bookingFlowType === "staff_key_approval") {
+      bookingStatus = "pending";
+      paymentRequired = 0;
+      paymentStatus = "not_required";
+      paymentAmount = 0.00;
+      keyStatus = "pending_collection";
+    }
 
+    // 3. CHECK OVERLAPPING BOOKINGS
     const checkSql = `
       SELECT booking_id
       FROM bookings
       WHERE facility_id = ?
       AND booking_date = ?
-      AND start_time = ?
       AND booking_status IN (
         'pending',
         'pending_payment',
@@ -953,10 +947,11 @@ router.post("/bookings", (req, res) => {
         'checked_in',
         'key_collected'
       )
-      LIMIT 1
+      AND (? < end_time AND ? > start_time) 
     `;
 
-    db.query(checkSql, [facility_id, booking_date, start_time], (checkErr, checkResult) => {
+    // Note: We inject start_time and end_time to check for actual overlaps
+    db.query(checkSql, [facility_id, booking_date, start_time, end_time], (checkErr, checkResult) => {
       if (checkErr) {
         return res.json({
           success: false,
@@ -964,10 +959,11 @@ router.post("/bookings", (req, res) => {
         });
       }
 
-      if (checkResult.length > 0) {
+      // 4. REJECT ONLY IF EXISTING BOOKINGS REACH OR EXCEED CAPACITY
+      if (checkResult.length >= maxCapacity) {
         return res.json({
           success: false,
-          message: "This time slot has already been booked"
+          message: `This time slot has reached its maximum capacity of ${maxCapacity} pax. Please try another slot.`
         });
       }
 
@@ -988,8 +984,7 @@ router.post("/bookings", (req, res) => {
           payment_status,
           payment_amount
         )
-        VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       db.query(
