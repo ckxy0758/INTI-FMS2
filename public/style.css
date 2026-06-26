@@ -1850,7 +1850,7 @@ body.sidebar-collapsed .main-content {
 .booking-action-card {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .booking-action-card h2 {
@@ -3025,7 +3025,7 @@ body.sidebar-collapsed .main-content {
 
 .booking-footer {
   margin-top: 22px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .key-status-filter {
