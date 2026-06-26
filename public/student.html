@@ -78,6 +78,15 @@
 
   <!-- ===== SCRIPT ===== -->
   <script>
+    document.getElementById("filterDate").addEventListener("click", function() {
+      this.style.border = "1.5px solid #D12E26";
+    });
+
+    document.getElementById("filterDate").addEventListener("blur", function() {
+      this.style.border = "1px solid #e5e7eb";
+      this.style.boxShadow = "none";
+    });
+
     loadLayout("facilities");
 
     const user =

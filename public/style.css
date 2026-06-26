@@ -426,6 +426,11 @@ input, select, textarea {
   border-color: #D12E26 !important;
 }
 
+#filterDate::-webkit-calendar-picker-indicator {
+  filter: invert(18%) sepia(99%) saturate(2475%) hue-rotate(346deg) brightness(90%) contrast(92%);
+  cursor: pointer;
+}
+
 .date-input-wrapper {
   position: relative;
   display: flex;
@@ -726,7 +731,7 @@ span.flatpickr-weekday {
   width: 100%;
   height: 42px;
   padding: 0 14px;
-  border: 1px solid #e5e7eb;
+  border: 1.5px solid #e5e7eb;
   border-radius: 8px;
   background: #ffffff;
   color: #D12E26;
@@ -3818,4 +3823,10 @@ input[type="password"]::-webkit-reveal {
 .details-section h3 {
   margin-top: 4px !important;
   margin-bottom: 4px !important;
+}
+
+.filter-bar input[type="date"]:focus {
+  outline: none !important;
+  border: 1.5px solid #D12E26 !important;
+  background: #ffffff !important;
 }
