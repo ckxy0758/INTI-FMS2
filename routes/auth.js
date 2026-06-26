@@ -425,7 +425,7 @@ const {
       rules || "",
       additional_info || "",
       equipment || "",
-      image_path || "images/bg-image-2.jpeg",
+      finalImagePath || "images/bg-image-2.jpeg",
       availability_status || "available",
       visible_to || "both",
       key_required || 0,
@@ -451,6 +451,8 @@ const {
 
 router.put("/facilities/:id", (req, res) => {
   const facilityId = req.params.id;
+  const fs = require("fs");
+  const path = require("path");
 
   const {
     facility_name,
@@ -469,6 +471,16 @@ router.put("/facilities/:id", (req, res) => {
     key_required,
     booking_flow_type
   } = req.body;
+
+  let finalImagePath = image_path;
+
+  if (image_path && image_path.startsWith("data:image")) {
+    const base64Data = image_path.replace(/^data:image\/\w+;base64,/, "");
+    const fileName = `facility_${facilityId}_${Date.now()}.jpg`;
+    const filePath = path.join(__dirname, "../public/uploads", fileName);
+    fs.writeFileSync(filePath, base64Data, "base64");
+    finalImagePath = `uploads/${fileName}`;
+  }
 
   if (
     !facility_name ||
@@ -518,7 +530,7 @@ router.put("/facilities/:id", (req, res) => {
       rules || "",
       additional_info || "",
       equipment || "",
-      image_path || "images/bg-image-2.jpeg",
+      finalImagePath || "images/bg-image-2.jpeg",
       availability_status || "available",
       visible_to || "both",
       key_required || 0,
