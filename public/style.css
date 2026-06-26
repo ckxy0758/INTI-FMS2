@@ -1770,6 +1770,7 @@ body.sidebar-collapsed .main-content {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 24px;
+  align-items: stretch;
 }
 
 .booking-detail-card,
@@ -1788,15 +1789,16 @@ body.sidebar-collapsed .main-content {
 }
 
 .booking-detail-header h2 {
-  margin: 0 0 16px;
+  margin: 0 0 30px;
   color: #6b7280;
   font-size: 20px;
+  font-weight: 600;
 }
 
 .booking-status-badge {
   background: #dff7e5;
   color: #208843;
-  padding: 8px 18px;
+  padding: 8px 20px;
   border-radius: 20px;
   font-weight: 700;
 }
@@ -1806,30 +1808,36 @@ body.sidebar-collapsed .main-content {
   height: 180px;
   object-fit: cover;
   border-radius: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
+  margin-top: 20px;
 }
 
 .booking-detail-card h2 {
   color: #111827;
-  margin: 8px 0;
+  margin: 0px 0;
+  font-size: 20px;
 }
 
 .booking-detail-desc {
   color: #6b7280;
-  font-weight: 600;
+  font-weight: 500;
+  margin: 3px 0;
+  font-size: 15px;
 }
 
 .booking-detail-info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px 22px;
-  margin-top: 20px;
+  gap: 15px 40px;
+  margin-top: 10;
 }
 
 .booking-detail-info-grid p {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px !important;
   margin: 0;
-  color: #374151;
-  font-weight: 600;
 }
 
 .booking-purpose-box {
@@ -1840,11 +1848,19 @@ body.sidebar-collapsed .main-content {
 
 .booking-purpose-box p {
   color: #374151;
-  font-weight: 600;
+  font-weight: 400;
+  font-size: 14px;
+  margin: 5px 0 0 0;
 }
 
 .booking-action-card {
   text-align: center;
+}
+
+.booking-action-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .booking-action-card h2 {
@@ -1914,6 +1930,11 @@ body.sidebar-collapsed .main-content {
   background: #ffffff;
   color: #D12E26;
   border: 2px solid #D12E26;
+}
+
+.action-secondary-btn:hover {
+  background: #D12E26;
+  color: #ffffff;
 }
 
 .admin-dashboard-grid {
@@ -3921,6 +3942,20 @@ input[type="password"]::-webkit-reveal {
 
 .booking-table-card {
   border: 1.5px solid #e1e5ec !important;
+}
+
+.outline-btn:hover {
+  background: #fde8e7;
+  color: #D12E26;
+  transform: translateY(-2px);
+  transition: 0.2s ease;
+}
+
+.solid-btn:hover {
+  background: #b92720;
+  border-color: #b92720;
+  transform: translateY(-2px);
+  transition: 0.2s ease;
 }
 
 
