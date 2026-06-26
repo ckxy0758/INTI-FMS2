@@ -407,16 +407,6 @@ input, select, textarea {
 
 /* ===== FLATPICKR ===== */
 
-.flatpickr-months {
-  background: #ffffff;
-  margin-bottom: 16px;
-  padding: 0;
-  position: relative;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-}
-
 #filterDate::placeholder {
   color: #D12E26;
 }
@@ -3958,5 +3948,8 @@ input[type="password"]::-webkit-reveal {
   transition: 0.2s ease;
 }
 
-
+#filterDate.active {
+  border: 1.5px solid #D12E26 !important;
+  outline: none !important;
+}
 

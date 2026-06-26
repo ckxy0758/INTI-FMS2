@@ -78,16 +78,19 @@
 
   <!-- ===== SCRIPT ===== -->
   <script>
-    document.getElementById("filterDate").addEventListener("click", function() {
-      this.style.border = "1.5px solid #D12E26";
-    });
-
-    document.getElementById("filterDate").addEventListener("blur", function() {
-      this.style.border = "1px solid #e5e7eb";
-      this.style.boxShadow = "none";
-    });
 
     loadLayout("facilities");
+    loadLayout("facilities");
+
+    const filterDate = document.getElementById("filterDate");
+
+    filterDate.addEventListener("focus", function() {
+      this.classList.add("active");
+    });
+
+    filterDate.addEventListener("blur", function() {
+      this.classList.remove("active");
+    });
 
     const user =
       JSON.parse(localStorage.getItem("user")) ||
