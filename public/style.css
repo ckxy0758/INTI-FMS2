@@ -893,7 +893,7 @@ span.flatpickr-weekday {
   position: absolute;
   right: 10px;
   top: 12px;
-  background: #dff7e5;
+  background: #D0FFE0;
   color: #208843;
   padding: 6px 10px;
   border-radius: 16px;
@@ -1274,15 +1274,19 @@ span.flatpickr-weekday {
 
 .progress-wrapper {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 }
 
 .progress-step {
   text-align: center;
   color: #9ca3af;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 500;
+  width: 70px;
+  min-width: 70px;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .progress-step .circle {
@@ -1292,8 +1296,8 @@ span.flatpickr-weekday {
   color: #ffffff;
   border-radius: 50%;
   line-height: 32px;
-  margin: 0 auto 6px;
-  font-weight: 800;
+  margin: 0 auto 15px;
+  font-weight: 500;
 }
 
 .progress-step.active {
@@ -1305,10 +1309,10 @@ span.flatpickr-weekday {
 }
 
 .progress-line {
-  width: 90px;
+  width: 30px;
   height: 4px;
   background: #e5e7eb;
-  margin: 0 8px 24px;
+  margin: 16px 4px 0;
   border-radius: 10px;
 }
 
@@ -3830,3 +3834,77 @@ input[type="password"]::-webkit-reveal {
   border: 1.5px solid #D12E26 !important;
   background: #ffffff !important;
 }
+
+/* ===== ACTIVITIES FILTER ROW FIX ===== */
+.activity-filter {
+  border: 1.5px solid #e5e7eb !important;
+  border-radius: 8px !important;
+}
+
+.activity-filter.active {
+  border: 1.5px solid #D12E26 !important;
+}
+
+#sortActivities {
+  height: 44px !important;
+  padding: 0 42px 0 14px !important;
+  border: 1.5px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  background-color: #ffffff !important;
+
+  appearance: none !important;
+  -webkit-appearance: none !important;
+
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 18px !important;
+}
+
+#sortActivities:focus {
+  outline: none !important;
+  border: 1.5px solid #D12E26 !important;
+}
+
+/* ===== CONSISTENT 1.5px BORDER FIX ===== */
+.filter-bar input,
+.filter-bar select {
+  border: 1.5px solid #e5e7eb !important;
+}
+
+.booking-panel input,
+.booking-panel select,
+.booking-panel textarea {
+  border: 1.5px solid #e5e7eb !important;
+}
+
+.notification-card {
+  border: 1.5px solid #e5e7eb !important;
+}
+
+.notification-card.unread {
+  border-left: 5px solid #D12E26 !important;
+}
+
+.activity-card {
+  border: 1.5px solid #e5e7eb !important;
+}
+
+.admin-facility-card {
+  border: 1.5px solid #e1e5ec !important;
+}
+
+.facility-form-card {
+  border: 1.5px solid #e1e5ec !important;
+}
+
+.user-table-card {
+  border: 1.5px solid #e1e5ec !important;
+}
+
+.booking-table-card {
+  border: 1.5px solid #e1e5ec !important;
+}
+
+
+
