@@ -1564,15 +1564,21 @@ span.flatpickr-weekday {
 }
 
 .settings-option-card h3 {
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   font-size: 18px;
   color: #111827;
+  font-weight: 600;
+  font-size: 18px;
+
+
 }
 
 .settings-option-card p {
   margin: 0;
   color: #111827;
-  font-weight: 500;
+  font-weight: 400;
+  font-size: 15px !important;
+
 }
 
 .settings-option-card button {
@@ -1580,13 +1586,14 @@ span.flatpickr-weekday {
   border: 1.5px solid #e5e7eb;
   background: #ffffff;
   border-radius: 18px;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
 }
 
 .settings-option-card button:hover {
+  background: #D12E26;
   border-color: #D12E26;
-  color: #D12E26;
+  color: #ffffff;
 }
 
 .settings-btn-row {
