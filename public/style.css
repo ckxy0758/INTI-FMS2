@@ -1388,16 +1388,22 @@ span.flatpickr-weekday {
 .mark-read-btn {
   background: #ffffff;
   color: #D12E26;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid #D12E26;  
   border-radius: 8px;
   padding: 12px 18px;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
 }
 
+.mark-read-btn:hover {
+  background: #D12E26 !important;
+  color: #ffffff !important;
+}
+
 .notification-group-title {
-  margin: 22px 0 12px;
+  margin: 5px 0 8px;
   font-size: 16px;
+  font-weight: 500;
   color: #111827;
 }
 
@@ -1434,20 +1440,23 @@ span.flatpickr-weekday {
 }
 
 .notification-content h3 {
-  margin: 0 0 6px;
+  margin: 0 0 3px;
   font-size: 16px;
+  font-weight: 600;
 }
 
 .notification-content p {
   margin: 0;
   color: #6b7280;
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 14px;
+
 }
 
 .notification-time {
   color: #6b7280;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .booking-panel .equipment-list {
