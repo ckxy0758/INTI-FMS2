@@ -4030,3 +4030,27 @@ input[type="password"]::-webkit-reveal {
   font-family: 'Poppins', sans-serif;
 }
 
+
+.booking-toolbar input[type="date"] {
+  height: 42px;
+  padding: 0 14px;
+  width: 180px !important;
+  box-sizing: border-box !important;
+  border: 1.5px solid #e5e7eb !important;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #D12E26;
+  font-weight: 600;
+  font-size: 14px !important;
+  font-family: 'Poppins', sans-serif;
+}
+
+.booking-toolbar input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(18%) sepia(99%) saturate(2475%) hue-rotate(346deg) brightness(90%) contrast(92%);
+  cursor: pointer;
+}
+
+.booking-toolbar input[type="date"].active {
+  border: 1.5px solid #D12E26 !important;
+  outline: none !important;
+}
