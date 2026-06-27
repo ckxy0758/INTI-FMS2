@@ -819,7 +819,8 @@ router.post("/bookings", (req, res) => {
     booking_date,
     start_time,
     end_time,
-    purpose
+    purpose,
+    equipmentRequired
   } = req.body;
 
   // Basic Validation
@@ -942,13 +943,13 @@ router.post("/bookings", (req, res) => {
           // 4. INSERT THE NEW BOOKING
           const insertSql = `
             INSERT INTO bookings 
-            (user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose, booking_status, key_status, payment_required, payment_status, payment_amount) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose, equipment_required, booking_status, key_status, payment_required, payment_status, payment_amount) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `;
 
           connection.query(
             insertSql, 
-            [user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose || "", bookingStatus, keyStatus, paymentRequired, paymentStatus, paymentAmount], 
+            [user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose || "", equipmentRequired || "", bookingStatus, keyStatus, paymentRequired, paymentStatus, paymentAmount], 
             (insertErr, insertResult) => {
             
             if (insertErr) {
