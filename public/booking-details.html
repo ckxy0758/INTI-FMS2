@@ -261,13 +261,10 @@
       })
       .then(res => res.json())
       .then(data => {
-        alert(data.message);
-        if (data.success) {
-          loadBookingDetails(); 
-        }
+        showAlert(data.message, data.success ? "success" : "error", data.success ? () => loadBookingDetails() : null);
       })
       .catch(() => {
-        alert("Check-in failed. Please try again.");
+        showAlert("Check-in failed. Please try again.", "error");
       });
     }
 
@@ -279,13 +276,10 @@
       })
       .then(res => res.json())
       .then(data => {
-        alert(data.message);
-        if (data.success) {
-          loadBookingDetails();
-        }
+        showAlert(data.message, data.success ? "success" : "error", data.success ? () => loadBookingDetails() : null);
       })
       .catch(() => {
-        alert("Key return failed. Please try again.");
+        showAlert("Key return failed. Please try again.", "error");
       });
     }
 
@@ -385,7 +379,38 @@
       sessionStorage.removeItem("user");
       window.location.href = "login.html";
     }
+
+    function showAlert(message, type, onClose) {
+      document.getElementById("modalIcon").innerHTML = type === "success"
+        ? `<div style="width:44px;height:44px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;"><svg xmlns="http://www.w3.org/2000/svg" height="36px" viewBox="0 -960 960 960" width="36px" fill="#22c55e"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg></div>`
+        : `<div style="width:44px;height:44px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;"><svg xmlns="http://www.w3.org/2000/svg" height="36px" viewBox="0 -960 960 960" width="36px" fill="#D12E26"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg></div>`;
+      document.getElementById("modalTitle").innerText = type === "success" ? "Success" : "Error";
+      document.getElementById("modalTitle").style.color = "#D12E26";
+      document.getElementById("modalTitle").style.fontSize = "24px";
+      document.getElementById("modalMessage").innerText = message;
+      document.getElementById("modalMessage").style.fontSize = "16px";
+      document.getElementById("modalButtons").innerHTML = `
+        <button onclick="closeModal('cb')" class="custom-modal-btn-ok">OK</button>
+      `;
+      if (onClose) window._modalCallback = onClose;
+      document.getElementById("customModal").style.display = "flex";
+    }
+
+    function closeModal(cb) {
+      document.getElementById("customModal").style.display = "none";
+      if (cb === 'cb' && window._modalCallback) { window._modalCallback(); window._modalCallback = null; }
+    }
+
   </script>
+
+<div id="customModal" class="custom-modal-overlay">
+    <div class="custom-modal-box">
+      <div id="modalIcon" class="custom-modal-icon"></div>
+      <h3 id="modalTitle" class="custom-modal-title"></h3>
+      <p id="modalMessage" class="custom-modal-message"></p>
+      <div id="modalButtons" class="custom-modal-buttons"></div>
+    </div>
+  </div>
 
 </body>
 </html>
