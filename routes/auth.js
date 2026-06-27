@@ -373,7 +373,8 @@ const {
   availability_status,
   visible_to,
   key_required,
-  booking_flow_type
+  booking_flow_type,
+  time_slots
 } = req.body;
 
   if (
@@ -407,9 +408,10 @@ const {
       availability_status,
       visible_to,
       key_required,
-      booking_flow_type
+      booking_flow_type,
+      time_slots
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   db.query(
@@ -429,7 +431,8 @@ const {
       availability_status || "available",
       visible_to || "both",
       key_required || 0,
-      booking_flow_type || "normal_approval"
+      booking_flow_type || "normal_approval",
+      JSON.stringify(time_slots || null)
     ],
     (err) => {
       if (err) {
@@ -469,7 +472,8 @@ router.put("/facilities/:id", (req, res) => {
     availability_status,
     visible_to,
     key_required,
-    booking_flow_type
+    booking_flow_type,
+    time_slots
   } = req.body;
 
   let finalImagePath = image_path;
@@ -513,7 +517,8 @@ router.put("/facilities/:id", (req, res) => {
       availability_status = ?,
       visible_to = ?,
       key_required = ?,
-      booking_flow_type = ? 
+      booking_flow_type = ?,
+      time_slots = ?
     WHERE facility_id = ?
   `;
 
@@ -535,6 +540,7 @@ router.put("/facilities/:id", (req, res) => {
       visible_to || "both",
       key_required || 0,
       booking_flow_type || "normal_approval",
+      JSON.stringify(time_slots || null),
       facilityId
     ],
     (err) => {
@@ -634,6 +640,17 @@ router.get("/facilities/:id/available-slots", (req, res) => {
       }
 
       const facility = facilityResult[0];
+      
+      let slotsSource = [];
+
+      if (facility.time_slots) {
+        try {
+          slotsSource = JSON.parse(facility.time_slots);
+        } catch (e) {
+          slotsSource = [];
+        }
+      }
+
       // 2. DEFINE THE CAPACITY LIMIT FROM DATABASE (Defaults to 1 if blank)
       const maxCapacity = facility.max_people || 1; 
 
@@ -646,6 +663,11 @@ router.get("/facilities/:id/available-slots", (req, res) => {
       `;
 
       db.query(bookingSql, [facilityId, selectedDate], (bookingErr, bookingResult) => {
+        const isBooked = (startTime, endTime) =>
+          bookingResult.some(b =>
+            isTimeOverlap(startTime, endTime, b.start_time, b.end_time)
+          );
+
         if (bookingErr) return res.json({ success: false, message: "Failed to check bookings", slots: [] });
 
         const timetableSql = `
@@ -670,42 +692,42 @@ router.get("/facilities/:id/available-slots", (req, res) => {
           const minimumBookingTime = new Date();
           minimumBookingTime.setMinutes(minimumBookingTime.getMinutes() + 30); 
 
-          for (let hour = operatingStart; hour < operatingEnd; hour++) {
-            if (facility.facility_name === 'Music Room' && (dayNumber === 2 || dayNumber === 5) && hour === 9) {
-                continue; 
-            }
+          if (slotsSource.length > 0) {
+            // ADMIN CUSTOM SLOTS (THIS FIXES YOUR ISSUE)
+            slotsSource.forEach(slot => {
+              const startTime = slot.start_time || slot.start;
+              const endTime = slot.end_time || slot.end;
 
-            const startTime = `${String(hour).padStart(2, "0")}:00:00`;
-            const endTime = `${String(hour + 1).padStart(2, "0")}:00:00`;
-            const slotStartDateTime = new Date(`${selectedDate}T${startTime}`);
-            const slotEndDateTime = new Date(`${selectedDate}T${endTime}`);
+              const isClassTime = timetableResult.some(classSlot =>
+                isTimeOverlap(startTime, endTime, classSlot.start_time, classSlot.end_time)
+              );
 
-            if (selectedDate === today) {
-                if (facility.booking_flow_type === 'direct_reservation') {
-                    const minsLeft = (slotEndDateTime - now) / 60000;
-                    if (minsLeft < 30) continue;
-                } else {
-                    if (slotStartDateTime < minimumBookingTime) continue;
-                }
-            }
-
-            // 3. NEW LOGIC: COUNT HOW MANY TIMES THIS SLOT IS BOOKED
-            let bookedPaxCount = 0;
-            bookingResult.forEach(booking => {
-              if (isTimeOverlap(startTime, endTime, booking.start_time, booking.end_time)) {
-                bookedPaxCount++;
+              if (!isClassTime && !isBooked(startTime, endTime)) {
+                slots.push({
+                  start_time: startTime,
+                  end_time: endTime,
+                  label: `${formatSlotTime(startTime)} - ${formatSlotTime(endTime)}`
+                });
               }
             });
 
-            const isClassTime = timetableResult.some(classSlot => isTimeOverlap(startTime, endTime, classSlot.start_time, classSlot.end_time));
+          } else {
+            // FALLBACK AUTO SLOTS (ONLY IF ADMIN DID NOT SET ANY)
+            for (let hour = operatingStart; hour < operatingEnd; hour++) {
+              const startTime = `${String(hour).padStart(2, "0")}:00:00`;
+              const endTime = `${String(hour + 1).padStart(2, "0")}:00:00`;
 
-            // 4. ONLY PUSH SLOT IF CURRENT BOOKINGS ARE LESS THAN MAX CAPACITY
-            if (bookedPaxCount < maxCapacity && !isClassTime) {
-              slots.push({
-                start_time: startTime,
-                end_time: endTime,
-                label: `${formatSlotTime(startTime)} - ${formatSlotTime(endTime)}`
-              });
+              const isClassTime = timetableResult.some(classSlot =>
+                isTimeOverlap(startTime, endTime, classSlot.start_time, classSlot.end_time)
+              );
+
+              if (!isClassTime && !isBooked(startTime, endTime)) {
+                slots.push({
+                  start_time: startTime,
+                  end_time: endTime,
+                  label: `${formatSlotTime(startTime)} - ${formatSlotTime(endTime)}`
+                });
+              }
             }
           }
 
