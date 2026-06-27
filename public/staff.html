@@ -2,7 +2,6 @@
 <html>
 <head>
   <title>Staff Dashboard</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -28,13 +27,7 @@
       <div class="filter-bar">
 
         <label>Filter By:</label>
-
-        <div class="date-input-wrapper">
-        <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor">
-          <path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Z"/>
-        </svg>
-        <input type="text" id="filterDate" placeholder="Select Date" readonly>
-      </div>
+        <input type="date" id="filterDate">
 
         <div class="custom-dropdown" id="typeDropdown">
         <button class="custom-dropdown-btn" onclick="toggleDropdown()">
@@ -73,8 +66,6 @@
   </div>
 
   <script src="component.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
   <script>
     loadLayout("facilities");
 
@@ -164,7 +155,7 @@
                   </svg>
                 </span>
 
-                <span>Max. People: ${facility.max_people || "-"}</span>
+                <span>Max. Capacity: ${facility.max_people || "-"}</span>
               </p>
 
               <p>
@@ -240,63 +231,18 @@
       return "Available Now";
     }
 
-    /* ===== DATE PICKER ===== */
-    flatpickr("#filterDate", {
-      dateFormat: "d/m/Y",
-      minDate: "today",
-      defaultDate: "today",
-      disableMobile: true,
-      locale: { firstDayOfWeek: 1 },
-      onOpen: function(selectedDates, dateStr, instance) {
-        setTimeout(function() {
-          const cal = instance.calendarContainer;
-          const input = document.getElementById("filterDate");
-          const rect = input.getBoundingClientRect();
-          cal.style.position = "fixed";
-          cal.style.top = (rect.bottom + 6) + "px";
-          cal.style.left = rect.left + "px";
-          cal.style.zIndex = "9999";
-        }, 0);
-      },
-      onReady: function(selectedDates, dateStr, instance) {
-        const cal = instance.calendarContainer;
-        cal.style.zIndex = "9999";
-
-        const monthsEl = cal.querySelector(".flatpickr-months");
-        const prevBtn = cal.querySelector(".flatpickr-prev-month");
-        const nextBtn = cal.querySelector(".flatpickr-next-month");
-        monthsEl.insertBefore(prevBtn, monthsEl.firstChild);
-        monthsEl.appendChild(nextBtn);
-
-        const bottomRow = document.createElement("div");
-        bottomRow.className = "fp-bottom-row";
-        bottomRow.innerHTML = `
-          <button class="fp-cancel-btn" type="button">Cancel</button>
-          <button class="fp-apply-btn" type="button">Today</button>
-        `;
-        cal.appendChild(bottomRow);
-
-        bottomRow.querySelector(".fp-cancel-btn").addEventListener("click", () => {
-          instance.clear();
-          instance.close();
-          applyFilters();
-        });
-
-        bottomRow.querySelector(".fp-apply-btn").addEventListener("click", () => {
-          instance.setDate(new Date());
-          instance.close();
-          applyFilters();
-        });
-      },
-      onChange: function(selectedDates, dateStr, instance) {
-        applyFilters();
-      }
+    document.getElementById("filterDate").addEventListener("change", function() {
+      applyFilters();
     });
 
-    window.addEventListener("scroll", function() {
-      const fp = document.getElementById("filterDate")._flatpickr;
-      if (fp) fp.close();
-    }, true);
+    document.getElementById("filterDate").addEventListener("click", function() {
+      this.style.border = "1.5px solid #D12E26";
+    });
+
+    document.getElementById("filterDate").addEventListener("blur", function() {
+      this.style.border = "1px solid #e5e7eb";
+      this.style.boxShadow = "none";
+    });
 
     function formatTime(time) {
       if (!time) return "-";

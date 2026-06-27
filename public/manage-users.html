@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Manage Users - Facility Management System</title>
+  <title>Manage Users</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -284,42 +284,71 @@
       return status;
     }
 
-    function deactivateUser(userId) {
-      if (!confirm("Are you sure you want to deactivate this user?")) {
-        return;
-      }
+    function showAlert(message, type) {
+      document.getElementById("modalIcon").innerHTML = type === "success"
+      ? `<div style="width:44px; height:44px; background:#dcfce7; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px;"><svg xmlns="http://www.w3.org/2000/svg" height="36px" viewBox="0 -960 960 960" width="36px" fill="#22c55e"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg></div>`
+      : `<div style="width:44px; height:44px; background:#fee2e2; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px;"><svg xmlns="http://www.w3.org/2000/svg" height="36px" viewBox="0 -960 960 960" width="36px" fill="#D12E26"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg></div>`;
+      document.getElementById("modalTitle").innerText = type === "success" ? "Success" : "Error";
+      document.getElementById("modalMessage").innerText = message;
+      document.getElementById("modalButtons").innerHTML = `
+        <button onclick="closeModal()" style="padding:10px 28px; background:#D12E26; color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-family:'Poppins',sans-serif;">OK</button>
+      `;
+      document.getElementById("customModal").style.display = "flex";
+    }
 
-      fetch(`/api/users/${userId}/deactivate`, {
-        method: "PUT"
-      })
-      .then(res => res.json())
-      .then(data => {
-        alert(data.message);
-        loadUsers();
+    function showConfirm(message, onConfirm) {
+      document.getElementById("modalIcon").innerHTML = `<div style="width:44px; height:44px; background:#fef3c7; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; font-size:32px; font-weight:800; color:#f59e0b;">!</div>`;      document.getElementById("modalTitle").innerText = "Confirmation";
+      document.getElementById("modalTitle").style.color = "#D12E26";
+      document.getElementById("modalTitle").style.fontSize = "24px";
+      document.getElementById("modalTitle").style.marginBottom = "6px";
+      document.getElementById("modalTitle").style.marginTop = "-8px";
+      document.getElementById("modalMessage").innerText = message;
+      document.getElementById("modalMessage").style.fontSize = "16px";
+      document.getElementById("modalMessage").style.marginBottom = "24px";
+      document.getElementById("modalButtons").innerHTML = `
+        <button onclick="closeModal()" style="padding:10px 28px; background:#fff; color:#374151; border:1.5px solid #e5e7eb; border-radius:8px; font-weight:600; cursor:pointer; font-family:'Poppins',sans-serif;">Cancel</button>
+        <button id="confirmBtn" style="padding:10px 28px; background:#D12E26; color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-family:'Poppins',sans-serif;">Confirm</button>
+      `;
+      document.getElementById("confirmBtn").onclick = () => { closeModal(); onConfirm(); };
+      document.getElementById("customModal").style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("customModal").style.display = "none";
+    }
+
+    function deactivateUser(userId) {
+      showConfirm("Are you sure you want to deactivate this user?", () => {
+        fetch(`/api/users/${userId}/deactivate`, { method: "PUT" })
+          .then(res => res.json())
+          .then(data => {
+            showAlert(data.message, data.success ? "success" : "error");
+            loadUsers();
+          });
       });
     }
 
     function reactivateUser(userId) {
-      if (!confirm("Are you sure you want to reactivate this user?")) {
-        return;
-      }
-
-      fetch(`/api/users/${userId}/reactivate`, {
-        method: "PUT"
-      })
-      .then(res => res.json())
-      .then(data => {
-        alert(data.message);
-        loadUsers();
+      showConfirm("Are you sure you want to reactivate this user?", () => {
+        fetch(`/api/users/${userId}/reactivate`, { method: "PUT" })
+          .then(res => res.json())
+          .then(data => {
+            showAlert(data.message, data.success ? "success" : "error");
+            loadUsers();
+          });
       });
     }
-
-    function logout() {
-      localStorage.removeItem("user");
-      sessionStorage.removeItem("user");
-      window.location.href = "login.html";
-    }
   </script>
+
+<!-- Custom Modal -->
+<div id="customModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:16px; padding:32px; width:380px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.15);">
+    <div id="modalIcon" style="font-size:40px; margin-bottom:12px;"></div>
+    <h3 id="modalTitle" style="margin:0 0 8px; font-size:20px; color:#111827;"></h3>
+    <p id="modalMessage" style="color:#6b7280; font-size:14px; margin:0 0 24px;"></p>
+    <div id="modalButtons" style="display:flex; gap:12px; justify-content:center;"></div>
+  </div>
+</div>
 
 </body>
 </html>

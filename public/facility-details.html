@@ -284,15 +284,28 @@
 
             <div class="details-section">
               <h3>Facility Rules</h3>
-              <p style="white-space: pre-line;">${facility.rules || "No rules provided."}</p>
-            </div>
-
+            <div>${formatRules(facility.rules)}</div>
             <div class="details-section">
               <h3>Additional Information</h3>
                 <p class="additional-info-text">${facility.additional_info || getDefaultAdditionalInfo(facility, bookingFlowType)}</p>
             </div>
           `;
         });
+    }
+
+    function formatRules(rules) {
+      if (!rules) return "No rules provided.";
+      const lines = rules
+        .split("\n")
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => line.replace(/^[-–—]\s*/, ""))
+        .map(line => `<div style="display:flex; gap:10px; margin-bottom:6px;">
+          <span style="flex-shrink:0; color:#111827;">•</span>
+          <span>${line}</span>
+        </div>`)
+        .join("");
+      return lines;
     }
 
     function submitBooking() {
