@@ -430,6 +430,15 @@
         renderActivities(allActivities);
       }
     }
+
+    // Newly added
+    function formatAvailability(status) {
+      if (status === "available") return "Available Now";
+      if (status === "unavailable") return "Unavailable";
+      if (status === "maintenance") return "Maintenance";
+      return "Unknown";
+    }
+
       function sortActivityList() {
         const sortType = document.getElementById("sortActivities").value;
 
@@ -511,6 +520,15 @@
       document.getElementById("customModal").style.display = "none";
     }
 
+
+function logout() {
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
+      // Add a small delay to ensure storage is cleared
+      setTimeout(() => {
+        window.location.href = "login.html";
+      }, 100);
+    }
 </script>
 
   <div id="customModal" class="custom-modal-overlay">
