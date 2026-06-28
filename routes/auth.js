@@ -160,6 +160,16 @@ router.post("/change-password", (req, res) => {
     });
   }
 
+  const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).{8,}$/;
+
+  if (!passwordRegex.test(newPassword)) {
+    return res.json({
+      success: false,
+      message: "Password must be at least 8 characters and contain uppercase, lowercase, a number and a special character."
+    });
+  }
+
   const sql = `
     UPDATE users
     SET password = ?, must_change_password = FALSE
@@ -242,6 +252,16 @@ router.post("/reset-password", (req, res) => {
 
   if (!token || !newPassword) {
     return res.json({ success: false, message: "Token and new password are required" });
+  }
+
+  const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).{8,}$/;
+
+  if (!passwordRegex.test(newPassword)) {
+    return res.json({
+      success: false,
+      message: "Password must be at least 8 characters and include uppercase, lowercase, a number and a special character."
+    });
   }
 
   // 1. Verify token exists and is not expired
@@ -1182,6 +1202,16 @@ router.put("/settings/change-password", (req, res) => {
     });
   }
 
+  const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).{8,}$/;
+
+  if (!passwordRegex.test(newPassword)) {
+    return res.json({
+      success: false,
+      message: "Password must be at least 8 characters and include uppercase, lowercase, a number and a special character."
+    });
+  }
+
   const checkSql = `
     SELECT password
     FROM users
@@ -1204,26 +1234,55 @@ router.put("/settings/change-password", (req, res) => {
       });
     }
 
-    if (result[0].password !== currentPassword) {
-      return res.json({
-        success: false,
-        message: "Current password is incorrect"
-      });
-    }
+    const storedPassword = result[0].password;
+    const isHashed = storedPassword.startsWith("$2");
 
-    const updateSql = `
-      UPDATE users
-      SET password = ?, must_change_password = FALSE
-      WHERE user_id = ?
-    `;
-
-    db.query(updateSql, [newPassword, user_id], (updateErr) => {
-      if (updateErr) {
+    const proceedUpdate = (isMatch) => {
+      if (!isMatch) {
         return res.json({
           success: false,
-          message: "Failed to change password"
+          message: "Current password is incorrect"
         });
       }
+
+      bcrypt.hash(newPassword, 10, (hashErr, hashedPassword) => {
+        if (hashErr) {
+          return res.json({
+            success: false,
+            message: "Error securing password"
+          });
+        }
+
+        const updateSql = `
+          UPDATE users
+          SET password = ?, must_change_password = FALSE
+          WHERE user_id = ?
+        `;
+
+        db.query(updateSql, [hashedPassword, user_id], (updateErr) => {
+          if (updateErr) {
+            return res.json({
+              success: false,
+              message: "Failed to change password"
+            });
+          }
+        });
+      });
+    };
+
+    if (isHashed) {
+      bcrypt.compare(currentPassword, storedPassword, (err, match) => {
+        if (err) {
+          return res.json({
+            success: false,
+            message: "Server error"
+          });
+        }
+        proceedUpdate(match);
+      });
+    } else {
+      proceedUpdate(currentPassword === storedPassword);
+    }
 
       return res.json({
         success: true,
@@ -1231,7 +1290,6 @@ router.put("/settings/change-password", (req, res) => {
       });
     });
   });
-});
 
 router.get("/profile/:user_id", (req, res) => {
   const userId = req.params.user_id;
