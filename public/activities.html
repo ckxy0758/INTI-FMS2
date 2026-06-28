@@ -130,7 +130,7 @@
               </button>
 
               <button class="solid-btn" onclick="modifyBooking(${activity.booking_id})">
-                Modify
+                Cancel
               </button>
             </div>
 
@@ -243,6 +243,40 @@
         `;
       }
 
+      // --- ADD THIS NEW BLOCK FOR NORMAL APPROVAL ---
+      if (activity.booking_flow_type === "normal_approval") {
+        let step = 1;
+
+        if (bookingStatus === "key_collected") step = 2;
+        if (bookingStatus === "completed") step = 3;
+
+        return `
+          <div class="progress-wrapper">
+
+            <div class="progress-step active">
+              <div class="circle">1</div>
+              <span>Approved</span>
+            </div>
+
+            <div class="progress-line ${step >= 2 ? 'active-line' : ''}"></div>
+
+            <div class="progress-step ${step >= 2 ? 'active' : ''}">
+              <div class="circle">2</div>
+              <span>Key Collected</span>
+            </div>
+
+            <div class="progress-line ${step >= 3 ? 'active-line' : ''}"></div>
+
+            <div class="progress-step ${step >= 3 ? 'active' : ''}">
+              <div class="circle">3</div>
+              <span>Returned</span>
+            </div>
+
+          </div>
+        `;
+      }
+      // --- END OF NEW BLOCK ---
+
       let step = 1;
       let step1Text = "Submitted";
       let step2Text = "Waiting List";
@@ -329,7 +363,7 @@
         if (bookingStatus === "completed") return "Completed";
       }
 
-      if (activity.booking_flow_type === "staff_key_approval") {
+      if (activity.booking_flow_type === "staff_key_approval" || activity.booking_flow_type === "normal_approval") {
         if (bookingStatus === "pending") return "Submitted";
         if (bookingStatus === "approved") return "Approved";
         if (bookingStatus === "key_collected") return "Key Collected";
@@ -423,7 +457,7 @@
     }
 
     function modifyBooking(id) {
-      showConfirm("Are you sure you want to cancel this booking? You can only cancel at least 30 minutes before the booking starts.", () => {
+      showConfirm("Are you sure you want to cancel this booking? You can only cancel at least 1 hour before the booking starts.", () => {
         fetch(`/api/bookings/${id}/cancel`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

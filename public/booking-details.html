@@ -76,7 +76,7 @@
         .then(data => {
           if (!data.success) {
             alert(data.message);
-            window.location.href = user.role === "admin" ? "key-management.html" : "activities.html";
+            window.location.href = "activities.html";
             return;
           }
 
@@ -84,27 +84,23 @@
           renderBookingDetails(currentBooking);
           renderActionPanel(currentBooking);
 
-          // --- AUTO CHECK-IN & AUTO KEY RETURN LOGIC ---
-          if (user.role !== "admin") {
-            const params = new URLSearchParams(window.location.search);
-            
-            if (params.get("auto_checkin") === "true") {
-                setTimeout(() => {
-                    // Scenario A: Cubicle Check-in
-                    if (currentBooking.booking_flow_type === "direct_reservation" && currentBooking.booking_status === "reserved") {
-                        if(isWithinCheckInWindow(currentBooking)) {
-                            checkInCubicle();
-                        } else {
-                            alert("Auto-check-in failed: Not within the 15-minute window.");
-                        }
-                    } 
-                    // Scenario B: Lab Key Return
-                    else if (currentBooking.booking_flow_type === "staff_key_approval" && currentBooking.booking_status === "key_collected") {
-                        returnKey();
-                    }
-                }, 500);
+          // --- NEW: AUTO CHECK-IN & KEY RETURN LOGIC ---
+          const autoCheckin = params.get("auto_checkin");
+          if (autoCheckin === "true") {
+            // Remove parameter from URL so it doesn't loop if page is refreshed
+            window.history.replaceState(null, '', window.location.pathname + '?id=' + bookingId);
+
+            const status = currentBooking.booking_status ? currentBooking.booking_status.trim().toLowerCase() : "";
+
+            if (currentBooking.booking_flow_type === "direct_reservation" && (status === "reserved" || status === "pending")) {
+              checkInCubicle();
+            } 
+            else if ((currentBooking.booking_flow_type === "staff_key_approval" || currentBooking.booking_flow_type === "normal_approval") && status === "key_collected") {
+              returnKey(); // Automatically triggers the key return pop-up
             }
           }
+          // --- END NEW LOGIC ---
+
         })
         .catch(() => {
           alert("Failed to load booking details.");
@@ -209,8 +205,8 @@
       }
 
       // Key Approval Flow (UPDATED FOR SCANNER)
-      if (booking.booking_flow_type === "staff_key_approval") {
-        card.innerHTML = `
+      if (booking.booking_flow_type === "staff_key_approval" || booking.booking_flow_type === "normal_approval") {
+          card.innerHTML = `
           <h2>Key Return</h2>
           <p>Please scan the QR code at the facility desk to return the key.</p>
 
@@ -293,7 +289,7 @@
         if (bookingStatus === "completed") return "Completed";
       }
 
-      if (booking.booking_flow_type === "staff_key_approval") {
+    if (booking.booking_flow_type === "staff_key_approval" || booking.booking_flow_type === "normal_approval") {
         if (bookingStatus === "pending") return "Submitted";
         if (bookingStatus === "approved") return "Approved";
         if (bookingStatus === "key_collected") return "Key Collected";

@@ -407,47 +407,15 @@
       const modalMessage = document.getElementById("modalMessage");
       const countdownText = document.getElementById("countdown");
 
-      const bookingStatus = data.booking_status;
-      const paymentRequired =
-        data.payment_required === 1 ||
-        data.payment_required === "1";
+      // Load the exact title and message sent from the backend
+      modalTitle.innerText = data.title || "Booking Request Submitted";
+      modalMessage.innerHTML = data.message || "Your booking request has been submitted successfully.";
 
-      const bookingFlowType =
-        currentFacility && currentFacility.booking_flow_type
-          ? currentFacility.booking_flow_type
-          : "normal_approval";
-
-      if (paymentRequired) {
+      // Update the icon dynamically based on the title
+      if (data.title === "Payment Required") {
         modalIcon.innerText = "RM";
-        modalTitle.innerText = "Payment Required";
-        modalMessage.innerHTML = `
-          Your booking request has been submitted successfully.<br><br>
-          Please proceed to the AFM Office to make payment
-          <strong>(RM${Number(data.payment_amount).toFixed(2)} per hour)</strong>.<br><br>
-          Your booking status is now <strong>Pending Payment</strong>.
-        `;
-      } else if (bookingFlowType === "direct_reservation" || bookingStatus === "reserved") {
-        modalIcon.innerText = "✓";
-        modalTitle.innerText = "Reservation Confirmed";
-        modalMessage.innerHTML = `
-          Your reservation has been confirmed successfully.<br><br>
-          Please check in during the allowed check-in window:
-          <strong>15 minutes before until 15 minutes after your booking starts</strong>.
-        `;
-      } else if (bookingFlowType === "staff_key_approval") {
-        modalIcon.innerText = "✓";
-        modalTitle.innerText = "Booking Request Submitted";
-        modalMessage.innerHTML = `
-          Your booking request has been submitted successfully.<br><br>
-          Please wait for admin approval. After approval, you may collect and return the key according to the booking status.
-        `;
       } else {
         modalIcon.innerText = "✓";
-        modalTitle.innerText = "Booking Request Submitted";
-        modalMessage.innerHTML = `
-          Your booking request has been submitted successfully.<br><br>
-          You will be notified once the request has been reviewed.
-        `;
       }
 
       let count = 3;

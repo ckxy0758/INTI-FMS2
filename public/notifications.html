@@ -67,20 +67,17 @@
       fetch(`/api/notifications/${user.id}`)
         .then(res => res.json())
         .then(data => {
-          if (!data.success) {
-            document.getElementById("notificationList").innerHTML =
-              "<p>Failed to load notifications.</p>";
-            return;
-          }
+          if (!data.success) return;
 
           allNotifications = data.notifications;
 
-          allRead =
-            allNotifications.length > 0 &&
-            allNotifications.every(item => item.is_read == 1);
+          // Update the toggle state based on current data
+          // If there are ANY notifications that are unread (is_read == 0), 
+          // then "Mark All As Read" should be the active option.
+          const hasUnread = allNotifications.some(n => n.is_read == 0);
+          allRead = !hasUnread; // If hasUnread is false, allRead is true
 
           updateToggleButton();
-
           renderNotifications(allNotifications);
         });
     }
@@ -116,8 +113,8 @@
         grouped[group].forEach(item => {
           // REMOVED the onclick="openNotification(...)" from here!
           list.innerHTML += `
-            <div class="notification-card ${item.is_read == 0 ? "unread" : ""}">
-              <div class="notification-icon">
+                <div class="notification-card ${item.is_read == 0 ? 'unread' : 'read'}">       
+                <div class="notification-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
                   <path d="M160-200v-80h80v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h80v80H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80Z"/>
                 </svg>
@@ -184,22 +181,22 @@
           : "Mark all as read";
     }
 
-    function toggleNotificationReadStatus() {
-      const endpoint =
-        allRead
-          ? "unread-all"
-          : "read-all";
+      function toggleNotificationReadStatus() {
+        const endpoint = allRead ? "unread-all" : "read-all";
 
-      fetch(`/api/notifications/${user.id}/${endpoint}`, {
-        method: "PUT"
-      })
+        fetch(`/api/notifications/${user.id}/${endpoint}`, {
+          method: "PUT"
+        })
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            loadNotifications();
+            // 1. Force the local state to flip immediately for instant feedback
+            allRead = !allRead; 
+            // 2. Refresh the UI
+            loadNotifications(); 
           }
         });
-    }
+      }
 
     function logout() {
       localStorage.removeItem("user");

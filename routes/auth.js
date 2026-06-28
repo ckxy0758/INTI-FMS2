@@ -1,19 +1,25 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
-const crypto = require("crypto"); // Built into Node.js
+const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
 
-// --- Configure your email transporter ---
-// Note: Replace with your actual SMTP credentials (e.g., Gmail, SendGrid)
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'courneyk8570@gmail.com',
-    pass: ''  //please remove this password before sending to AI
+    pass: '' // REPLACE THIS
   }
 });
+
+function sendEmailNotification(userEmail, title, message) {
+  const mailOptions = { from: 'courneyk8570@gmail.com', to: userEmail, subject: title, text: message };
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) console.error("Email error:", error);
+    else console.log("Email sent: " + info.response);
+  });
+}
 
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
@@ -810,209 +816,119 @@ function updateCubicleBookingStatuses(callback) {
   });
 }
 
-/* ===== SUBMIT BOOKING WITH TRANSACTION AND ROW LOCKING (CAPACITY CHECK) ===== */
+/* ===== SUBMIT BOOKING WITH TRANSACTION AND ROW LOCKING (CAPACITY & DUPLICATE CHECK) ===== */
 router.post("/bookings", (req, res) => {
-  const {
-    user_id,
-    facility_id,
-    program,
-    booking_date,
-    start_time,
-    end_time,
-    purpose
-  } = req.body;
+  const { user_id, facility_id, program, booking_date, start_time, end_time, purpose } = req.body;
+  const userIdInt = parseInt(user_id);
 
-  // Basic Validation
   if (!user_id || !facility_id || !program || !booking_date || !start_time || !end_time) {
     return res.json({ success: false, message: "Please fill in all required booking details" });
   }
 
-  const bookingDayNumber = new Date(booking_date).getDay();
-  if (bookingDayNumber === 0 || bookingDayNumber === 6) {
-    return res.json({ success: false, message: "Bookings are not allowed on Saturday and Sunday" });
-  }
-
-  const start = new Date(`${booking_date}T${start_time}`);
-  const end = new Date(`${booking_date}T${end_time}`);
-
-  if (start >= end) {
-    return res.json({ success: false, message: "End time must be later than start time" });
-  }
-
-  const duration_hours = (end - start) / (1000 * 60 * 60);
-
-  // GET A DEDICATED CONNECTION FOR THE TRANSACTION
   db.getConnection((connErr, connection) => {
-    if (connErr) {
-      console.error("Connection pool error:", connErr);
-      return res.json({ success: false, message: "Database connection failed" });
-    }
+    if (connErr) return res.json({ success: false, message: "Database connection failed" });
 
-    // START TRANSACTION
     connection.beginTransaction((transactionErr) => {
-      if (transactionErr) {
-        connection.release();
-        return res.json({ success: false, message: "Failed to start transaction" });
-      }
+      if (transactionErr) { connection.release(); return res.json({ success: false, message: "Failed to start transaction" }); }
 
-      // 1. SELECT FOR UPDATE - Locks this specific facility row so no one else can book it simultaneously
-      const facilitySql = `
-        SELECT facility_name, booking_flow_type, max_people 
-        FROM facilities 
-        WHERE facility_id = ? 
-        FOR UPDATE
-      `;
-
+      const facilitySql = `SELECT facility_name, booking_flow_type, max_people FROM facilities WHERE facility_id = ? FOR UPDATE`;
       connection.query(facilitySql, [facility_id], (facilityErr, facilityResult) => {
         if (facilityErr || facilityResult.length === 0) {
-          return connection.rollback(() => {
-            connection.release();
-            res.json({ success: false, message: "Facility not found" });
-          });
+          return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Facility not found" }); });
         }
 
         const facilityName = facilityResult[0].facility_name;
         const bookingFlowType = facilityResult[0].booking_flow_type || "normal_approval";
-        const maxCapacity = facilityResult[0].max_people || 1; 
+        const maxCapacity = facilityResult[0].max_people || 1;
         const now = new Date();
 
-        // --- Validation based on Facility Type ---
+        // 1. Validation
         if (bookingFlowType === 'direct_reservation') {
-            const minsLeft = (end - now) / 60000;
-            if (minsLeft < 30) {
-                return connection.rollback(() => {
-                  connection.release();
-                  res.json({ success: false, message: "It is too late to book this time slot (less than 30 minutes remaining)." });
-                });
-            }
-        } else {
-            const minAdvance = new Date(now.getTime() + 30 * 60000);
-            if (start < minAdvance) {
-                return connection.rollback(() => {
-                  connection.release();
-                  res.json({ success: false, message: "You must book at least 30 minutes in advance" });
-                });
-            }
+          if ((new Date(`${booking_date}T${end_time}`) - now) / 60000 < 30) {
+            return connection.rollback(() => { connection.release(); res.json({ success: false, message: "It is too late to book." }); });
+          }
         }
 
-        // --- Setup Status Variables ---
-        let bookingStatus = "pending";
-        let paymentRequired = 0;
-        let paymentStatus = "not_required";
-        let paymentAmount = 0.00;
-        let keyStatus = "not_required";
+        let bookingStatus = bookingFlowType === "normal_approval" ? "approved" : "pending";
+        let keyStatus = (bookingFlowType === "normal_approval" || bookingFlowType === "staff_key_approval") ? "pending_collection" : "not_required";
+        if (bookingFlowType === "payment_required") bookingStatus = "pending_payment";
+        if (bookingFlowType === "direct_reservation") bookingStatus = "reserved";
 
-        if (bookingFlowType === "normal_approval") {
-          // Defaults are fine
-        } else if (bookingFlowType === "payment_required") {
-          bookingStatus = "pending_payment";
-          paymentRequired = 1;
-          paymentStatus = "pending_payment";
-          paymentAmount = 5.00;
-        } else if (bookingFlowType === "direct_reservation") {
-          bookingStatus = "reserved";
+        // Notification Variables
+        let nTitle = "Booking Submitted";
+        let nMsg = `Your booking request for ${facilityName} has been submitted successfully.`;
+        
+        if (bookingFlowType === "payment_required") {
+            nTitle = "Payment Required";
+            nMsg = "Please proceed to AFM to make payment so that your booking request only can be approved";
         } else if (bookingFlowType === "staff_key_approval") {
-          keyStatus = "pending_collection";
+            nTitle = "Booking Submitted";
+            nMsg = `Your booking request for ${facilityName} has been submitted successfully. Please wait admin to approve.`;
+        } else if (bookingFlowType === "normal_approval") {
+            nTitle = "Booking Approved";
+            nMsg = "Your booking have been approved please proceed to AFM to collect your key.";
         }
 
-        // 2. CHECK EXISTING CAPACITY (Other users are locked out from doing this until we finish)
-        const checkSql = `
-          SELECT booking_id FROM bookings
-          WHERE facility_id = ? AND booking_date = ?
-          AND booking_status IN ('pending', 'pending_payment', 'payment_submitted', 'approved', 'reserved', 'checked_in', 'key_collected')
-          AND (? < end_time AND ? > start_time) 
-        `;
+        const checkSql = `SELECT booking_id, user_id FROM bookings WHERE facility_id = ? AND booking_date = ? AND booking_status NOT IN ('cancelled', 'expired', 'completed') AND (? < end_time AND ? > start_time)`;
 
         connection.query(checkSql, [facility_id, booking_date, start_time, end_time], (checkErr, checkResult) => {
-          if (checkErr) {
-            return connection.rollback(() => {
-              connection.release();
-              res.json({ success: false, message: "Failed to check booking availability" });
-            });
+          if (checkErr) return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Error" }); });
+
+          if (checkResult.find(b => b.user_id === userIdInt)) {
+            return connection.rollback(() => { connection.release(); res.json({ success: false, message: "You already have an active booking for this facility at this time." }); });
           }
 
-          // 3. REJECT IF CAPACITY MET
           if (checkResult.length >= maxCapacity) {
-            return connection.rollback(() => {
-              connection.release();
-              res.json({ success: false, message: `This time slot has reached its maximum capacity of ${maxCapacity} pax. Please try another slot.` });
-            });
+            return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Capacity reached." }); });
           }
 
-          // 4. INSERT THE NEW BOOKING
-          const insertSql = `
-            INSERT INTO bookings 
-            (user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose, booking_status, key_status, payment_required, payment_status, payment_amount) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
+          const insertSql = `INSERT INTO bookings (user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose, booking_status, key_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+          const duration = (new Date(`${booking_date}T${end_time}`) - new Date(`${booking_date}T${start_time}`)) / (1000 * 60 * 60);
+          
+          connection.query(insertSql, [user_id, facility_id, program, booking_date, start_time, end_time, duration, purpose || "", bookingStatus, keyStatus], (insertErr, insertResult) => {
+            if (insertErr) return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Booking failed" }); });
 
-          connection.query(
-            insertSql, 
-            [user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose || "", bookingStatus, keyStatus, paymentRequired, paymentStatus, paymentAmount], 
-            (insertErr, insertResult) => {
-            
-            if (insertErr) {
-              return connection.rollback(() => {
-                connection.release();
-                res.json({ success: false, message: "Booking submission failed", error: insertErr.message });
-              });
-            }
-
-            const bookingId = insertResult.insertId;
-
-            // 5. COMMIT THE TRANSACTION (Unlocks the row so the next person can book)
             connection.commit((commitErr) => {
-              if (commitErr) {
-                return connection.rollback(() => {
-                  connection.release();
-                  res.json({ success: false, message: "Failed to finalize booking" });
-                });
-              }
-
-              // Release connection back to the pool
+              if (commitErr) return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Commit failed" }); });
               connection.release();
+              
+              // 1. Insert User Notification
+              db.query(
+                "INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) VALUES (?, ?, ?, ?, 'booking', 0)", 
+                [user_id, insertResult.insertId, nTitle, nMsg],
+                (userNotifErr) => {
+                  if (userNotifErr) console.error("User notification error:", userNotifErr);
 
-              // ==========================================
-              // NOTIFICATIONS (Run via normal db.query outside the transaction lock)
-              // ==========================================
-              const requiresAdminReview = ["normal_approval", "payment_required", "staff_key_approval"];
+                  // 2. Determine if Admins need to be notified
+                  const requiresAdminAction = ["payment_required", "staff_key_approval"].includes(bookingFlowType);
 
-              if (requiresAdminReview.includes(bookingFlowType)) {
-                const adminNotificationSql = `
-                  INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
-                  SELECT user_id, ?, 'New Booking Request', ?, 'admin_booking', 0
-                  FROM users WHERE role = 'admin' AND status = 'active'
-                `;
-                db.query(adminNotificationSql, [bookingId, `A new booking request for ${facilityName} has been submitted and requires review.`]);
-              }
-
-              let notificationTitle = "Booking Submitted";
-              let notificationMessage = `Your booking request of ${facilityName} has been submitted successfully.`;
-
-              if (bookingFlowType === "payment_required") {
-                notificationTitle = "Payment Required";
-                notificationMessage = `Your booking request of ${facilityName} has been submitted. Please proceed to AFM to make payment.`;
-              } else if (bookingFlowType === "direct_reservation") {
-                notificationTitle = "Reservation Successful";
-                notificationMessage = `Your reservation of ${facilityName} has been successful.`;
-              } else if (bookingFlowType === "staff_key_approval") {
-                notificationMessage = `Your booking of ${facilityName} has been submitted. Please wait for admin approval.`;
-              }
-
-              db.query(`INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) VALUES (?, ?, ?, ?, ?, 0)`, 
-                [user_id, bookingId, notificationTitle, notificationMessage, "booking"]
+                  if (requiresAdminAction) {
+                    let adminTitle = "New Booking Request";
+                    let adminMsg = `A new booking request for ${facilityName} has been submitted and requires review.`;
+                    
+                    if (bookingFlowType === "payment_required") {
+                        adminMsg = `A new booking request for ${facilityName} has been submitted, if user have make payment then approved.`;
+                    }
+                    
+                    const notifyAdminsSql = `
+                      INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
+                      SELECT user_id, ?, ?, ?, 'system', 0 
+                      FROM users 
+                      WHERE role = 'admin' AND status = 'active'
+                    `;
+                    
+                    db.query(notifyAdminsSql, [insertResult.insertId, adminTitle, adminMsg], (adminNotifErr) => {
+                      if (adminNotifErr) console.error("Admin notification error:", adminNotifErr);
+                      
+                      // Return custom title & message to frontend
+                      return res.json({ success: true, title: nTitle, message: nMsg });
+                    });
+                  } else {
+                    // Return custom title & message to frontend
+                    return res.json({ success: true, title: nTitle, message: nMsg });
+                  }
+                }
               );
-
-              // 6. RETURN SUCCESS
-              return res.json({
-                success: true,
-                message: paymentRequired === 1 ? "Booking request submitted. Please proceed to AFM to make payment." : "Booking request submitted successfully.",
-                booking_id: bookingId,
-                booking_status: bookingStatus,
-                payment_required: paymentRequired,
-                payment_status: paymentStatus,
-                payment_amount: paymentAmount
-              });
             });
           });
         });
@@ -1067,37 +983,13 @@ router.get("/activities/:user_id", (req, res) => {
 });
 
 router.get("/notifications/:user_id", (req, res) => {
-  const userId = req.params.user_id;
-
-  createKeyReturnReminders((reminderErr) => {
-    if (reminderErr) {
-      console.log("Key reminder creation error:", reminderErr);
-    }
-
-    const sql = `
-      SELECT *
-      FROM notifications
-      WHERE user_id = ?
-      ORDER BY created_at DESC
-    `;
-
-    db.query(sql, [userId], (err, result) => {
-      if (err) {
-        console.log("Notifications load error:", err);
-
-        return res.json({
-          success: false,
-          notifications: []
-        });
-      }
-
-      return res.json({
-        success: true,
-        notifications: result
-      });
-    });
+  const sql = `SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC`;
+  db.query(sql, [req.params.user_id], (err, result) => {
+    if (err) return res.json({ success: false, notifications: [] });
+    return res.json({ success: true, notifications: result });
   });
 });
+
 
 router.put("/notifications/:user_id/read-all", (req, res) => {
   const userId = req.params.user_id;
@@ -1417,14 +1309,14 @@ router.put("/bookings/:id/cancel", (req, res) => {
 
     const startDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
     const cancelDeadline = new Date(startDateTime);
-    cancelDeadline.setMinutes(cancelDeadline.getMinutes() - 30);
+    cancelDeadline.setMinutes(cancelDeadline.getMinutes() - 60);
 
     const now = new Date();
 
     if (now > cancelDeadline) {
       return res.json({
         success: false,
-        message: "You can only cancel at least 30 minutes before the booking starts"
+        message: "You can only cancel at least 1 hour before the booking starts"
       });
     }
 
@@ -1436,11 +1328,18 @@ router.put("/bookings/:id/cancel", (req, res) => {
 
     db.query(updateSql, [bookingId], (updateErr) => {
       if (updateErr) {
-        return res.json({
-          success: false,
-          message: "Failed to cancel booking"
-        });
+        return res.json({ success: false, message: "Failed to cancel booking" });
       }
+
+      // ADDED: Notify Admins that the user cancelled
+      const adminNotifSql = `
+        INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
+        SELECT user_id, ?, 'Booking Cancelled', 'User has cancelled a previously approved booking.', 'system', 0
+        FROM users WHERE role = 'admin' AND status = 'active'
+      `;
+      db.query(adminNotifSql, [bookingId], (adminErr) => {
+        if (adminErr) console.error("Failed to send admin cancellation notif:", adminErr);
+      });
 
       return res.json({
         success: true,
@@ -1570,18 +1469,22 @@ router.put("/admin/bookings/:id/cancel", (req, res) => {
 
   db.query(sql, [bookingId], (err, result) => {
     if (err) {
-      return res.json({
-        success: false,
-        message: "Failed to cancel booking"
-      });
+      return res.json({ success: false, message: "Failed to cancel booking" });
     }
 
     if (result.affectedRows === 0) {
-      return res.json({
-        success: false,
-        message: "This booking cannot be cancelled"
-      });
+      return res.json({ success: false, message: "This booking cannot be cancelled" });
     }
+
+    // ADDED: Notify User that the admin did not approve/cancelled it
+    const userNotifSql = `
+      INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
+      SELECT user_id, booking_id, 'Booking Cancelled', 'Admin did not approve your booking.', 'booking_cancelled', 0
+      FROM bookings WHERE booking_id = ?
+    `;
+    db.query(userNotifSql, [bookingId], (userErr) => {
+        if (userErr) console.error("Failed to send user cancellation notif:", userErr);
+    });
 
     return res.json({
       success: true,
@@ -1610,9 +1513,9 @@ router.get("/admin/key-management", (req, res) => {
     FROM bookings b
     JOIN users u ON b.user_id = u.user_id
     JOIN facilities f ON b.facility_id = f.facility_id
-    WHERE f.booking_flow_type = 'staff_key_approval'
+    WHERE f.booking_flow_type IN ('staff_key_approval', 'normal_approval')
     AND f.key_required = 1
-    AND u.role = 'staff'
+    -- AND u.role = 'staff'  <-- Comment this out so students can collect keys too!
     AND (
       (b.booking_status = 'approved' AND b.key_status = 'pending_collection')
       OR
@@ -1651,7 +1554,7 @@ router.put("/admin/bookings/:id/collect-key", (req, res) => {
     WHERE b.booking_id = ?
     AND b.booking_status = 'approved'
     AND b.key_status = 'pending_collection'
-    AND f.booking_flow_type = 'staff_key_approval'
+    AND f.booking_flow_type IN ('staff_key_approval', 'normal_approval')
   `;
 
   db.query(sql, [bookingId], (err, result) => {
@@ -1690,7 +1593,7 @@ router.put("/bookings/:id/return-key", (req, res) => {
     AND b.user_id = ?
     AND b.booking_status = 'key_collected'
     AND b.key_status = 'collected'
-    AND f.booking_flow_type = 'staff_key_approval'
+    AND f.booking_flow_type IN ('staff_key_approval', 'normal_approval')
   `;
 
   db.query(sql, [bookingId, user_id], (err, result) => {
@@ -1718,38 +1621,25 @@ router.put("/bookings/:id/return-key", (req, res) => {
 });
 
 function createKeyReturnReminders(callback) {
+  // Try running this query directly in phpMyAdmin to see if it works
   const sql = `
-    INSERT INTO notifications
-    (
-      user_id,
-      booking_id,
-      title,
-      message,
-      notification_type,
-      is_read
-    )
-    SELECT
-      b.user_id,
-      b.booking_id,
-      'Key Return Reminder',
-      CONCAT('Reminder: Please return the key for ', f.facility_name, ' as your booking time has ended.'),
-      'key_return_reminder',
-      0
+    INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
+    SELECT b.user_id, b.booking_id, 'Key Return Reminder', 
+           CONCAT('Reminder: Please return the key for ', f.facility_name, '.'), 
+           'key_return_reminder', 0
     FROM bookings b
     JOIN facilities f ON b.facility_id = f.facility_id
-    WHERE f.booking_flow_type = 'staff_key_approval'
-    AND b.booking_status = 'key_collected'
-    AND b.key_status = 'collected'
+    WHERE b.booking_status = 'key_collected'
     AND NOW() >= TIMESTAMP(b.booking_date, b.end_time)
     AND NOT EXISTS (
-      SELECT 1
-      FROM notifications n
-      WHERE n.booking_id = b.booking_id
-      AND n.notification_type = 'key_return_reminder'
+        SELECT 1 FROM notifications n 
+        WHERE n.booking_id = b.booking_id AND n.notification_type = 'key_return_reminder'
     )
   `;
-
-  db.query(sql, callback);
+  db.query(sql, (err, result) => {
+    if (err) console.error("Error creating reminders:", err);
+    callback();
+  });
 }
 
 // GET CURRENT BOOKING ID FOR QR REDIRECT
@@ -1780,8 +1670,8 @@ router.get("/bookings/current-booking/:facility_id/:user_id", (req, res) => {
     AND b.facility_id = ? 
     AND (
       (b.booking_status = 'reserved' AND b.booking_date = ? AND ? BETWEEN b.start_time AND b.end_time)
-      OR 
-      (b.booking_status = 'key_collected' AND b.key_status = 'collected' AND f.booking_flow_type = 'staff_key_approval')
+    OR 
+      (b.booking_status = 'key_collected' AND b.key_status = 'collected' AND f.booking_flow_type IN ('staff_key_approval', 'normal_approval'))
     )
     LIMIT 1
   `;
@@ -1802,5 +1692,66 @@ router.get("/bookings/current-booking/:facility_id/:user_id", (req, res) => {
     return res.json({ success: true, booking_id: result[0].booking_id });
   });
 });
+
+function createOverdueKeyNotifications(callback) {
+  // 1. Alert the User
+  const userSql = `
+    INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
+    SELECT 
+      b.user_id, 
+      b.booking_id, 
+      'OVERDUE: Key Return', 
+      CONCAT('URGENT: Your booking for ', f.facility_name, ' ended over 30 minutes ago. Please return the key immediately to avoid penalties.'), 
+      'key_overdue_warning', 
+      0
+    FROM bookings b
+    JOIN facilities f ON b.facility_id = f.facility_id
+    WHERE f.booking_flow_type IN ('staff_key_approval', 'normal_approval')
+    AND b.booking_status = 'key_collected'
+    AND b.key_status = 'collected'
+    AND NOW() >= DATE_ADD(TIMESTAMP(b.booking_date, b.end_time), INTERVAL 30 MINUTE)
+    AND NOT EXISTS (
+      SELECT 1 FROM notifications n 
+      WHERE n.booking_id = b.booking_id 
+      AND n.notification_type = 'key_overdue_warning'
+      AND n.user_id = b.user_id
+    )
+  `;
+
+  // 2. Alert the Admins
+  const adminSql = `
+    INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
+    SELECT 
+      u.user_id, 
+      b.booking_id, 
+      'OVERDUE: Key Return Alert', 
+      CONCAT('URGENT: A key for ', f.facility_name, ' is overdue by over 30 minutes.'), 
+      'admin_key_overdue', 
+      0
+    FROM bookings b
+    JOIN facilities f ON b.facility_id = f.facility_id
+    CROSS JOIN users u
+    WHERE f.booking_flow_type IN ('staff_key_approval', 'normal_approval')
+    AND b.booking_status = 'key_collected'
+    AND b.key_status = 'collected'
+    AND NOW() >= DATE_ADD(TIMESTAMP(b.booking_date, b.end_time), INTERVAL 30 MINUTE)
+    AND u.role = 'admin' AND u.status = 'active'
+    AND NOT EXISTS (
+      SELECT 1 FROM notifications n 
+      WHERE n.booking_id = b.booking_id 
+      AND n.notification_type = 'admin_key_overdue'
+      AND n.user_id = u.user_id
+    )
+  `;
+
+  db.query(userSql, (err) => {
+    if (err) console.error("Error creating user overdue reminders:", err);
+    
+    db.query(adminSql, (adminErr) => {
+      if (adminErr) console.error("Error creating admin overdue reminders:", adminErr);
+      if(callback) callback();
+    });
+  });
+}
 
 module.exports = router;
