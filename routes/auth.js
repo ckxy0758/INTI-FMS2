@@ -860,21 +860,8 @@ function updateCubicleBookingStatuses(callback) {
 
 /* ===== SUBMIT BOOKING WITH TRANSACTION AND ROW LOCKING (CAPACITY & DUPLICATE CHECK) ===== */
 router.post("/bookings", (req, res) => {
-<<<<<<< HEAD
-  const { user_id, facility_id, program, booking_date, start_time, end_time, purpose } = req.body;
+  const { user_id, facility_id, program, booking_date, start_time, end_time, purpose, equipmentRequired } = req.body;
   const userIdInt = parseInt(user_id);
-=======
-  const {
-    user_id,
-    facility_id,
-    program,
-    booking_date,
-    start_time,
-    end_time,
-    purpose,
-    equipmentRequired
-  } = req.body;
->>>>>>> 80def08b6adf10b0dbcc4a9a802a3479406c1876
 
   if (!user_id || !facility_id || !program || !booking_date || !start_time || !end_time) {
     return res.json({ success: false, message: "Please fill in all required booking details" });
@@ -895,29 +882,25 @@ router.post("/bookings", (req, res) => {
         const facilityName = facilityResult[0].facility_name;
         const bookingFlowType = facilityResult[0].booking_flow_type || "normal_approval";
         const maxCapacity = facilityResult[0].max_people || 1;
-        const now = new Date();
-
-        // 1. Validation
-        if (bookingFlowType === 'direct_reservation') {
-          if ((new Date(`${booking_date}T${end_time}`) - now) / 60000 < 30) {
-            return connection.rollback(() => { connection.release(); res.json({ success: false, message: "It is too late to book." }); });
-          }
-        }
-
+        
         let bookingStatus = bookingFlowType === "normal_approval" ? "approved" : "pending";
         let keyStatus = (bookingFlowType === "normal_approval" || bookingFlowType === "staff_key_approval") ? "pending_collection" : "not_required";
         if (bookingFlowType === "payment_required") bookingStatus = "pending_payment";
         if (bookingFlowType === "direct_reservation") bookingStatus = "reserved";
 
+        // Calculate missing variables
+        const duration_hours = (new Date(`${booking_date}T${end_time}`) - new Date(`${booking_date}T${start_time}`)) / (1000 * 60 * 60);
+        const paymentRequired = bookingFlowType === "payment_required" ? 1 : 0;
+        const paymentStatus = paymentRequired ? "pending" : "not_required";
+        const paymentAmount = 0; // Or calculate based on your logic
+
         // Notification Variables
         let nTitle = "Booking Submitted";
         let nMsg = `Your booking request for ${facilityName} has been submitted successfully.`;
-        
         if (bookingFlowType === "payment_required") {
             nTitle = "Payment Required";
             nMsg = "Please proceed to AFM to make payment so that your booking request only can be approved";
         } else if (bookingFlowType === "staff_key_approval") {
-            nTitle = "Booking Submitted";
             nMsg = `Your booking request for ${facilityName} has been submitted successfully. Please wait admin to approve.`;
         } else if (bookingFlowType === "normal_approval") {
             nTitle = "Booking Approved";
@@ -937,15 +920,6 @@ router.post("/bookings", (req, res) => {
             return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Capacity reached." }); });
           }
 
-<<<<<<< HEAD
-          const insertSql = `INSERT INTO bookings (user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose, booking_status, key_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-          const duration = (new Date(`${booking_date}T${end_time}`) - new Date(`${booking_date}T${start_time}`)) / (1000 * 60 * 60);
-          
-          connection.query(insertSql, [user_id, facility_id, program, booking_date, start_time, end_time, duration, purpose || "", bookingStatus, keyStatus], (insertErr, insertResult) => {
-            if (insertErr) return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Booking failed" }); });
-
-=======
-          // 4. INSERT THE NEW BOOKING
           const insertSql = `
             INSERT INTO bookings 
             (user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose, equipment_required, booking_status, key_status, payment_required, payment_status, payment_amount) 
@@ -956,18 +930,10 @@ router.post("/bookings", (req, res) => {
             insertSql, 
             [user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose || "", equipmentRequired || "", bookingStatus, keyStatus, paymentRequired, paymentStatus, paymentAmount], 
             (insertErr, insertResult) => {
-            
             if (insertErr) {
-              return connection.rollback(() => {
-                connection.release();
-                res.json({ success: false, message: "Booking submission failed", error: insertErr.message });
-              });
+              return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Booking failed", error: insertErr.message }); });
             }
 
-            const bookingId = insertResult.insertId;
-
-            // 5. COMMIT THE TRANSACTION (Unlocks the row so the next person can book)
->>>>>>> 80def08b6adf10b0dbcc4a9a802a3479406c1876
             connection.commit((commitErr) => {
               if (commitErr) return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Commit failed" }); });
               connection.release();
@@ -977,34 +943,19 @@ router.post("/bookings", (req, res) => {
                 "INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) VALUES (?, ?, ?, ?, 'booking', 0)", 
                 [user_id, insertResult.insertId, nTitle, nMsg],
                 (userNotifErr) => {
-                  if (userNotifErr) console.error("User notification error:", userNotifErr);
-
                   // 2. Determine if Admins need to be notified
                   const requiresAdminAction = ["payment_required", "staff_key_approval"].includes(bookingFlowType);
 
                   if (requiresAdminAction) {
                     let adminTitle = "New Booking Request";
                     let adminMsg = `A new booking request for ${facilityName} has been submitted and requires review.`;
+                    if (bookingFlowType === "payment_required") adminMsg = `A new booking request for ${facilityName} has been submitted, if user have make payment then approved.`;
                     
-                    if (bookingFlowType === "payment_required") {
-                        adminMsg = `A new booking request for ${facilityName} has been submitted, if user have make payment then approved.`;
-                    }
-                    
-                    const notifyAdminsSql = `
-                      INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
-                      SELECT user_id, ?, ?, ?, 'system', 0 
-                      FROM users 
-                      WHERE role = 'admin' AND status = 'active'
-                    `;
-                    
-                    db.query(notifyAdminsSql, [insertResult.insertId, adminTitle, adminMsg], (adminNotifErr) => {
-                      if (adminNotifErr) console.error("Admin notification error:", adminNotifErr);
-                      
-                      // Return custom title & message to frontend
+                    db.query("INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) SELECT user_id, ?, ?, ?, 'system', 0 FROM users WHERE role = 'admin' AND status = 'active'", 
+                    [insertResult.insertId, adminTitle, adminMsg], () => {
                       return res.json({ success: true, title: nTitle, message: nMsg });
                     });
                   } else {
-                    // Return custom title & message to frontend
                     return res.json({ success: true, title: nTitle, message: nMsg });
                   }
                 }
