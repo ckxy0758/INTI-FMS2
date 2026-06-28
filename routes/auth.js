@@ -878,6 +878,13 @@ router.post("/bookings", (req, res) => {
         if (facilityErr || facilityResult.length === 0) {
           return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Facility not found" }); });
         }
+        // --- ADD THIS SECURITY CHECK ---
+        if (facilityResult[0].availability_status !== 'available') {
+            return connection.rollback(() => {
+                connection.release();
+                res.json({ success: false, message: "This facility is currently not available for booking." });
+            });
+        }
 
         const facilityName = facilityResult[0].facility_name;
         const bookingFlowType = facilityResult[0].booking_flow_type || "normal_approval";
@@ -899,7 +906,7 @@ router.post("/bookings", (req, res) => {
         let nMsg = `Your booking request for ${facilityName} has been submitted successfully.`;
         if (bookingFlowType === "payment_required") {
             nTitle = "Payment Required";
-            nMsg = "Please proceed to AFM to make payment so that your booking request only can be approved";
+            nMsg = "Please proceed to AFM to make payment so that your booking request only can be approved.";
         } else if (bookingFlowType === "staff_key_approval") {
             nMsg = `Your booking request for ${facilityName} has been submitted successfully. Please wait admin to approve.`;
         } else if (bookingFlowType === "normal_approval") {

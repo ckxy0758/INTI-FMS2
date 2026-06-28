@@ -217,6 +217,13 @@
           }
 
           const facility = data.facility;
+
+          if (facility.availability_status !== 'available') {
+             alert("This facility is currently " + facility.availability_status + ".");
+             window.location.href = (user.role === "staff" ? "staff.html" : "student.html");
+             return;
+          }
+          
           currentFacility = facility;
 
           const bookingFlowType = facility.booking_flow_type || "normal_approval";
@@ -317,6 +324,11 @@
 
       let startTime = "";
       let endTime = "";
+
+      if (currentFacility && currentFacility.availability_status !== 'available') {
+      alert("This facility is currently " + currentFacility.availability_status + " and cannot be booked.");
+      return;
+  } 
 
       if (selectedSlot) {
         const slotParts = selectedSlot.split("|");

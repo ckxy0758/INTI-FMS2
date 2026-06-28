@@ -4054,3 +4054,15 @@ input[type="password"]::-webkit-reveal {
   border: 1.5px solid #D12E26 !important;
   outline: none !important;
 }
+
+/* Grey out unavailable facilities */
+.facility-disabled {
+    opacity: 0.6;
+    pointer-events: none; /* Prevents clicks on the whole card */
+}
+
+/* Make the unavailable badge look different */
+.badge-unavailable {
+    background-color: #D12E26 !important; /* Red for unavailable */
+    color: white;
+}
