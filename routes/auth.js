@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'courneyk8570@gmail.com',
-    pass: 'hlkmpewoamjcdfrn' // REPLACE THIS
+    pass: '' // REPLACE THIS
   }
 });
 
@@ -877,6 +877,7 @@ router.post("/bookings", (req, res) => {
         // Notification Variables
         let nTitle = "Booking Submitted";
         let nMsg = `Your booking request for ${facilityName} has been submitted successfully.`;
+
         if (bookingFlowType === "payment_required") {
             nTitle = "Payment Required";
             nMsg = "Please proceed to AFM to make payment so that your booking request only can be approved.";
@@ -884,7 +885,10 @@ router.post("/bookings", (req, res) => {
             nMsg = `Your booking request for ${facilityName} has been submitted successfully. Please wait admin to approve.`;
         } else if (bookingFlowType === "normal_approval") {
             nTitle = "Booking Approved";
-            nMsg = "Your booking have been approved please proceed to AFM to collect your key.";
+            nMsg = "Your booking has been approved. Please proceed to AFM to collect your key.";
+        } else if (bookingFlowType === "direct_reservation") {
+            nTitle = "Reservation Successful";
+            nMsg = `Your have successfully reserved ${facilityName}. Please remember to check in.`;
         }
 
         const checkSql = `SELECT booking_id, user_id FROM bookings WHERE facility_id = ? AND booking_date = ? AND booking_status NOT IN ('cancelled', 'expired', 'completed') AND (? < end_time AND ? > start_time)`;
@@ -915,14 +919,44 @@ router.post("/bookings", (req, res) => {
               }
 
               connection.commit((commitErr) => {
-                if (commitErr) return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Commit failed" }); });
-                connection.release();
-                
-                db.query("INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) VALUES (?, ?, ?, ?, 'booking', 0)", 
-                [user_id, insertResult.insertId, nTitle, nMsg]);
-                
-                return res.json({ success: true, title: nTitle, message: nMsg });
-              });
+              if (commitErr) return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Commit failed" }); });
+              connection.release();
+              
+              // 1. Insert User Notification
+              db.query(
+                "INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) VALUES (?, ?, ?, ?, 'booking', 0)", 
+                [user_id, insertResult.insertId, nTitle, nMsg],
+                (userNotifErr) => {
+                  
+                  // --- SEND EMAIL NOTIFICATION HERE ---
+                  db.query("SELECT email FROM users WHERE user_id = ?", [user_id], (err, rows) => {
+                    if (!err && rows.length > 0) {
+                        sendEmailNotification(rows[0].email, nTitle, nMsg);
+                    }
+                  });
+
+                  // 2. Determine if Admins need to be notified
+                  const requiresAdminAction = ["payment_required", "staff_key_approval"].includes(bookingFlowType);
+
+                  if (requiresAdminAction) {
+                    let adminTitle = "New Booking Request";
+                    let adminMsg = `A new booking request for ${facilityName} has been submitted and requires review.`;
+                    if (bookingFlowType === "payment_required") adminMsg = `A new booking request for ${facilityName} has been submitted, if user have make payment then approved.`;
+                    
+                    db.query("INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) SELECT user_id, ?, ?, ?, 'system', 0 FROM users WHERE role = 'admin' AND status = 'active'", 
+                    [insertResult.insertId, adminTitle, adminMsg], () => {
+                      return res.json({ success: true, title: nTitle, message: nMsg });
+                    });
+                   } else {
+                    return res.json({
+                      success: true,
+                      title: nTitle,
+                      message: nMsg
+                    });
+                  }
+                }
+              );
+            });
           });
         });
       });
@@ -1469,16 +1503,52 @@ router.put("/admin/bookings/:id/approve", (req, res) => {
       WHERE b.booking_id = ?
     `;
 
-    db.query(notificationSql, [bookingId], (notificationErr) => {
-      if (notificationErr) {
-        console.log("Approval notification error:", notificationErr);
-      }
+      db.query(notificationSql, [bookingId], (notificationErr) => {
+        if (notificationErr) {
+          console.log("Approval notification error:", notificationErr);
+        }
 
-      return res.json({
-        success: true,
-        message: "Booking approved successfully"
+        // Send the same notification via email
+        const emailSql = `
+          SELECT
+            u.email,
+            f.facility_name,
+            f.booking_flow_type
+          FROM bookings b
+          JOIN users u ON b.user_id = u.user_id
+          JOIN facilities f ON b.facility_id = f.facility_id
+          WHERE b.booking_id = ?
+          LIMIT 1
+        `;
+
+        db.query(emailSql, [bookingId], (emailErr, emailResult) => {
+          if (!emailErr && emailResult.length > 0) {
+            const user = emailResult[0];
+
+            let emailTitle = "Booking Approved";
+            let emailMessage;
+
+            if (user.booking_flow_type === "staff_key_approval") {
+              emailMessage =
+                `Your booking request of ${user.facility_name} has been approved. Please go to AFM to collect the key.`;
+            } else {
+              emailMessage =
+                `Your booking request of ${user.facility_name} has been approved.`;
+            }
+
+            sendEmailNotification(
+              user.email,
+              emailTitle,
+              emailMessage
+            );
+          }
+        });
+
+        return res.json({
+          success: true,
+          message: "Booking approved successfully"
+        });
       });
-    });
   });
 });
 
