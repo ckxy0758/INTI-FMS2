@@ -360,10 +360,8 @@
     }
 
 
-    function approveBooking(bookingId) {
-        if (!confirm("Approve this booking?")) {
-            return;
-        }
+function approveBooking(bookingId) {
+        if (!confirm("Approve this booking?")) return;
 
         fetch(`/api/admin/bookings/${bookingId}/approve`, {
             method: "PUT"
@@ -371,14 +369,18 @@
         .then(res => res.json())
         .then(data => {
             alert(data.message);
-            loadBookings();
+            // Fetch updated data, then re-apply current filter
+            fetch("/api/admin/bookings")
+                .then(res => res.json())
+                .then(data => {
+                    allBookings = data.bookings;
+                    applyBookingFilters(); // <--- THIS KEEPS THE TAB ACTIVE
+                });
         });
-        }
+    }
 
     function cancelBooking(bookingId) {
-        if (!confirm("Cancel this booking?")) {
-            return;
-        }
+        if (!confirm("Cancel this booking?")) return;
 
         fetch(`/api/admin/bookings/${bookingId}/cancel`, {
             method: "PUT"
@@ -386,7 +388,13 @@
         .then(res => res.json())
         .then(data => {
             alert(data.message);
-            loadBookings();
+            // Fetch updated data, then re-apply current filter
+            fetch("/api/admin/bookings")
+                .then(res => res.json())
+                .then(data => {
+                    allBookings = data.bookings;
+                    applyBookingFilters(); // <--- THIS KEEPS THE TAB ACTIVE
+                });
         });
     }
 
