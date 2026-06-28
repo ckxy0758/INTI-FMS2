@@ -449,7 +449,7 @@ router.post("/facilities", verifyToken, requireRole(['admin']), (req, res) => {
       rules || "",
       additional_info || "",
       equipment || "",
-      finalImagePath || "images/bg-image-2.jpeg",
+      image_path || "images/bg-image-2.jpeg",
       availability_status || "available",
       visible_to || "both",
       key_required || 0,

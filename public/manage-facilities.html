@@ -457,11 +457,19 @@
       document.getElementById("visible_to").value = facility.visible_to || "both";
       document.getElementById("key_required").value = String(facility.key_required || 0);
 
-      document.getElementById("facilityPreview").src = "";
-      document.getElementById("facilityPreview").style.display = "none";
-      document.getElementById("facilityNoImage").style.display = "flex";
+      if (facility.image_path) {
+          document.getElementById("facilityPreview").src = facility.image_path;
+          document.getElementById("facilityPreview").style.display = "block";
+          document.getElementById("facilityNoImage").style.display = "none";
 
-      imageBase64 = "";
+          imageBase64 = facility.image_path;
+      } else {
+          document.getElementById("facilityPreview").src = "";
+          document.getElementById("facilityPreview").style.display = "none";
+          document.getElementById("facilityNoImage").style.display = "flex";
+
+          imageBase64 = "";
+      }
       document.getElementById("timeSlotContainer").innerHTML = "";
 
       if (isCustom && facility.time_slots) {
@@ -682,7 +690,7 @@
         visible_to: visibleTo,
         key_required: keyRequired,
         equipment: getEquipmentText(),
-        image_path: imageBase64
+        image_path: imageBase64 || null
       };
 
       if (
