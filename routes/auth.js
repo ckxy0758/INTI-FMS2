@@ -652,7 +652,7 @@ router.get("/facilities/:id/available-slots", verifyToken, (req, res) => {
 
     // 1. ADDED max_people TO THIS QUERY
     const facilitySql = `
-      SELECT facility_name, operating_start, operating_end, booking_flow_type, max_people
+      SELECT facility_name, operating_start, operating_end, booking_flow_type, max_people, time_slots
       FROM facilities
       WHERE facility_id = ?
       LIMIT 1
@@ -702,32 +702,66 @@ router.get("/facilities/:id/available-slots", verifyToken, (req, res) => {
           const operatingStart = Number(facility.operating_start.substring(0, 2));
           const operatingEnd = Number(facility.operating_end.substring(0, 2));
 
-          // HELPER FUNCTION: Count bookings for a specific slot
           const getBookedCount = (start, end) => {
-            return bookingResult.filter(b => isTimeOverlap(start, end, b.start_time, b.end_time)).length;
+            return bookingResult.filter(b =>
+              isTimeOverlap(start, end, b.start_time, b.end_time)
+            ).length;
           };
 
-          for (let hour = operatingStart; hour < operatingEnd; hour++) {
-            const startTime = `${String(hour).padStart(2, "0")}:00:00`;
-            const endTime = `${String(hour + 1).padStart(2, "0")}:00:00`;
-            
-            // 1. Check if it's a class time
-            const isClassTime = timetableResult.some(classSlot => 
-                isTimeOverlap(startTime, endTime, classSlot.start_time, classSlot.end_time)
-            );
+          // Facilities that use manual slots
+          const manualFacilities = ["AI Lab", "CC Lab", "LR501"];
 
-            // 2. Count existing bookings for this specific slot
-            const currentBookedCount = getBookedCount(startTime, endTime);
+          let slotList = [];
 
-            // 3. Only show slot if (Bookings < Max Capacity) AND not a class time
-            if (!isClassTime && currentBookedCount < maxCapacity) {
-              slots.push({
-                start_time: startTime,
-                end_time: endTime,
-                label: `${formatSlotTime(startTime)} - ${formatSlotTime(endTime)} (${currentBookedCount}/${maxCapacity} booked)`
-              });
-            }
+          // Use manual slots only for these facilities
+          if (
+              manualFacilities.includes(facility.facility_name) &&
+              slotsSource &&
+              slotsSource.length > 0
+          ) {
+
+              slotList = slotsSource.map(slot => ({
+                  start_time: slot.start + ":00",
+                  end_time: slot.end + ":00"
+              }));
+
+          } else {
+
+              // Original hourly generation
+              for (let hour = operatingStart; hour < operatingEnd; hour++) {
+
+                  slotList.push({
+                      start_time: `${String(hour).padStart(2, "0")}:00:00`,
+                      end_time: `${String(hour + 1).padStart(2, "0")}:00:00`
+                  });
+
+              }
+
           }
+
+          // Check every slot
+          slotList.forEach(slot => {
+
+              const startTime = slot.start_time;
+              const endTime = slot.end_time;
+
+              const isClassTime = timetableResult.some(classSlot =>
+                  isTimeOverlap(startTime, endTime, classSlot.start_time, classSlot.end_time)
+              );
+
+              const currentBookedCount = getBookedCount(startTime, endTime);
+
+              if (!isClassTime && currentBookedCount < maxCapacity) {
+
+                  slots.push({
+                      start_time: startTime,
+                      end_time: endTime,
+                      label: `${formatSlotTime(startTime)} - ${formatSlotTime(endTime)} (${currentBookedCount}/${maxCapacity} booked)`
+                  });
+
+              }
+
+          });
 
           return res.json({ success: true, slots: slots });
         });
