@@ -131,6 +131,16 @@
               </div>
             </div>
 
+            <div id="customTimeSection" style="display:none;">
+              <label>Custom Available Time Slots</label>
+
+              <div id="timeSlotContainer"></div>
+
+              <button type="button" onclick="addTimeSlotRow()">
+                + Add Time Slot
+              </button>
+            </div>
+
             <div>
               <label>Location</label>
               <input type="text" id="location">
@@ -394,6 +404,17 @@
       document.getElementById("facilityFormPage").style.display = "block";
 
       document.getElementById("facilityNameText").innerText = facility.facility_name;
+
+      const isCustom = isCustomTimeFacility(facility.facility_name);
+
+      if (isCustom) {
+        document.getElementById("customTimeSection").style.display = "block";
+        document.getElementById("operating_start").parentElement.style.display = "none";
+      } else {
+        document.getElementById("customTimeSection").style.display = "none";
+        document.getElementById("operating_start").parentElement.style.display = "block";
+      }
+
       document.getElementById("deleteBtn").style.display = "inline-block";
 
       document.getElementById("facility_id").value = facility.facility_id;
@@ -418,6 +439,17 @@
       document.getElementById("facilityNoImage").style.display = "flex";
 
       imageBase64 = "";
+      document.getElementById("timeSlotContainer").innerHTML = "";
+
+      if (isCustom && facility.time_slots) {
+        const slots = typeof facility.time_slots === "string"
+          ? JSON.parse(facility.time_slots)
+          : facility.time_slots;
+
+        slots.forEach(s => {
+          addTimeSlotRow(s.start, s.end);
+        });
+      }
 
       const equipment = facility.equipment || "";
 
@@ -478,6 +510,8 @@
       document.getElementById("booking_flow_type").value = "normal_approval";
       document.getElementById("operating_start").value = "";
       document.getElementById("operating_end").value = "";
+      document.getElementById("timeSlotContainer").innerHTML = "";
+      document.getElementById("customTimeSection").style.display = "none";  
       document.getElementById("location").value = "";
       document.getElementById("max_people").value = "";
       document.getElementById("availability_status").value = "available";
@@ -568,6 +602,26 @@
       return equipment.join(", ");
     }
 
+    function isCustomTimeFacility(name) {
+      return ["AI Lab", "CC Lab", "LR501"].includes(name);
+    }
+
+    function addTimeSlotRow(start = "", end = "") {
+      const container = document.getElementById("timeSlotContainer");
+
+      const row = document.createElement("div");
+      row.className = "time-row";
+
+      row.innerHTML = `
+        <input type="time" class="slot-start" value="${start}">
+        <span>to</span>
+        <input type="time" class="slot-end" value="${end}">
+        <button type="button" onclick="this.parentElement.remove()">X</button>
+      `;
+
+      container.appendChild(row);
+    }
+
     function saveFacility() {
       const facility_id = document.getElementById("facility_id").value;
 
@@ -589,6 +643,22 @@
         visibleTo = "staff";
       }
 
+      const name = document.getElementById("facility_name").value.trim();
+      const isCustom = isCustomTimeFacility(name);
+
+      let timeSlots = [];
+
+      if (isCustom) {
+        document.querySelectorAll("#timeSlotContainer .time-row").forEach(row => {
+          const start = row.querySelector(".slot-start").value;
+          const end = row.querySelector(".slot-end").value;
+
+          if (start && end) {
+            timeSlots.push({ start, end });
+          }
+        });
+      }
+
       const facilityData = {
         facility_name: document.getElementById("facility_name").value.trim(),
         description: document.getElementById("description").value.trim(),
@@ -596,6 +666,7 @@
         booking_flow_type: bookingFlowType,
         operating_start: document.getElementById("operating_start").value,
         operating_end: document.getElementById("operating_end").value,
+        time_slots: timeSlots,
         location: document.getElementById("location").value.trim(),
         max_people: document.getElementById("max_people").value,
         availability_status: document.getElementById("availability_status").value,

@@ -166,6 +166,16 @@ router.post("/change-password", (req, res) => {
     });
   }
 
+  const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).{8,}$/;
+
+  if (!passwordRegex.test(newPassword)) {
+    return res.json({
+      success: false,
+      message: "Password must be at least 8 characters and contain uppercase, lowercase, a number and a special character."
+    });
+  }
+
   const sql = `
     UPDATE users
     SET password = ?, must_change_password = FALSE
@@ -248,6 +258,16 @@ router.post("/reset-password", (req, res) => {
 
   if (!token || !newPassword) {
     return res.json({ success: false, message: "Token and new password are required" });
+  }
+
+  const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).{8,}$/;
+
+  if (!passwordRegex.test(newPassword)) {
+    return res.json({
+      success: false,
+      message: "Password must be at least 8 characters and include uppercase, lowercase, a number and a special character."
+    });
   }
 
   // 1. Verify token exists and is not expired
@@ -379,7 +399,8 @@ const {
   availability_status,
   visible_to,
   key_required,
-  booking_flow_type
+  booking_flow_type,
+  time_slots
 } = req.body;
 
   if (
@@ -413,9 +434,10 @@ const {
       availability_status,
       visible_to,
       key_required,
-      booking_flow_type
+      booking_flow_type,
+      time_slots
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   db.query(
@@ -435,7 +457,8 @@ const {
       availability_status || "available",
       visible_to || "both",
       key_required || 0,
-      booking_flow_type || "normal_approval"
+      booking_flow_type || "normal_approval",
+      JSON.stringify(time_slots || null)
     ],
     (err) => {
       if (err) {
@@ -475,7 +498,8 @@ router.put("/facilities/:id", (req, res) => {
     availability_status,
     visible_to,
     key_required,
-    booking_flow_type
+    booking_flow_type,
+    time_slots
   } = req.body;
 
   let finalImagePath = image_path;
@@ -519,7 +543,8 @@ router.put("/facilities/:id", (req, res) => {
       availability_status = ?,
       visible_to = ?,
       key_required = ?,
-      booking_flow_type = ? 
+      booking_flow_type = ?,
+      time_slots = ?
     WHERE facility_id = ?
   `;
 
@@ -541,6 +566,7 @@ router.put("/facilities/:id", (req, res) => {
       visible_to || "both",
       key_required || 0,
       booking_flow_type || "normal_approval",
+      JSON.stringify(time_slots || null),
       facilityId
     ],
     (err) => {
@@ -640,6 +666,17 @@ router.get("/facilities/:id/available-slots", (req, res) => {
       }
 
       const facility = facilityResult[0];
+      
+      let slotsSource = [];
+
+      if (facility.time_slots) {
+        try {
+          slotsSource = JSON.parse(facility.time_slots);
+        } catch (e) {
+          slotsSource = [];
+        }
+      }
+
       // 2. DEFINE THE CAPACITY LIMIT FROM DATABASE (Defaults to 1 if blank)
       const maxCapacity = facility.max_people || 1; 
 
@@ -652,6 +689,11 @@ router.get("/facilities/:id/available-slots", (req, res) => {
       `;
 
       db.query(bookingSql, [facilityId, selectedDate], (bookingErr, bookingResult) => {
+        const isBooked = (startTime, endTime) =>
+          bookingResult.some(b =>
+            isTimeOverlap(startTime, endTime, b.start_time, b.end_time)
+          );
+
         if (bookingErr) return res.json({ success: false, message: "Failed to check bookings", slots: [] });
 
         const timetableSql = `
@@ -676,42 +718,42 @@ router.get("/facilities/:id/available-slots", (req, res) => {
           const minimumBookingTime = new Date();
           minimumBookingTime.setMinutes(minimumBookingTime.getMinutes() + 30); 
 
-          for (let hour = operatingStart; hour < operatingEnd; hour++) {
-            if (facility.facility_name === 'Music Room' && (dayNumber === 2 || dayNumber === 5) && hour === 9) {
-                continue; 
-            }
+          if (slotsSource.length > 0) {
+            // ADMIN CUSTOM SLOTS (THIS FIXES YOUR ISSUE)
+            slotsSource.forEach(slot => {
+              const startTime = slot.start_time || slot.start;
+              const endTime = slot.end_time || slot.end;
 
-            const startTime = `${String(hour).padStart(2, "0")}:00:00`;
-            const endTime = `${String(hour + 1).padStart(2, "0")}:00:00`;
-            const slotStartDateTime = new Date(`${selectedDate}T${startTime}`);
-            const slotEndDateTime = new Date(`${selectedDate}T${endTime}`);
+              const isClassTime = timetableResult.some(classSlot =>
+                isTimeOverlap(startTime, endTime, classSlot.start_time, classSlot.end_time)
+              );
 
-            if (selectedDate === today) {
-                if (facility.booking_flow_type === 'direct_reservation') {
-                    const minsLeft = (slotEndDateTime - now) / 60000;
-                    if (minsLeft < 30) continue;
-                } else {
-                    if (slotStartDateTime < minimumBookingTime) continue;
-                }
-            }
-
-            // 3. NEW LOGIC: COUNT HOW MANY TIMES THIS SLOT IS BOOKED
-            let bookedPaxCount = 0;
-            bookingResult.forEach(booking => {
-              if (isTimeOverlap(startTime, endTime, booking.start_time, booking.end_time)) {
-                bookedPaxCount++;
+              if (!isClassTime && !isBooked(startTime, endTime)) {
+                slots.push({
+                  start_time: startTime,
+                  end_time: endTime,
+                  label: `${formatSlotTime(startTime)} - ${formatSlotTime(endTime)}`
+                });
               }
             });
 
-            const isClassTime = timetableResult.some(classSlot => isTimeOverlap(startTime, endTime, classSlot.start_time, classSlot.end_time));
+          } else {
+            // FALLBACK AUTO SLOTS (ONLY IF ADMIN DID NOT SET ANY)
+            for (let hour = operatingStart; hour < operatingEnd; hour++) {
+              const startTime = `${String(hour).padStart(2, "0")}:00:00`;
+              const endTime = `${String(hour + 1).padStart(2, "0")}:00:00`;
 
-            // 4. ONLY PUSH SLOT IF CURRENT BOOKINGS ARE LESS THAN MAX CAPACITY
-            if (bookedPaxCount < maxCapacity && !isClassTime) {
-              slots.push({
-                start_time: startTime,
-                end_time: endTime,
-                label: `${formatSlotTime(startTime)} - ${formatSlotTime(endTime)}`
-              });
+              const isClassTime = timetableResult.some(classSlot =>
+                isTimeOverlap(startTime, endTime, classSlot.start_time, classSlot.end_time)
+              );
+
+              if (!isClassTime && !isBooked(startTime, endTime)) {
+                slots.push({
+                  start_time: startTime,
+                  end_time: endTime,
+                  label: `${formatSlotTime(startTime)} - ${formatSlotTime(endTime)}`
+                });
+              }
             }
           }
 
@@ -818,8 +860,21 @@ function updateCubicleBookingStatuses(callback) {
 
 /* ===== SUBMIT BOOKING WITH TRANSACTION AND ROW LOCKING (CAPACITY & DUPLICATE CHECK) ===== */
 router.post("/bookings", (req, res) => {
+<<<<<<< HEAD
   const { user_id, facility_id, program, booking_date, start_time, end_time, purpose } = req.body;
   const userIdInt = parseInt(user_id);
+=======
+  const {
+    user_id,
+    facility_id,
+    program,
+    booking_date,
+    start_time,
+    end_time,
+    purpose,
+    equipmentRequired
+  } = req.body;
+>>>>>>> 80def08b6adf10b0dbcc4a9a802a3479406c1876
 
   if (!user_id || !facility_id || !program || !booking_date || !start_time || !end_time) {
     return res.json({ success: false, message: "Please fill in all required booking details" });
@@ -882,12 +937,37 @@ router.post("/bookings", (req, res) => {
             return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Capacity reached." }); });
           }
 
+<<<<<<< HEAD
           const insertSql = `INSERT INTO bookings (user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose, booking_status, key_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
           const duration = (new Date(`${booking_date}T${end_time}`) - new Date(`${booking_date}T${start_time}`)) / (1000 * 60 * 60);
           
           connection.query(insertSql, [user_id, facility_id, program, booking_date, start_time, end_time, duration, purpose || "", bookingStatus, keyStatus], (insertErr, insertResult) => {
             if (insertErr) return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Booking failed" }); });
 
+=======
+          // 4. INSERT THE NEW BOOKING
+          const insertSql = `
+            INSERT INTO bookings 
+            (user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose, equipment_required, booking_status, key_status, payment_required, payment_status, payment_amount) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `;
+
+          connection.query(
+            insertSql, 
+            [user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose || "", equipmentRequired || "", bookingStatus, keyStatus, paymentRequired, paymentStatus, paymentAmount], 
+            (insertErr, insertResult) => {
+            
+            if (insertErr) {
+              return connection.rollback(() => {
+                connection.release();
+                res.json({ success: false, message: "Booking submission failed", error: insertErr.message });
+              });
+            }
+
+            const bookingId = insertResult.insertId;
+
+            // 5. COMMIT THE TRANSACTION (Unlocks the row so the next person can book)
+>>>>>>> 80def08b6adf10b0dbcc4a9a802a3479406c1876
             connection.commit((commitErr) => {
               if (commitErr) return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Commit failed" }); });
               connection.release();
@@ -1051,6 +1131,16 @@ router.put("/settings/change-password", (req, res) => {
     });
   }
 
+  const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).{8,}$/;
+
+  if (!passwordRegex.test(newPassword)) {
+    return res.json({
+      success: false,
+      message: "Password must be at least 8 characters and include uppercase, lowercase, a number and a special character."
+    });
+  }
+
   const checkSql = `
     SELECT password
     FROM users
@@ -1073,26 +1163,55 @@ router.put("/settings/change-password", (req, res) => {
       });
     }
 
-    if (result[0].password !== currentPassword) {
-      return res.json({
-        success: false,
-        message: "Current password is incorrect"
-      });
-    }
+    const storedPassword = result[0].password;
+    const isHashed = storedPassword.startsWith("$2");
 
-    const updateSql = `
-      UPDATE users
-      SET password = ?, must_change_password = FALSE
-      WHERE user_id = ?
-    `;
-
-    db.query(updateSql, [newPassword, user_id], (updateErr) => {
-      if (updateErr) {
+    const proceedUpdate = (isMatch) => {
+      if (!isMatch) {
         return res.json({
           success: false,
-          message: "Failed to change password"
+          message: "Current password is incorrect"
         });
       }
+
+      bcrypt.hash(newPassword, 10, (hashErr, hashedPassword) => {
+        if (hashErr) {
+          return res.json({
+            success: false,
+            message: "Error securing password"
+          });
+        }
+
+        const updateSql = `
+          UPDATE users
+          SET password = ?, must_change_password = FALSE
+          WHERE user_id = ?
+        `;
+
+        db.query(updateSql, [hashedPassword, user_id], (updateErr) => {
+          if (updateErr) {
+            return res.json({
+              success: false,
+              message: "Failed to change password"
+            });
+          }
+        });
+      });
+    };
+
+    if (isHashed) {
+      bcrypt.compare(currentPassword, storedPassword, (err, match) => {
+        if (err) {
+          return res.json({
+            success: false,
+            message: "Server error"
+          });
+        }
+        proceedUpdate(match);
+      });
+    } else {
+      proceedUpdate(currentPassword === storedPassword);
+    }
 
       return res.json({
         success: true,
@@ -1100,7 +1219,6 @@ router.put("/settings/change-password", (req, res) => {
       });
     });
   });
-});
 
 router.get("/profile/:user_id", (req, res) => {
   const userId = req.params.user_id;
