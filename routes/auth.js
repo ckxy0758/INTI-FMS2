@@ -548,6 +548,8 @@ router.put("/facilities/:id", (req, res) => {
     WHERE facility_id = ?
   `;
 
+  const timeSlotsValue = (time_slots && time_slots.length > 0) ? JSON.stringify(time_slots) : null;
+
   db.query(
     sql,
     [
@@ -566,7 +568,7 @@ router.put("/facilities/:id", (req, res) => {
       visible_to || "both",
       key_required || 0,
       booking_flow_type || "normal_approval",
-      JSON.stringify(time_slots || null),
+      timeSlotsValue,
       facilityId
     ],
     (err) => {
@@ -858,10 +860,12 @@ function updateCubicleBookingStatuses(callback) {
   });
 }
 
-/* ===== SUBMIT BOOKING WITH TRANSACTION AND ROW LOCKING (CAPACITY & DUPLICATE CHECK) ===== */
 router.post("/bookings", (req, res) => {
   const { user_id, facility_id, program, booking_date, start_time, end_time, purpose, equipmentRequired } = req.body;
   const userIdInt = parseInt(user_id);
+
+  // 1. Calculate duration at the top so it is accessible everywhere in this function
+  const duration_hours = (new Date(`${booking_date}T${end_time}`) - new Date(`${booking_date}T${start_time}`)) / (1000 * 60 * 60);
 
   if (!user_id || !facility_id || !program || !booking_date || !start_time || !end_time) {
     return res.json({ success: false, message: "Please fill in all required booking details" });
@@ -873,17 +877,14 @@ router.post("/bookings", (req, res) => {
     connection.beginTransaction((transactionErr) => {
       if (transactionErr) { connection.release(); return res.json({ success: false, message: "Failed to start transaction" }); }
 
-      const facilitySql = `SELECT facility_name, booking_flow_type, max_people FROM facilities WHERE facility_id = ? FOR UPDATE`;
+      const facilitySql = `SELECT facility_name, booking_flow_type, max_people, availability_status FROM facilities WHERE facility_id = ? FOR UPDATE`;
       connection.query(facilitySql, [facility_id], (facilityErr, facilityResult) => {
         if (facilityErr || facilityResult.length === 0) {
           return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Facility not found" }); });
         }
-        // --- ADD THIS SECURITY CHECK ---
+
         if (facilityResult[0].availability_status !== 'available') {
-            return connection.rollback(() => {
-                connection.release();
-                res.json({ success: false, message: "This facility is currently not available for booking." });
-            });
+            return connection.rollback(() => { connection.release(); res.json({ success: false, message: "This facility is currently not available for booking." }); });
         }
 
         const facilityName = facilityResult[0].facility_name;
@@ -895,11 +896,9 @@ router.post("/bookings", (req, res) => {
         if (bookingFlowType === "payment_required") bookingStatus = "pending_payment";
         if (bookingFlowType === "direct_reservation") bookingStatus = "reserved";
 
-        // Calculate missing variables
-        const duration_hours = (new Date(`${booking_date}T${end_time}`) - new Date(`${booking_date}T${start_time}`)) / (1000 * 60 * 60);
         const paymentRequired = bookingFlowType === "payment_required" ? 1 : 0;
-        const paymentStatus = paymentRequired ? "pending" : "not_required";
-        const paymentAmount = 0; // Or calculate based on your logic
+        const paymentStatus = paymentRequired ? "pending_payment" : "not_required";
+        const paymentAmount = 0; 
 
         // Notification Variables
         let nTitle = "Booking Submitted";
@@ -937,37 +936,19 @@ router.post("/bookings", (req, res) => {
             insertSql, 
             [user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose || "", equipmentRequired || "", bookingStatus, keyStatus, paymentRequired, paymentStatus, paymentAmount], 
             (insertErr, insertResult) => {
-            if (insertErr) {
-              return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Booking failed", error: insertErr.message }); });
-            }
+              if (insertErr) {
+                return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Booking failed", error: insertErr.message }); });
+              }
 
-            connection.commit((commitErr) => {
-              if (commitErr) return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Commit failed" }); });
-              connection.release();
-              
-              // 1. Insert User Notification
-              db.query(
-                "INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) VALUES (?, ?, ?, ?, 'booking', 0)", 
-                [user_id, insertResult.insertId, nTitle, nMsg],
-                (userNotifErr) => {
-                  // 2. Determine if Admins need to be notified
-                  const requiresAdminAction = ["payment_required", "staff_key_approval"].includes(bookingFlowType);
-
-                  if (requiresAdminAction) {
-                    let adminTitle = "New Booking Request";
-                    let adminMsg = `A new booking request for ${facilityName} has been submitted and requires review.`;
-                    if (bookingFlowType === "payment_required") adminMsg = `A new booking request for ${facilityName} has been submitted, if user have make payment then approved.`;
-                    
-                    db.query("INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) SELECT user_id, ?, ?, ?, 'system', 0 FROM users WHERE role = 'admin' AND status = 'active'", 
-                    [insertResult.insertId, adminTitle, adminMsg], () => {
-                      return res.json({ success: true, title: nTitle, message: nMsg });
-                    });
-                  } else {
-                    return res.json({ success: true, title: nTitle, message: nMsg });
-                  }
-                }
-              );
-            });
+              connection.commit((commitErr) => {
+                if (commitErr) return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Commit failed" }); });
+                connection.release();
+                
+                db.query("INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) VALUES (?, ?, ?, ?, 'booking', 0)", 
+                [user_id, insertResult.insertId, nTitle, nMsg]);
+                
+                return res.json({ success: true, title: nTitle, message: nMsg });
+              });
           });
         });
       });
