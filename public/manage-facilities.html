@@ -432,7 +432,7 @@
 
       if (isCustom) {
         document.getElementById("customTimeSection").style.display = "block";
-        document.getElementById("operating_start").parentElement.style.display = "none";
+        document.getElementById("operating_start").parentElement.style.display = "block";
       } else {
         document.getElementById("customTimeSection").style.display = "none";
         document.getElementById("operating_start").parentElement.style.display = "block";
@@ -540,6 +540,7 @@
       document.getElementById("operating_end").value = "";
       document.getElementById("timeSlotContainer").innerHTML = "";
       document.getElementById("customTimeSection").style.display = "none";  
+      document.getElementById("operating_start").parentElement.style.display = "block";
       document.getElementById("location").value = "";
       document.getElementById("max_people").value = "";
       document.getElementById("availability_status").value = "available";
