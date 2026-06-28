@@ -52,36 +52,7 @@
 
             <label>Equipment / Requirements</label>
 
-            <div class="equipment-list">
-
-              <label class="equipment-row">
-                <input type="checkbox" value="Computer" class="equipment">
-                <span>Computer</span>
-              </label>
-
-              <label class="equipment-row">
-                <input type="checkbox" value="HDMI Cable" class="equipment">
-                <span>HDMI Cable</span>
-              </label>
-
-              <label class="equipment-row">
-                <input type="checkbox" value="Projector" class="equipment">
-                <span>Projector</span>
-              </label>
-
-              <label class="equipment-row">
-                <input type="checkbox" value="Others" class="equipment">
-                <span>Others:</span>
-
-                <input
-                  type="text"
-                  id="otherEquipment"
-                  class="other-equipment-input"
-                  placeholder="__________"
-                >
-              </label>
-
-            </div>
+            <div id="equipmentList" class="equipment-list"></div>
 
           </div>
 
@@ -226,6 +197,8 @@
             
           currentFacility = facility;
 
+          renderEquipment(facility.equipment);
+
           const bookingFlowType = facility.booking_flow_type || "normal_approval";
 
           const equipmentSection = document.getElementById("equipmentSection");
@@ -342,21 +315,10 @@
         const selectedEquipment = [];
 
         document
-          .querySelectorAll(".equipment:checked")
-          .forEach(item => {
-            if (item.value === "Others") {
-              const otherText =
-                document.getElementById("otherEquipment").value.trim();
-
-              if (otherText) {
-                selectedEquipment.push(`Others: ${otherText}`);
-              } else {
-                selectedEquipment.push("Others");
-              }
-            } else {
-              selectedEquipment.push(item.value);
-            }
-          });
+        .querySelectorAll(".equipment:checked")
+        .forEach(item => {
+            selectedEquipment.push(item.value);
+        });
 
         equipmentRequired = selectedEquipment.join(", ");
       }
@@ -499,6 +461,40 @@
       localStorage.removeItem("user");
       sessionStorage.removeItem("user");
       window.location.href = "login.html";
+    }
+
+    function renderEquipment(equipmentText) {
+
+        const equipmentList = document.getElementById("equipmentList");
+
+        equipmentList.innerHTML = "";
+
+        if (!equipmentText || equipmentText.trim() === "") {
+            return;
+        }
+
+        equipmentText.split(",").forEach(item => {
+
+            const equipment = item.trim();
+
+            if (!equipment) return;
+
+            const label = document.createElement("label");
+            label.className = "equipment-row";
+
+            label.innerHTML = `
+                <input
+                    type="checkbox"
+                    value="${equipment}"
+                    class="equipment"
+                >
+                <span>${equipment}</span>
+            `;
+
+            equipmentList.appendChild(label);
+
+        });
+
     }
   </script>
 
