@@ -690,12 +690,7 @@ router.get("/facilities/:id/available-slots", (req, res) => {
         AND booking_status IN ('pending', 'pending_payment', 'payment_submitted', 'approved', 'reserved', 'checked_in', 'key_collected')
       `;
 
-      db.query(bookingSql, [facilityId, selectedDate], (bookingErr, bookingResult) => {
-        const isBooked = (startTime, endTime) =>
-          bookingResult.some(b =>
-            isTimeOverlap(startTime, endTime, b.start_time, b.end_time)
-          );
-
+    db.query(bookingSql, [facilityId, selectedDate], (bookingErr, bookingResult) => {
         if (bookingErr) return res.json({ success: false, message: "Failed to check bookings", slots: [] });
 
         const timetableSql = `
@@ -711,51 +706,30 @@ router.get("/facilities/:id/available-slots", (req, res) => {
           const operatingStart = Number(facility.operating_start.substring(0, 2));
           const operatingEnd = Number(facility.operating_end.substring(0, 2));
 
-          if (isNaN(operatingStart) || isNaN(operatingEnd) || operatingStart >= operatingEnd) {
-            return res.json({ success: false, message: "Invalid operating hours", slots: [] });
-          }
+          // HELPER FUNCTION: Count bookings for a specific slot
+          const getBookedCount = (start, end) => {
+            return bookingResult.filter(b => isTimeOverlap(start, end, b.start_time, b.end_time)).length;
+          };
 
-          const today = new Date().toISOString().split("T")[0];
-          const now = new Date();
-          const minimumBookingTime = new Date();
-          minimumBookingTime.setMinutes(minimumBookingTime.getMinutes() + 30); 
-
-          if (slotsSource.length > 0) {
-            // ADMIN CUSTOM SLOTS (THIS FIXES YOUR ISSUE)
-            slotsSource.forEach(slot => {
-              const startTime = slot.start_time || slot.start;
-              const endTime = slot.end_time || slot.end;
-
-              const isClassTime = timetableResult.some(classSlot =>
+          for (let hour = operatingStart; hour < operatingEnd; hour++) {
+            const startTime = `${String(hour).padStart(2, "0")}:00:00`;
+            const endTime = `${String(hour + 1).padStart(2, "0")}:00:00`;
+            
+            // 1. Check if it's a class time
+            const isClassTime = timetableResult.some(classSlot => 
                 isTimeOverlap(startTime, endTime, classSlot.start_time, classSlot.end_time)
-              );
+            );
 
-              if (!isClassTime && !isBooked(startTime, endTime)) {
-                slots.push({
-                  start_time: startTime,
-                  end_time: endTime,
-                  label: `${formatSlotTime(startTime)} - ${formatSlotTime(endTime)}`
-                });
-              }
-            });
+            // 2. Count existing bookings for this specific slot
+            const currentBookedCount = getBookedCount(startTime, endTime);
 
-          } else {
-            // FALLBACK AUTO SLOTS (ONLY IF ADMIN DID NOT SET ANY)
-            for (let hour = operatingStart; hour < operatingEnd; hour++) {
-              const startTime = `${String(hour).padStart(2, "0")}:00:00`;
-              const endTime = `${String(hour + 1).padStart(2, "0")}:00:00`;
-
-              const isClassTime = timetableResult.some(classSlot =>
-                isTimeOverlap(startTime, endTime, classSlot.start_time, classSlot.end_time)
-              );
-
-              if (!isClassTime && !isBooked(startTime, endTime)) {
-                slots.push({
-                  start_time: startTime,
-                  end_time: endTime,
-                  label: `${formatSlotTime(startTime)} - ${formatSlotTime(endTime)}`
-                });
-              }
+            // 3. Only show slot if (Bookings < Max Capacity) AND not a class time
+            if (!isClassTime && currentBookedCount < maxCapacity) {
+              slots.push({
+                start_time: startTime,
+                end_time: endTime,
+                label: `${formatSlotTime(startTime)} - ${formatSlotTime(endTime)} (${currentBookedCount}/${maxCapacity} booked)`
+              });
             }
           }
 
