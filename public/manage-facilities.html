@@ -204,31 +204,20 @@
           </div>
 
           <div id="equipmentOptions" style="display:none;">
-            <label>Equipment / Requirements</label>
+              <label>Equipment / Requirements</label>
+              <div class="equipment-add-row">
+                  <input
+                      type="text"
+                      id="newEquipment"
+                      placeholder="Enter equipment..."
+                      onkeypress="if(event.key==='Enter'){event.preventDefault();addEquipment();}"
+                  >
 
-            <div class="equipment-row">
-              <label>
-                <input type="checkbox" id="equipment_computer">
-                Computer
-              </label>
-
-              <label>
-                <input type="checkbox" id="equipment_hdmi">
-                HDMI Cable
-              </label>
-
-              <label>
-                <input type="checkbox" id="equipment_projector">
-                Projector
-              </label>
-
-              <label>
-                <input type="checkbox" id="equipment_other">
-                Others
-              </label>
-
-              <input type="text" id="equipment_other_text" placeholder="Others...">
-            </div>
+                  <button type="button" onclick="addEquipment()">
+                      Add
+                  </button>
+              </div>
+              <div id="equipmentList" class="equipment-row"></div>
           </div>
 
           <div class="facility-form-actions">
@@ -321,12 +310,42 @@
       }
     }
 
+    let equipmentItems = [];
+
+    function addEquipment(name = "", checked = true) {
+
+        const input = document.getElementById("newEquipment");
+        const equipment = (name || input.value).trim();
+
+        if (!equipment) return;
+
+        if (equipmentItems.includes(equipment)) {
+            alert("Equipment already exists.");
+            return;
+        }
+
+        equipmentItems.push(equipment);
+        const container = document.getElementById("equipmentList");
+        const label = document.createElement("label");
+
+        label.innerHTML = `
+            <input
+                type="checkbox"
+                class="equipment-checkbox"
+                value="${equipment}"
+                ${checked ? "checked" : ""}
+            >
+            ${equipment}
+        `;
+
+        container.appendChild(label);
+        input.value = "";
+    }
+
     function clearEquipmentFields() {
-      document.getElementById("equipment_computer").checked = false;
-      document.getElementById("equipment_hdmi").checked = false;
-      document.getElementById("equipment_projector").checked = false;
-      document.getElementById("equipment_other").checked = false;
-      document.getElementById("equipment_other_text").value = "";
+        equipmentItems = [];
+        document.getElementById("newEquipment").value = "";
+        document.getElementById("equipmentList").innerHTML = "";
     }
 
     function renderFacilities(facilities) {
@@ -457,25 +476,22 @@
 
       const equipment = facility.equipment || "";
 
+      clearEquipmentFields();
       if (equipment.trim() !== "") {
-        document.getElementById("equipment_included").value = "yes";
-        document.getElementById("equipmentOptions").style.display = "block";
 
-        document.getElementById("equipment_computer").checked = equipment.includes("Computer");
-        document.getElementById("equipment_hdmi").checked = equipment.includes("HDMI Cable");
-        document.getElementById("equipment_projector").checked = equipment.includes("Projector");
-        document.getElementById("equipment_other").checked = equipment.includes("Others");
+          document.getElementById("equipment_included").value = "yes";
+          document.getElementById("equipmentOptions").style.display = "block";
 
-        if (equipment.includes("Others:")) {
-          document.getElementById("equipment_other_text").value =
-            equipment.split("Others:")[1].trim();
-        } else {
-          document.getElementById("equipment_other_text").value = "";
-        }
+          equipment.split(",").forEach(item => {
+              const text = item.trim();
+
+              if (text !== "") {
+                  addEquipment(text, true);
+              }
+          });
       } else {
-        document.getElementById("equipment_included").value = "no";
-        document.getElementById("equipmentOptions").style.display = "none";
-        clearEquipmentFields();
+          document.getElementById("equipment_included").value = "no";
+          document.getElementById("equipmentOptions").style.display = "none";
       }
     }
 
@@ -578,32 +594,19 @@
   }
 
     function getEquipmentText() {
-      const equipmentIncluded = document.getElementById("equipment_included").value;
 
-      if (equipmentIncluded === "no") {
-        return "";
-      }
+        if (document.getElementById("equipment_included").value === "no") {
+            return "";
+        }
 
-      let equipment = [];
+        const equipment = [];
+        document.querySelectorAll("#equipmentList input[type='checkbox']").forEach(item => {
 
-      if (document.getElementById("equipment_computer").checked) {
-        equipment.push("Computer");
-      }
-
-      if (document.getElementById("equipment_hdmi").checked) {
-        equipment.push("HDMI Cable");
-      }
-
-      if (document.getElementById("equipment_projector").checked) {
-        equipment.push("Projector");
-      }
-
-      if (document.getElementById("equipment_other").checked) {
-        const otherText = document.getElementById("equipment_other_text").value.trim();
-        equipment.push(otherText ? `Others: ${otherText}` : "Others");
-      }
-
-      return equipment.join(", ");
+            if (item.checked) {
+                equipment.push(item.value);
+            }
+        });
+        return equipment.join(", ");
     }
 
     function isCustomTimeFacility(name) {
