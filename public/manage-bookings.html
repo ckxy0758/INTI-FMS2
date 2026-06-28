@@ -108,7 +108,11 @@
     loadBookings();
 
     function loadBookings() {
-      fetch("/api/admin/bookings")
+      fetch("/api/admin/bookings", {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        }
+      })
         .then(res => res.json())
         .then(data => {
           if (!data.success) {
@@ -362,11 +366,17 @@
 
     function approveBooking(bookingId) {
       showConfirm("Approve this booking?", () => {
-        fetch(`/api/admin/bookings/${bookingId}/approve`, { method: "PUT" })
+      fetch(`/api/admin/bookings/${bookingId}/approve`, { 
+          method: "PUT",
+          headers: { "Authorization": "Bearer " + localStorage.getItem("authToken") }
+        })
           .then(res => res.json())
           .then(data => {
             showAlert(data.message, data.success ? "success" : "error");
-            fetch("/api/admin/bookings")
+            // Nested fetch also needs the token!
+            fetch("/api/admin/bookings", {
+              headers: { "Authorization": "Bearer " + localStorage.getItem("authToken") }
+            })
               .then(res => res.json())
               .then(data => {
                 allBookings = data.bookings;
@@ -378,11 +388,17 @@
 
     function cancelBooking(bookingId) {
       showConfirm("Cancel this booking?", () => {
-        fetch(`/api/admin/bookings/${bookingId}/cancel`, { method: "PUT" })
+      fetch(`/api/admin/bookings/${bookingId}/cancel`, { 
+          method: "PUT",
+          headers: { "Authorization": "Bearer " + localStorage.getItem("authToken") }
+        })
           .then(res => res.json())
           .then(data => {
             showAlert(data.message, data.success ? "success" : "error");
-            fetch("/api/admin/bookings")
+            // Nested fetch also needs the token!
+            fetch("/api/admin/bookings", {
+              headers: { "Authorization": "Bearer " + localStorage.getItem("authToken") }
+            })
               .then(res => res.json())
               .then(data => {
                 allBookings = data.bookings;

@@ -171,7 +171,12 @@
         return;
       }
 
-      fetch(`/api/facilities/${facilityId}/available-slots?date=${bookingDate}`)
+      fetch(`/api/facilities/${facilityId}/available-slots?date=${bookingDate}`, {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        }
+      })
+        
         .then(res => res.json())
         .then(data => {
           timeSlot.innerHTML = `<option value="">Select Available Time Slot</option>`;
@@ -206,7 +211,11 @@
     }
 
     function loadFacility() {
-      fetch(`/api/facilities/${facilityId}`)
+      fetch(`/api/facilities/${facilityId}`, {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        }
+      })
         .then(res => res.json())
         .then(data => {
           const container = document.getElementById("facilityDetails");
@@ -223,7 +232,7 @@
              window.location.href = (user.role === "staff" ? "staff.html" : "student.html");
              return;
           }
-            
+
           currentFacility = facility;
 
           const bookingFlowType = facility.booking_flow_type || "normal_approval";
@@ -381,10 +390,11 @@
         return;
       }
 
-      fetch("/api/bookings", {
+    fetch("/api/bookings", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
         },
         body: JSON.stringify({
           user_id: user.id,

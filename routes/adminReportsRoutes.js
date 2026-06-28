@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const { verifyToken, requireRole } = require("../middleware/authMiddleware");
 
 // GET /api/admin/reports
-router.get("/admin/reports", (req, res) => {
+router.get("/admin/reports", verifyToken, requireRole(['admin']), (req, res) => {
   const {
     month,
     year,

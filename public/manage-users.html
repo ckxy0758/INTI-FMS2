@@ -137,10 +137,11 @@
         return;
       }
 
-      fetch("/api/users", {
+    fetch("/api/users", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
         },
         body: JSON.stringify({
           name,
@@ -178,8 +179,11 @@
     }
 
     function loadUsers() {
-      fetch("/api/users")
-        .then(res => res.json())
+    fetch("/api/users", {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        }
+      })        .then(res => res.json())
         .then(data => {
           if (!data.success) {
             document.getElementById("userTable").innerHTML = `
@@ -319,8 +323,12 @@
 
     function deactivateUser(userId) {
       showConfirm("Are you sure you want to deactivate this user?", () => {
-        fetch(`/api/users/${userId}/deactivate`, { method: "PUT" })
-          .then(res => res.json())
+        fetch(`/api/users/${userId}/deactivate`, { 
+          method: "PUT",
+          headers: {
+            "Authorization": "Bearer " + localStorage.getItem("authToken")
+          }
+        })          .then(res => res.json())
           .then(data => {
             showAlert(data.message, data.success ? "success" : "error");
             loadUsers();
@@ -330,7 +338,12 @@
 
     function reactivateUser(userId) {
       showConfirm("Are you sure you want to reactivate this user?", () => {
-        fetch(`/api/users/${userId}/reactivate`, { method: "PUT" })
+        fetch(`/api/users/${userId}/reactivate`, { 
+          method: "PUT",
+          headers: {
+            "Authorization": "Bearer " + localStorage.getItem("authToken")
+          }
+        })
           .then(res => res.json())
           .then(data => {
             showAlert(data.message, data.success ? "success" : "error");

@@ -277,7 +277,11 @@
     loadFacilities();
 
     function loadFacilities() {
-      fetch("/api/facilities")
+      fetch("/api/facilities", {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        }
+      })
         .then(res => res.json())
         .then(data => {
           if (!data.success) {
@@ -701,7 +705,8 @@
       fetch(url, {
         method,
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
         },
         body: JSON.stringify(facilityData)
       })
@@ -720,7 +725,12 @@
       if (!facility_id) return;
 
       showConfirm("Are you sure you want to delete this facility?", () => {
-        fetch(`/api/facilities/${facility_id}`, { method: "DELETE" })
+        fetch(`/api/facilities/${facility_id}`, { 
+          method: "DELETE",
+          headers: {
+            "Authorization": "Bearer " + localStorage.getItem("authToken")
+          }
+        })
           .then(res => res.json())
           .then(data => {
             showAlert(data.message, data.success ? "success" : "error", data.success ? () => { backToFacilityList(); loadFacilities(); } : null);

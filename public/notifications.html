@@ -64,7 +64,11 @@
     loadNotifications();
 
     function loadNotifications() {
-      fetch(`/api/notifications/${user.id}`)
+      fetch(`/api/notifications/${user.id}`, {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        }
+      })
         .then(res => res.json())
         .then(data => {
           if (!data.success) return;
@@ -185,7 +189,10 @@
         const endpoint = allRead ? "unread-all" : "read-all";
 
         fetch(`/api/notifications/${user.id}/${endpoint}`, {
-          method: "PUT"
+          method: "PUT",
+          headers: {
+            "Authorization": "Bearer " + localStorage.getItem("authToken")
+          }
         })
         .then(res => res.json())
         .then(data => {

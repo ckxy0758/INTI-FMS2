@@ -54,7 +54,11 @@
     loadProfile();
 
     function loadProfile() {
-      fetch(`/api/profile/${user.id}`)
+      fetch(`/api/profile/${user.id}`, {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        }
+      })
         .then(res => res.json())
         .then(data => {
           if (!data.success) {

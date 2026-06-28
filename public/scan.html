@@ -34,7 +34,11 @@
       if (!facilityId) {
         document.getElementById("errorMessage").innerText = "Invalid QR Code.";
       } else {
-        fetch(`/api/bookings/current-booking/${facilityId}/${user.id}`)
+        fetch(`/api/bookings/current-booking/${facilityId}/${user.id}`, {
+          headers: {
+            "Authorization": "Bearer " + localStorage.getItem("authToken")
+          }
+        })
           .then(res => res.json())
           .then(data => {
             if (data.success) {

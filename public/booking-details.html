@@ -71,7 +71,11 @@
 
     // 3. Fetch Data  
     function loadBookingDetails() {
-      fetch(`/api/bookings/${bookingId}`)
+      fetch(`/api/bookings/${bookingId}`, {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        }
+      })
         .then(res => res.json())
         .then(data => {
           if (!data.success) {
@@ -250,7 +254,10 @@
     function checkInCubicle() {
       fetch(`/api/bookings/${bookingId}/check-in`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        },
         body: JSON.stringify({ user_id: user.id })
       })
       .then(res => res.json())
@@ -263,9 +270,12 @@
     }
 
     function returnKey() {
-      fetch(`/api/bookings/${bookingId}/return-key`, {
+    fetch(`/api/bookings/${bookingId}/return-key`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        },
         body: JSON.stringify({ user_id: user.id })
       })
       .then(res => res.json())

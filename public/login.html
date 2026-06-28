@@ -80,6 +80,7 @@
 
           if (data.success) {
 
+            localStorage.setItem("authToken", data.token);
             const remember = document.getElementById("remember").checked;
 
             if (remember) {

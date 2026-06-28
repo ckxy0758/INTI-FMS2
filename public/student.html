@@ -115,7 +115,11 @@
 
     function loadFacilities() {
 
-      fetch(`/api/facilities?role=${user.role}`)
+      fetch(`/api/facilities?role=${user.role}`, {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        }
+      })
 
       .then(res => res.json())
 

@@ -55,7 +55,11 @@
     loadActivities();
 
     function loadActivities() {
-      fetch(`/api/activities/${user.id}`)
+      fetch(`/api/activities/${user.id}`, {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        }
+      })
         .then(res => res.json())
         .then(data => {
           if (!data.success) {
@@ -469,7 +473,10 @@
       showConfirm("Are you sure you want to cancel this booking? You can only cancel at least 1 hour before the booking starts.", () => {
         fetch(`/api/bookings/${id}/cancel`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + localStorage.getItem("authToken")
+          },
           body: JSON.stringify({ user_id: user.id })
         })
         .then(res => res.json())

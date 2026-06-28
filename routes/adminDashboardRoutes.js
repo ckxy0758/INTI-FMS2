@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const { verifyToken, requireRole } = require("../middleware/authMiddleware");
 
 // GET /api/admin/dashboard
-router.get("/admin/dashboard", (req, res) => {
+router.get("/admin/dashboard", verifyToken, requireRole(['admin']), (req, res) => {
   const userId = req.query.userId;
 
   // 1. Fetch all 4 KPIs efficiently in a single query

@@ -326,7 +326,11 @@
       if (month) url += `&month=${month}`;
       if (year) url += `&year=${year}`;
 
-      fetch(url)
+      fetch(url, {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        }
+      })
         .then(response => response.json())
         .then(data => {
           if (!data.success) {
@@ -361,7 +365,11 @@
     }
 
     function loadFacilitiesForFilters() {
-      fetch("http://localhost:3000/api/facilities?role=admin")
+      fetch("http://localhost:3000/api/facilities?role=admin", {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        }
+      })
         .then(response => response.json())
         .then(data => {
           if (!data.success) return;

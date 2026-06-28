@@ -4,12 +4,15 @@ const db = require("../db");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
+const jwt = require("jsonwebtoken");
+const { verifyToken, requireRole, JWT_SECRET } = require("../middleware/authMiddleware"); // Adjust path if needed
+
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'courneyk8570@gmail.com',
-    pass: '' // REPLACE THIS
+    pass: 'hlkmpewoamjcdfrn' // REPLACE THIS
   }
 });
 
@@ -31,59 +34,52 @@ router.post("/login", (req, res) => {
       return res.json({ success: false, message: "Database error" });
     }
 
-    // If the user exists
     if (result.length === 1) {
       const user = result[0];
-
-      // Check if the password in the database is a bcrypt hash (starts with $2)
       const isHashed = user.password.startsWith("$2");
 
-      if (isHashed) {
-        // --- NEW SECURE ACCOUNTS ---
-        bcrypt.compare(password, user.password, (compareErr, isMatch) => {
-          if (compareErr) return res.json({ success: false, message: "Error verifying credentials" });
-          
-          if (isMatch) {
-            return res.json({
-              success: true,
-              user: {
-                id: user.user_id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                must_change_password: user.must_change_password
-              }
-            });
-          } else {
-            return res.json({ success: false, message: "Invalid email or password" });
+      // Helper function to handle successful login and generate token
+      const handleSuccess = () => {
+        // Create the token payload
+        const tokenData = {
+          id: user.user_id,
+          role: user.role
+        };
+
+        // Generate the token (Expires in 8 hours)
+        const token = jwt.sign(tokenData, JWT_SECRET, { expiresIn: '8h' });
+
+        return res.json({
+          success: true,
+          message: "Login successful",
+          token: token, // Send the token to the frontend
+          user: {
+            id: user.user_id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            must_change_password: user.must_change_password
           }
         });
-      } else {
-        // --- OLD PLAIN-TEXT ACCOUNTS (Legacy) ---
-        // Direct string comparison for accounts created before the bcrypt upgrade
-        if (password === user.password) {
-          return res.json({
-            success: true,
-            user: {
-              id: user.user_id,
-              name: user.name,
-              email: user.email,
-              role: user.role,
-              must_change_password: user.must_change_password
-            }
-          });
-        } else {
+      };
+
+      if (isHashed) {
+        bcrypt.compare(password, user.password, (compareErr, isMatch) => {
+          if (compareErr) return res.json({ success: false, message: "Error verifying credentials" });
+          if (isMatch) return handleSuccess();
           return res.json({ success: false, message: "Invalid email or password" });
-        }
+        });
+      } else {
+        if (password === user.password) return handleSuccess();
+        return res.json({ success: false, message: "Invalid email or password" });
       }
     } else {
-      // User not found or inactive
       return res.json({ success: false, message: "Invalid email or password" });
     }
   });
 });
 
-router.post("/users", (req, res) => {
+router.post("/users", verifyToken, requireRole(['admin']), (req, res) => {
   const { name, user_code, email, role } = req.body;
 
   if (!name || !user_code || !email || !role) {
@@ -138,7 +134,7 @@ router.post("/users", (req, res) => {
   });
 });
 
-router.get("/users", (req, res) => {
+router.get("/users", verifyToken, requireRole(['admin']), (req, res) => {
   const sql = "SELECT user_id, name, user_code, email, role, status FROM users ORDER BY user_id DESC";
 
   db.query(sql, (err, result) => {
@@ -156,7 +152,7 @@ router.get("/users", (req, res) => {
   });
 });
 
-router.post("/change-password", (req, res) => {
+router.post("/change-password", verifyToken, (req, res) => {
   const { user_id, newPassword } = req.body;
 
   if (!user_id || !newPassword) {
@@ -304,7 +300,7 @@ router.post("/reset-password", (req, res) => {
   });
 });
 
-router.put("/users/:id/deactivate", (req, res) => {
+router.put("/users/:id/deactivate", verifyToken, requireRole(['admin']), (req, res) => {
   const userId = req.params.id;
 
   const sql = "UPDATE users SET status = 'inactive' WHERE user_id = ?";
@@ -324,7 +320,7 @@ router.put("/users/:id/deactivate", (req, res) => {
   });
 });
 
-router.put("/users/:id/reactivate", (req, res) => {
+router.put("/users/:id/reactivate", verifyToken, requireRole(['admin']), (req, res) => {
   const userId = req.params.id;
 
   const sql = "UPDATE users SET status = 'active' WHERE user_id = ?";
@@ -344,7 +340,7 @@ router.put("/users/:id/reactivate", (req, res) => {
   });
 });
 
-router.get("/facilities", (req, res) => {
+router.get("/facilities", verifyToken, (req, res) => {
   const role = req.query.role;
 
   let sql = `
@@ -383,8 +379,8 @@ router.get("/facilities", (req, res) => {
   });
 });
 
-router.post("/facilities", (req, res) => {
-const {
+router.post("/facilities", verifyToken, requireRole(['admin']), (req, res) => {
+  const {
   facility_name,
   facility_type,
   location,
@@ -478,7 +474,7 @@ const {
   );
 });
 
-router.put("/facilities/:id", (req, res) => {
+router.put("/facilities/:id", verifyToken, requireRole(['admin']), (req, res) => {
   const facilityId = req.params.id;
   const fs = require("fs");
   const path = require("path");
@@ -589,7 +585,7 @@ router.put("/facilities/:id", (req, res) => {
   );
 });
 
-router.delete("/facilities/:id", (req, res) => {
+router.delete("/facilities/:id", verifyToken, requireRole(['admin']), (req, res) => {
   const facilityId = req.params.id;
 
   const checkSql = `
@@ -638,7 +634,7 @@ router.delete("/facilities/:id", (req, res) => {
 });
 
 /* ===== AVAILABLE 1-HOUR TIME SLOTS ===== */
-router.get("/facilities/:id/available-slots", (req, res) => {
+router.get("/facilities/:id/available-slots", verifyToken, (req, res) => {
   const facilityId = req.params.id;
   const selectedDate = req.query.date;
 
@@ -747,7 +743,7 @@ router.get("/test-slots", (req, res) => {
   });
 });
 
-router.get("/facilities/:id", (req, res) => {
+router.get("/facilities/:id", verifyToken, (req, res) => {
   const facilityId = req.params.id;
 
   const sql = `
@@ -834,7 +830,7 @@ function updateCubicleBookingStatuses(callback) {
   });
 }
 
-router.post("/bookings", (req, res) => {
+router.post("/bookings", verifyToken, (req, res) => {
   const { user_id, facility_id, program, booking_date, start_time, end_time, purpose, equipmentRequired } = req.body;
   const userIdInt = parseInt(user_id);
 
@@ -964,7 +960,7 @@ router.post("/bookings", (req, res) => {
   });
 });
 
-router.get("/activities/:user_id", (req, res) => {
+router.get("/activities/:user_id", verifyToken, (req, res) => {
   const userId = req.params.user_id;
 
   updateCubicleBookingStatuses(() => {
@@ -1009,7 +1005,7 @@ router.get("/activities/:user_id", (req, res) => {
   });
 });
 
-router.get("/notifications/:user_id", (req, res) => {
+router.get("/notifications/:user_id", verifyToken, (req, res) => {
   const sql = `SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC`;
   db.query(sql, [req.params.user_id], (err, result) => {
     if (err) return res.json({ success: false, notifications: [] });
@@ -1018,7 +1014,7 @@ router.get("/notifications/:user_id", (req, res) => {
 });
 
 
-router.put("/notifications/:user_id/read-all", (req, res) => {
+router.put("/notifications/:user_id/read-all", verifyToken, (req, res) => {
   const userId = req.params.user_id;
 
   const sql = `
@@ -1043,7 +1039,7 @@ router.put("/notifications/:user_id/read-all", (req, res) => {
   });
 });
 
-router.put("/notifications/:user_id/unread-all", (req, res) => {
+router.put("/notifications/:user_id/unread-all", verifyToken, (req, res) => {
   const userId = req.params.user_id;
 
   const sql = `
@@ -1068,7 +1064,7 @@ router.put("/notifications/:user_id/unread-all", (req, res) => {
   });
 });
 
-router.put("/settings/change-password", (req, res) => {
+router.put("/settings/change-password", verifyToken, (req, res) => {
   const { user_id, currentPassword, newPassword } = req.body;
 
   if (!user_id || !currentPassword || !newPassword) {
@@ -1167,7 +1163,7 @@ router.put("/settings/change-password", (req, res) => {
     });
   });
 
-router.get("/profile/:user_id", (req, res) => {
+router.get("/profile/:user_id", verifyToken, (req, res) => {
   const userId = req.params.user_id;
 
   const sql = `
@@ -1203,7 +1199,7 @@ router.get("/profile/:user_id", (req, res) => {
   });
 });
 
-router.put("/bookings/:id/check-in", (req, res) => {
+router.put("/bookings/:id/check-in", verifyToken, (req, res) => {
   const bookingId = req.params.id;
   const { user_id } = req.body;
 
@@ -1270,7 +1266,7 @@ router.put("/bookings/:id/check-in", (req, res) => {
   });
 });
 
-router.get("/bookings/:id", (req, res) => {
+router.get("/bookings/:id", verifyToken, (req, res) => {
   const bookingId = req.params.id;
 
   updateCubicleBookingStatuses(() => {
@@ -1328,7 +1324,7 @@ router.get("/bookings/:id", (req, res) => {
   });
 });
 
-router.put("/bookings/:id/cancel", (req, res) => {
+router.put("/bookings/:id/cancel", verifyToken, (req, res) => {
   const bookingId = req.params.id;
   const { user_id } = req.body;
 
@@ -1414,8 +1410,8 @@ router.put("/bookings/:id/cancel", (req, res) => {
   });
 });
 
-router.get("/admin/bookings", (req, res) => {
-  const sql = `
+router.get("/admin/bookings", verifyToken, requireRole(['admin']), (req, res) => {
+    const sql = `
     SELECT 
       b.booking_id,
       DATE_FORMAT(b.booking_date, '%Y-%m-%d') AS booking_date,
@@ -1451,7 +1447,7 @@ router.get("/admin/bookings", (req, res) => {
   });
 });
 
-router.put("/admin/bookings/:id/approve", (req, res) => {
+router.put("/admin/bookings/:id/approve", verifyToken, requireRole(['admin']), (req, res) => {
   const bookingId = req.params.id;
 
   const updateSql = `
@@ -1552,7 +1548,7 @@ router.put("/admin/bookings/:id/approve", (req, res) => {
   });
 });
 
-router.put("/admin/bookings/:id/cancel", (req, res) => {
+router.put("/admin/bookings/:id/cancel", verifyToken, requireRole(['admin']), (req, res) => {
   const bookingId = req.params.id;
 
   const sql = `
@@ -1594,7 +1590,7 @@ router.put("/admin/bookings/:id/cancel", (req, res) => {
   });
 });
 
-router.get("/admin/key-management", (req, res) => {
+router.get("/admin/key-management", verifyToken, requireRole(['admin']), (req, res) => {
   const sql = `
   SELECT
     b.booking_id,
@@ -1644,7 +1640,7 @@ router.get("/admin/key-management", (req, res) => {
   });
 });
 
-router.put("/admin/bookings/:id/collect-key", (req, res) => {
+router.put("/admin/bookings/:id/collect-key", verifyToken, requireRole(['admin']), (req, res) => {
   const bookingId = req.params.id;
 
   const sql = `
@@ -1680,7 +1676,7 @@ router.put("/admin/bookings/:id/collect-key", (req, res) => {
   });
 });
 
-router.put("/bookings/:id/return-key", (req, res) => {
+router.put("/bookings/:id/return-key", verifyToken, (req, res) => {
   const bookingId = req.params.id;
   const { user_id } = req.body;
 
@@ -1745,7 +1741,7 @@ function createKeyReturnReminders(callback) {
 
 // GET CURRENT BOOKING ID FOR QR REDIRECT
 // SINGLE, CLEAN ROUTE: Handle QR Code current booking lookup for Cubicles AND Key Returns
-router.get("/bookings/current-booking/:facility_id/:user_id", (req, res) => {
+router.get("/bookings/current-booking/:facility_id/:user_id", verifyToken, (req, res) => {
   const facilityId = req.params.facility_id;
   const userId = req.params.user_id;
 
