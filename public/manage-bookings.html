@@ -366,7 +366,12 @@
           .then(res => res.json())
           .then(data => {
             showAlert(data.message, data.success ? "success" : "error");
-            loadBookings();
+            fetch("/api/admin/bookings")
+              .then(res => res.json())
+              .then(data => {
+                allBookings = data.bookings;
+                applyBookingFilters();
+              });
           });
       });
     }
@@ -377,7 +382,12 @@
           .then(res => res.json())
           .then(data => {
             showAlert(data.message, data.success ? "success" : "error");
-            loadBookings();
+            fetch("/api/admin/bookings")
+              .then(res => res.json())
+              .then(data => {
+                allBookings = data.bookings;
+                applyBookingFilters();
+              });
           });
       });
     }
@@ -549,6 +559,6 @@
       <div id="modalButtons" class="custom-modal-buttons"></div>
     </div>
   </div>
-  
+
 </body>
 </html>
