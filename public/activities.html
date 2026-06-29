@@ -409,30 +409,8 @@
       });
 
       event.target.classList.add("active");
-
-      const now = new Date();
-
-      if (type === "upcoming") {
-        renderActivities(
-          allActivities.filter(item =>
-            getActivityEndDateTime(item) > now &&
-            item.booking_status !== "cancelled"
-          )
-        );
-      } else if (type === "past") {
-        renderActivities(
-          allActivities.filter(item =>
-            getActivityEndDateTime(item) <= now &&
-            item.booking_status !== "cancelled"
-          )
-        );
-      } else if (type === "cancelled") {
-        renderActivities(
-          allActivities.filter(item => item.booking_status === "cancelled")
-        );
-      } else {
-        renderActivities(allActivities);
-      }
+      currentFilter = type;
+      sortActivityList();
     }
 
     // Newly added
@@ -443,20 +421,39 @@
       return "Unknown";
     }
 
-      function sortActivityList() {
-        const sortType = document.getElementById("sortActivities").value;
+      let currentFilter = "all";
 
-        let sorted = [...allActivities];
+    function sortActivityList() {
+      const sortType = document.getElementById("sortActivities").value;
+      const now = new Date();
 
-        sorted.sort((a, b) => {
-          const dateA = new Date(`${a.booking_date}T${a.start_time}`);
-          const dateB = new Date(`${b.booking_date}T${b.start_time}`);
+      let filtered = [...allActivities];
 
-          return sortType === "newest" ? dateB - dateA : dateA - dateB;
+      if (currentFilter === "upcoming") {
+        filtered = filtered.filter(item => {
+          const status = item.booking_status ? item.booking_status.trim().toLowerCase() : "";
+          const endDateTime = getActivityEndDateTime(item);
+          const isActiveStatus = ["pending", "pending_payment", "payment_submitted", "approved", "reserved", "checked_in", "key_collected"].includes(status);
+          return isActiveStatus && endDateTime > now;
         });
-
-        renderActivities(sorted);
+      } else if (currentFilter === "past") {
+        filtered = filtered.filter(item => {
+          const status = item.booking_status ? item.booking_status.trim().toLowerCase() : "";
+          const endDateTime = getActivityEndDateTime(item);
+          return endDateTime <= now && status !== "cancelled";
+        });
+      } else if (currentFilter === "cancelled") {
+        filtered = filtered.filter(item => item.booking_status === "cancelled");
       }
+
+      filtered.sort((a, b) => {
+        const dateA = new Date(`${a.booking_date}T${a.start_time}`);
+        const dateB = new Date(`${b.booking_date}T${b.start_time}`);
+        return sortType === "newest" ? dateB - dateA : dateA - dateB;
+      });
+
+      renderActivities(filtered);
+    }
 
     function formatTime(time) {
       const [hour, minute] = time.split(":");

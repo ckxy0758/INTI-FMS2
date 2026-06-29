@@ -157,6 +157,7 @@ input, select, textarea {
 
 .password-wrapper {
   margin-bottom: 20px;
+  margin-top: 8px;
 }
 
 .toggle-eye {
@@ -262,8 +263,10 @@ input, select, textarea {
 }
 
 #message {
-  margin-top: 15px;
+  margin-top: 16px;
   text-align: center;
+  color: #D12E26 !important;
+
 }
 
 /* ===== DASHBOARD HEADER ===== */
@@ -931,9 +934,20 @@ span.flatpickr-weekday {
   cursor: pointer;
 }
 
+.facility-info button {
+  transition: all 0.2s ease;
+}
+
 .facility-info button:hover {
   background: #D12E26;
   color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(209,46,38,0.25);
+}
+
+.facility-info button:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 /* ===== FACILITY DETAILS PAGE ===== */
@@ -1122,7 +1136,7 @@ span.flatpickr-weekday {
 .booking-modal {
   background: #ffffff;
   width: 420px;
-  padding: 40px 35px 30px;
+  padding: 36px 35px 30px;
   border-radius: 22px;
   text-align: center;
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
@@ -1130,15 +1144,16 @@ span.flatpickr-weekday {
 }
 
 .success-icon {
-  width: 78px;
-  height: 78px;
+  width: 64px;
+  height: 64px;
   background: #d9f7df;
   color: #2e7d32;
   border-radius: 50%;
   font-size: 28px;
   font-weight: bold;
-  line-height: 78px;
-  margin: -75px auto 20px;
+  line-height: 64px;
+  margin: 0 auto 20px;
+  text-align: center;
 }
 
 .booking-modal h2 {
@@ -1387,9 +1402,20 @@ span.flatpickr-weekday {
   cursor: pointer;
 }
 
+.mark-read-btn {
+  transition: all 0.2s ease;
+}
+
 .mark-read-btn:hover {
   background: #D12E26 !important;
   color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(209,46,38,0.25) !important;
+}
+
+.mark-read-btn:active {
+  transform: translateY(0) !important;
+  box-shadow: none !important;
 }
 
 .notification-group-title {
@@ -1540,8 +1566,21 @@ span.flatpickr-weekday {
   cursor: pointer;
 }
 
-.settings-card button:hover {
-  background: #b92720;
+.settings-option-card button {
+  transition: all 0.2s ease;
+}
+
+.settings-option-card button:hover {
+  background: #D12E26;
+  border-color: #D12E26;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(209,46,38,0.25);
+}
+
+.settings-option-card button:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .settings-option-card {
@@ -2018,6 +2057,17 @@ body.sidebar-collapsed .main-content {
   padding: 13px 22px;
   font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-user-btn:hover {
+  background: #c6241c;
+  transform: translateY(-1px);
+}
+
+.add-user-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .user-table-card {
@@ -2065,6 +2115,14 @@ body.sidebar-collapsed .main-content {
 
 .text-action-btn.danger {
   color: #c93a34;
+  transition: all 0.2s ease;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.text-action-btn.danger:hover {
+  background: #fee2e2;
+  color: #b92720;
 }
 
 .text-action-btn.success {
@@ -2083,8 +2141,10 @@ body.sidebar-collapsed .main-content {
   inset: 0;
   background: rgba(243, 244, 246, 0.82);
   z-index: 999;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  overflow-y: auto;
+  padding-top: 60px;
 }
 
 .create-user-modal {
@@ -2094,6 +2154,7 @@ body.sidebar-collapsed .main-content {
   border-radius: 16px;
   padding: 30px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  margin: 40px auto;
 }
 
 .create-user-modal h2 {
@@ -2155,7 +2216,7 @@ body.sidebar-collapsed .main-content {
   background: white;
   border: 1px solid #e1e5ec;
   border-radius: 14px;
-  padding: 20px;
+  padding: 20px 60px 20px 20px;
   margin-bottom: 22px;
   position: relative;
 }
@@ -2171,8 +2232,14 @@ body.sidebar-collapsed .main-content {
   border-radius: 12px;
 }
 
+.admin-facility-info {
+  flex: 1;
+  min-width: 0;
+  padding-right: 40px;
+}
+
 .admin-facility-info h3 {
-  margin: 0 0 0px;
+  margin: 0 0 4px;
   font-size: 20px;
   font-weight: 700;
 }
@@ -2850,13 +2917,33 @@ body.sidebar-collapsed .main-content {
   justify-content: center;
   gap: 8px;
   line-height: 1;
+  transition: all 0.2s ease;
 }
 
-.export-icon {
-  width: 18px;
-  height: 18px;
-  display: block;
-  flex-shrink: 0;
+.export-btn:hover {
+  background: #D12E26;
+  border-color: #D12E26;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(209,46,38,0.25);
+}
+
+.export-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.export-btn svg {
+  color: #6b7280;
+  transition: color 0.2s ease;
+}
+
+.export-btn:hover svg {
+  color: #ffffff;
+}
+
+.export-btn:hover .export-icon {
+  color: #ffffff;
 }
 
 .export-btn span {
@@ -3192,11 +3279,24 @@ body.sidebar-collapsed .main-content {
 .key-card .action-main-btn {
   justify-self: end;
   margin-top: 0;
-  height: 42px;
-  padding: 0 18px;
-  border-radius: 10px;
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
+  background: linear-gradient(135deg, #D12E26, #b92720) !important;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.key-card .action-main-btn:hover {
+  background: linear-gradient(135deg, #b92720, #9e1f19) !important;
+  transform: translateY(-1px);
+}
+
+.key-card .action-main-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .notification-card {
@@ -3209,11 +3309,11 @@ body.sidebar-collapsed .main-content {
 
 /* ===== ADMIN SIDEBAR ===== */
 .admin-sidebar {
-  width: 220px !important;
+  width: 190px !important;
 }
 
 body:has(.admin-sidebar) .main-content {
-  margin-left: 220px;
+  margin-left: 190px !important;
 }
 
 body.sidebar-collapsed .admin-sidebar {
@@ -3221,7 +3321,7 @@ body.sidebar-collapsed .admin-sidebar {
 }
 
 body.sidebar-collapsed:has(.admin-sidebar) .main-content {
-  margin-left: 70px;
+  margin-left: 70px !important;
 }
 
 .admin-sidebar a {
@@ -3299,8 +3399,7 @@ body.sidebar-collapsed:has(.admin-sidebar) .main-content {
 
 /* Components */
 .btn-view-all { padding: 6px 12px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; text-decoration: none; }
-.badge { background: #ef4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 8px; font-weight: bold; }
-
+.badge { background: #ef4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 8px; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; line-height: 1; }
 /* Notifications inside report-card */
 #dashboardNotifications { max-height: 250px; overflow-y: auto; }
 .notif-item { padding: 15px 0; border-bottom: 1px solid #e5e7eb; }
@@ -3947,11 +4046,20 @@ input[type="password"]::-webkit-reveal {
   transition: 0.2s ease;
 }
 
+.solid-btn {
+  transition: all 0.2s ease;
+}
+
 .solid-btn:hover {
-  background: #b92720;
-  border-color: #b92720;
-  transform: translateY(-2px);
-  transition: 0.2s ease;
+  background: #e8352c;
+  border-color: #e8352c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(209,46,38,0.25);
+}
+
+.solid-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 #filterDate.active {
@@ -4278,4 +4386,319 @@ input[type="password"]::-webkit-reveal {
   border-color: #D12E26 !important;
   outline: none !important;
   box-shadow: none !important;
+}
+
+/* ===== IMAGE PREVIEW FIX ===== */
+#facilityNoImage[style*="display: none"],
+#facilityNoImage[style*="display:none"] {
+  display: none !important;
+}
+
+#facilityPreview[style*="display: block"],
+#facilityPreview[style*="display:block"] {
+  display: block !important;
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.time-row input[type="time"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.facility-full-row .time-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.facility-full-row .time-row input[type="time"] {
+  flex: 1 !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+/* ===== LOGIN PAGE ENHANCEMENT ===== */
+.login-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.45);
+  z-index: 0;
+}
+
+.topbar {
+  position: relative;
+  z-index: 10;
+  background: rgba(255,255,255,0.85) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.topbar h2 {
+  color: #D12E26 !important;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.help-icon {
+  border-color: #D12E26 !important;
+  color: #D12E26 !important;
+}
+
+.login-hero {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+}
+
+.login-page {
+  position: relative;
+}
+
+.login-card {
+  width: 420px !important;
+  padding: 44px 40px 36px !important;
+  border-radius: 24px !important;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.3), 0 8px 20px rgba(209,46,38,0.1) !important;
+  animation: loginSlideUp 0.45s ease;
+}
+
+@keyframes loginSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.login-card h1 {
+  font-size: 28px !important;
+  font-weight: 800 !important;
+  color: #111827 !important;
+  margin-bottom: 4px !important;
+}
+
+.login-card > p {
+  font-size: 14px !important;
+  color: #6b7280 !important;
+  margin-bottom: 28px !important;
+}
+
+.login-card input[type="email"] {
+  width: 100%;
+  height: 50px;
+  padding: 0 15px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+  font-size: 15px;
+}
+
+.login-card input[type="email"]:focus {
+  border-color: #D12E26 !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(209,46,38,0.08) !important;
+  outline: none !important;
+}
+
+.password-input input {
+  height: 48px !important;
+  border-radius: 12px !important;
+  border: 1.5px solid #e5e7eb !important;
+  background: #f9fafb !important;
+  font-size: 14px !important;
+  transition: all 0.2s ease !important;
+}
+
+.password-input input:focus {
+  border-color: #D12E26 !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(209,46,38,0.08) !important;
+  outline: none !important;
+}
+
+.login-card button {
+  height: 50px !important;
+  border-radius: 12px !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  background: linear-gradient(135deg, #D12E26, #b92720) !important;
+  box-shadow: none !important;
+  transition: all 0.25s ease !important;
+  letter-spacing: 0.3px !important;
+}
+
+.login-card button:hover {
+  background: linear-gradient(135deg, #e8352c, #D12E26) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px rgba(209,46,38,0.3) !important;
+}
+
+.login-card button:active {
+  transform: translateY(0) !important;
+}
+
+.login-card label {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+  letter-spacing: 0.2px !important;
+}
+
+/* ===== GLOBAL SCROLLBAR ===== */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  width: 0px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+
+body:hover *::-webkit-scrollbar {
+  width: 6px;
+}
+
+body:hover *::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+}
+
+body:hover *::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+.forgot-password-page .login-card,
+.change-password-page .login-card {
+  padding: 28px 36px !important;
+}
+
+/* ===== NO IMAGE PLACEHOLDER ===== */
+.facility-img img[src=""],
+.admin-facility-img[src=""] {
+  display: none;
+}
+
+.facility-img:has(img[src=""]) {
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.facility-img:has(img[src=""])::before {
+  content: "No Image";
+  color: #9ca3af;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Poppins', sans-serif;
+}
+
+.admin-facility-card:has(.admin-facility-img[src=""]) .admin-facility-img {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-facility-img {
+  object-fit: cover;
+}
+
+.admin-facility-img[src=""] {
+  visibility: hidden;
+  position: relative;
+}
+
+.admin-facility-img[src=""]::after {
+  visibility: visible;
+  position: absolute;
+  content: "No Image";
+}
+
+#bookingModal {
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* ===== CUSTOM TIME SLOT BUTTON ENHANCEMENT ===== */
+#customTimeSection > button,
+div#customTimeSection button[type="button"][onclick="addTimeSlotRow()"] {
+  background: #fde8e7 !important;
+  border: 1.5px solid #D12E26 !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #D12E26 !important;
+  cursor: pointer !important;
+  font-family: 'Poppins', sans-serif !important;
+  margin-top: 8px !important;
+  width: auto !important;
+}
+
+div#customTimeSection button[type="button"][onclick="addTimeSlotRow()"]:hover {
+  background: #D12E26 !important;
+  color: #ffffff !important;
+}
+
+/* X button inside time rows */
+#timeSlotContainer .time-row button {
+  background: #fee2e2 !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: #D12E26 !important;
+  font-weight: 700 !important;
+  padding: 6px 12px !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: unset !important;
+}
+
+#timeSlotContainer .time-row button:hover {
+  background: #D12E26 !important;
+  color: #ffffff !important;
+}
+
+#timeSlotContainer .time-row {
+  margin-bottom: 10px !important;
+}
+
+div#customTimeSection button[type="button"][onclick="addTimeSlotRow()"] {
+  background: #D12E26 !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+div#customTimeSection button[type="button"][onclick="addTimeSlotRow()"]:hover {
+  background: #b92720 !important;
+}
+
+.facility-edit-btn {
+  transition: all 0.2s ease;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.facility-edit-btn:hover {
+  background: #fde8e7;
+  transform: translateY(-1px);
 }

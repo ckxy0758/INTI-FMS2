@@ -232,9 +232,9 @@ function loadLayout(activePage) {
     `;
   }
 
-  if (localStorage.getItem("sidebarCollapsed") === "true") {
-    document.body.classList.add("sidebar-collapsed");
-  }
+    if (localStorage.getItem("sidebarCollapsed") === "true") {
+      document.body.classList.add("sidebar-collapsed");
+    }
 
   const menuIcon = document.querySelector(".menu-icon");
 

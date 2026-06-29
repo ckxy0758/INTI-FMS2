@@ -157,13 +157,24 @@
             return;
           }
 
+          const now = new Date();
+
           data.slots.forEach(slot => {
-            timeSlot.innerHTML += `
-              <option value="${slot.start_time}|${slot.end_time}">
-                ${slot.label}
-              </option>
-            `;
+            const slotDateTime = new Date(`${bookingDate}T${slot.start_time}`);
+            const diffMinutes = (slotDateTime - now) / (1000 * 60);
+
+            if (diffMinutes >= 30) {
+              timeSlot.innerHTML += `
+                <option value="${slot.start_time}|${slot.end_time}">
+                  ${slot.label}
+                </option>
+              `;
+            }
           });
+
+          if (timeSlot.options.length === 1) {
+            timeSlot.innerHTML = `<option value="">No available slots</option>`;
+          }
         })
         .catch(() => {
           timeSlot.innerHTML = `<option value="">Failed to load slots</option>`;
@@ -352,6 +363,12 @@
         return;
       }
 
+      if (isWithin30Minutes(bookingDate, startTime)) {
+        message.style.color = "red";
+        message.innerText = "Booking must be made at least 30 minutes before the start time.";
+        return;
+      }
+
     fetch("/api/bookings", {
         method: "POST",
         headers: {
@@ -505,6 +522,14 @@
 
         });
 
+    }
+
+    function isWithin30Minutes(bookingDate, startTime) {
+      const selectedDateTime = new Date(`${bookingDate}T${startTime}`);
+      const now = new Date();
+      const diffMs = selectedDateTime - now;
+      const diffMinutes = diffMs / (1000 * 60);
+      return diffMinutes < 30;
     }
   </script>
 

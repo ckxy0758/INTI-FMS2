@@ -122,21 +122,27 @@
               </select>
             </div>
 
-            <div>
+            <div class="facility-full-row">
               <label>Operating Hours</label>
               <div class="time-row">
-                <input type="time" id="operating_start">
+                <input type="time" id="operating_start" style="flex:1;">
                 <span>to</span>
-                <input type="time" id="operating_end">
+                <input type="time" id="operating_end" style="flex:1;">
               </div>
             </div>
 
-            <div id="customTimeSection" style="display:none;">
+            <div class="facility-full-row">
+              <label>Use Custom Time Slots?</label>
+              <select id="use_custom_slots" onchange="toggleCustomTimeSection()">
+                <option value="no">No - Use Hourly Slots</option>
+                <option value="yes">Yes - Set Custom Slots</option>
+              </select>
+            </div>
+
+            <div class="facility-full-row" id="customTimeSection" style="display:none;">
               <label>Custom Available Time Slots</label>
-
               <div id="timeSlotContainer"></div>
-
-              <button type="button" onclick="addTimeSlotRow()">
+              <button type="button" onclick="addTimeSlotRow()" style="margin-top:10px;">
                 + Add Time Slot
               </button>
             </div>
@@ -356,10 +362,12 @@
         facilityList.innerHTML += `
           <div class="admin-facility-card">
 
-            <img 
-              src="${facility.image_path || 'images/bg-image-2.jpeg'}" 
-              class="admin-facility-img"
-            >
+            ${facility.image_path 
+              ? `<img src="${facility.image_path}" class="admin-facility-img">`
+              : `<div class="admin-facility-img" style="background:#f3f4f6; display:flex; align-items:center; justify-content:center; border-radius:12px;">
+                  <span style="color:#9ca3af; font-size:13px; font-weight:500;">No Image</span>
+                </div>`
+            }
 
             <div class="admin-facility-info">
             <h3>${facility.facility_name}</h3>
@@ -423,15 +431,11 @@
 
       document.getElementById("facilityNameText").innerText = facility.facility_name;
 
-      const isCustom = isCustomTimeFacility(facility.facility_name);
+      const hasTimeSlots = facility.time_slots && 
+        JSON.parse(facility.time_slots || "[]").length > 0;
 
-      if (isCustom) {
-        document.getElementById("customTimeSection").style.display = "block";
-        document.getElementById("operating_start").parentElement.style.display = "block";
-      } else {
-        document.getElementById("customTimeSection").style.display = "none";
-        document.getElementById("operating_start").parentElement.style.display = "block";
-      }
+      document.getElementById("use_custom_slots").value = hasTimeSlots ? "yes" : "no";
+      document.getElementById("customTimeSection").style.display = hasTimeSlots ? "block" : "none";
 
       document.getElementById("deleteBtn").style.display = "inline-block";
 
@@ -467,7 +471,7 @@
       }
       document.getElementById("timeSlotContainer").innerHTML = "";
 
-      if (isCustom && facility.time_slots) {
+      if (hasTimeSlots) {
         const slots = typeof facility.time_slots === "string"
           ? JSON.parse(facility.time_slots)
           : facility.time_slots;
@@ -535,6 +539,7 @@
       document.getElementById("operating_end").value = "";
       document.getElementById("timeSlotContainer").innerHTML = "";
       document.getElementById("customTimeSection").style.display = "none";  
+      document.getElementById("use_custom_slots").value = "no";
       document.getElementById("operating_start").parentElement.style.display = "block";
       document.getElementById("location").value = "";
       document.getElementById("max_people").value = "";
@@ -557,64 +562,40 @@
 
     function previewImage(event) {
     const file = event.target.files[0];
-
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
       alert("Image size must be below 5MB.");
+      event.target.value = "";
       return;
     }
 
     const reader = new FileReader();
-
     reader.onload = function(e) {
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.createElement("canvas");
-        const maxWidth = 800;
-        let width = img.width;
-        let height = img.height;
+      imageBase64 = e.target.result;
 
-        if (width > maxWidth) {
-          height = Math.round(height * maxWidth / width);
-          width = maxWidth;
-        }
+      const preview = document.getElementById("facilityPreview");
+      const noImage = document.getElementById("facilityNoImage");
 
-        canvas.width = width;
-        canvas.height = height;
+      preview.src = imageBase64;
+      preview.style.display = "block";
+      noImage.style.display = "none";
 
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-
-        imageBase64 = canvas.toDataURL("image/jpeg", 0.7);
-        document.getElementById("facilityPreview").src = imageBase64;
-        document.getElementById("facilityPreview").style.display = "block";
-        document.getElementById("facilityNoImage").style.display = "none";
-      };
-      img.src = e.target.result;
+      console.log("Image loaded successfully");
     };
-
     reader.readAsDataURL(file);
   }
 
     function getEquipmentText() {
+      if (document.getElementById("equipment_included").value === "no") {
+        return "";
+      }
 
-        if (document.getElementById("equipment_included").value === "no") {
-            return "";
-        }
-
-        const equipment = [];
-        document.querySelectorAll("#equipmentList input[type='checkbox']").forEach(item => {
-
-            if (item.checked) {
-                equipment.push(item.value);
-            }
-        });
-        return equipment.join(", ");
+      return equipmentItems.join(", ");
     }
 
     function isCustomTimeFacility(name) {
-      return ["AI Lab", "CC Lab", "LR501"].includes(name);
+      return document.getElementById("use_custom_slots").value === "yes";
     }
 
     function addTimeSlotRow(start = "", end = "") {
@@ -654,8 +635,7 @@
         visibleTo = "staff";
       }
 
-      const name = document.getElementById("facility_name").value.trim();
-      const isCustom = isCustomTimeFacility(name);
+      const isCustom = document.getElementById("use_custom_slots").value === "yes";
 
       let timeSlots = [];
 
@@ -830,6 +810,15 @@
     function removeEquipment(btn, name) {
       equipmentItems = equipmentItems.filter(i => i !== name);
       btn.closest('.equipment-tag').remove();
+    }
+
+    function toggleCustomTimeSection() {
+      const useCustom = document.getElementById("use_custom_slots").value;
+      document.getElementById("customTimeSection").style.display = 
+        useCustom === "yes" ? "block" : "none";
+      if (useCustom === "no") {
+        document.getElementById("timeSlotContainer").innerHTML = "";
+      }
     }
 
   </script>

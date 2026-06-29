@@ -166,7 +166,7 @@
         facilityList.innerHTML += `
           <div class="${cardClass}">
             <div class="facility-img">
-              <img src="${facility.image_path || 'images/bg-image-2.jpeg'}" alt="${facility.facility_name}">
+              <img src="${facility.image_path || ''}" alt="${facility.facility_name}">
               <span class="status-badge ${!isAvailable ? 'badge-unavailable' : ''}">
                 ${formatAvailability(facility.availability_status)}
               </span>
