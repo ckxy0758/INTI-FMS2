@@ -204,21 +204,20 @@
           </div>
 
           <div id="equipmentOptions" style="display:none;">
-              <label>Equipment / Requirements</label>
-              <div class="equipment-add-row">
-                  <input
-                      type="text"
-                      id="newEquipment"
-                      placeholder="Enter equipment..."
-                      onkeypress="if(event.key==='Enter'){event.preventDefault();addEquipment();}"
-                  >
-
-                  <button type="button" onclick="addEquipment()">
-                      Add
-                  </button>
-              </div>
-              <div id="equipmentList" class="equipment-row"></div>
+          <label>Equipment / Requirements</label>
+          <div class="equipment-input-row">
+            <input
+              type="text"
+              id="newEquipment"
+              placeholder="Enter equipment or requirement..."
+              onkeypress="if(event.key==='Enter'){event.preventDefault();addEquipment();}"
+            >
+            <button type="button" class="equipment-add-btn" onclick="addEquipment()">
+              + Add
+            </button>
           </div>
+          <div id="equipmentList" class="equipment-tag-list"></div>
+        </div>
 
           <div class="facility-form-actions">
             <button class="back-facility-btn" type="button" onclick="backToFacilityList()">
@@ -329,14 +328,10 @@
         const label = document.createElement("label");
 
         label.innerHTML = `
-            <input
-                type="checkbox"
-                class="equipment-checkbox"
-                value="${equipment}"
-                ${checked ? "checked" : ""}
-            >
-            ${equipment}
+          <span>${equipment}</span>
+          <button type="button" onclick="removeEquipment(this, '${equipment}')">×</button>
         `;
+        label.className = "equipment-tag";
 
         container.appendChild(label);
         input.value = "";
@@ -830,6 +825,11 @@
     function closeModal(cb) {
       document.getElementById("customModal").style.display = "none";
       if (cb === 'cb' && window._modalCallback) { window._modalCallback(); window._modalCallback = null; }
+    }
+
+    function removeEquipment(btn, name) {
+      equipmentItems = equipmentItems.filter(i => i !== name);
+      btn.closest('.equipment-tag').remove();
     }
 
   </script>
