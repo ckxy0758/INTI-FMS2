@@ -254,25 +254,43 @@
     }
 
     function markKeyCollected(bookingId) {
-      if (!confirm("Confirm that the key has been collected?")) {
-        return;
-      }
+    const modal = document.getElementById("keyConfirmModal");
+    modal.style.display = "flex";
 
+    document.getElementById("keyModalCancel").onclick = () => {
+      modal.style.display = "none";
+    };
+
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.style.display = "none";
+    };
+
+    document.getElementById("keyModalConfirm").onclick = () => {
+      modal.style.display = "none";
       fetch(`/api/admin/bookings/${bookingId}/collect-key`, {
         method: "PUT",
-        headers: {
-          "Authorization": "Bearer " + localStorage.getItem("authToken")
-        }
+        headers: { "Authorization": "Bearer " + localStorage.getItem("authToken") }
       })
       .then(res => res.json())
       .then(data => {
-        alert(data.message);
-        loadKeyManagement();
+        const successModal = document.getElementById("keySuccessModal");
+        document.getElementById("keySuccessMessage").textContent = data.message;
+        successModal.style.display = "flex";
+        document.getElementById("keySuccessOk").onclick = () => {
+          successModal.style.display = "none";
+          loadKeyManagement();
+        };
       })
       .catch(() => {
-        alert("Failed to update key status.");
+        const successModal = document.getElementById("keySuccessModal");
+        document.getElementById("keySuccessMessage").textContent = "Failed to update key status.";
+        successModal.style.display = "flex";
+        document.getElementById("keySuccessOk").onclick = () => {
+          successModal.style.display = "none";
+        };
       });
-    }
+    };
+  }
 
     function isOverdue(item) {
       if (
@@ -369,6 +387,41 @@
       window.location.href = "login.html";
     }
   </script>
+
+<div class="custom-modal-overlay" id="keyConfirmModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:9999; align-items:center; justify-content:center;">
+  <div class="custom-modal-box">
+    <div class="custom-modal-icon">
+      <div style="width:56px; height:56px; border-radius:50%; background:#fff4e6; display:flex; align-items:center; justify-content:center; margin:0 auto;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 -960 960 960" fill="#D12E26">
+          <path d="M280-400q-83 0-141.5-58.5T80-600q0-83 58.5-141.5T280-800q83 0 141.5 58.5T480-600q0 29-6.5 54.5T455-498l246 246q9 9 9 21t-9 21l-80 80q-9 9-21 9t-21-9l-26-26-34 34q-9 9-21.5 9T476-122l-36-38-26 26q-9 9-21 9t-21-9l-43-43q-20 13-42.5 20T280-400Zm0-80q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0-80q-17 0-28.5-11.5T240-600q0-17 11.5-28.5T280-640q17 0 28.5 11.5T320-600q0 17-11.5 28.5T280-560Z"/>
+        </svg>
+      </div>
+    </div>
+    <p class="custom-modal-title" style="font-weight:700; margin:16px 0 6px;">Confirm Key Collection</p>
+    <p class="custom-modal-message">Please confirm that the key has been handed to the holder.</p>
+    <div class="custom-modal-buttons">
+      <button class="custom-modal-btn-cancel" id="keyModalCancel">Cancel</button>
+      <button class="custom-modal-btn-confirm" id="keyModalConfirm">Yes, collected</button>
+    </div>
+  </div>
+</div>
+
+<div class="custom-modal-overlay" id="keySuccessModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:9999; align-items:center; justify-content:center;">
+  <div class="custom-modal-box">
+    <div class="custom-modal-icon">
+      <div style="width:56px; height:56px; border-radius:50%; background:#d9f7df; display:flex; align-items:center; justify-content:center; margin:0 auto;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 -960 960 960" fill="#2e7d32">
+          <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+        </svg>
+      </div>
+    </div>
+    <p class="custom-modal-title" style="font-weight:700; margin:16px 0 6px;">Key Collected</p>
+    <p class="custom-modal-message" id="keySuccessMessage"></p>
+    <div class="custom-modal-buttons">
+      <button class="custom-modal-btn-confirm" id="keySuccessOk" style="width:100%;">OK</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
