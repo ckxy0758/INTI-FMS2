@@ -51,6 +51,8 @@ router.post("/login", (req, res) => {
       const user = result[0];
       const isHashed = user.password.startsWith("$2"); // Check if password is encrypted
 
+
+      // STATELESS AUTHENTICATION (Verifying and Token Generation)  
       // Centralized success handler for token generation (DRY principle)
       const handleSuccess = () => {
         const tokenData = {
@@ -64,7 +66,7 @@ router.post("/login", (req, res) => {
         return res.json({
           success: true,
           message: "Login successful",
-          token: token,
+          token: token, // Send to frontend for API authorization
           user: {
             id: user.user_id,
             name: user.name,
@@ -75,7 +77,8 @@ router.post("/login", (req, res) => {
         });
       };
 
-      if (isHashed) {
+  // Security Check: Verify if the stored password is a bcrypt hash (starts with $2)
+    if (isHashed) {
         // Compare entered plain-text password with stored bcrypt hash
         bcrypt.compare(password, user.password, (compareErr, isMatch) => {
           if (compareErr) return res.json({ success: false, message: "Error verifying credentials" });
@@ -107,7 +110,9 @@ router.post("/users", verifyToken, requireRole(['admin']), (req, res) => {
 
   const defaultPassword = user_code;
 
-  // Hash the temporary password before storing it to secure the database
+  // CRYPTOGRAPHIC SECURITY (Hashing new passwords)
+  // Hash the temporary password before storing it to secure the database.
+  // A salt factor of 10 is used to protect against brute-force and rainbow table attacks.
   bcrypt.hash(defaultPassword, 10, (hashErr, hashedPassword) => {
     if (hashErr) {
       return res.json({ success: false, message: "Error securing password" });
@@ -119,6 +124,7 @@ router.post("/users", verifyToken, requireRole(['admin']), (req, res) => {
       VALUES (?, ?, ?, ?, ?, 'active', TRUE)
     `;
 
+    // The plaintext is NEVER stored. Only the 'hashedPassword' is inserted.
     db.query(sql, [name, user_code, email, hashedPassword, role], (err) => {
       if (err) {
         return res.json({ success: false, message: "User already exists or database error" });
@@ -180,6 +186,7 @@ router.post("/forgot-password", (req, res) => {
     return res.json({ success: false, message: "Email is required" });
   }
 
+  // Check if user exists 
   const checkUserSql = "SELECT * FROM users WHERE email = ? AND status = 'active'";
   
   db.query(checkUserSql, [email], (err, result) => {
@@ -194,6 +201,7 @@ router.post("/forgot-password", (req, res) => {
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 3600000);
 
+    // Store token in database
     const insertTokenSql = `INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)`;
 
     db.query(insertTokenSql, [email, token, expiresAt], (insertErr) => {
@@ -202,6 +210,7 @@ router.post("/forgot-password", (req, res) => {
         return res.json({ success: false, message: "Failed to process request" });
       }
 
+      // Send Email 
       const resetLink = `http://localhost:3000/reset-password.html?token=${token}`;
       
       const mailOptions = {
@@ -211,6 +220,7 @@ router.post("/forgot-password", (req, res) => {
         text: `You requested a password reset. Click the link to set a new password: ${resetLink}\n\nThis link expires in 1 hour.`
       };
 
+      // Dispatch the email asychronously
       transporter.sendMail(mailOptions, (mailErr) => {
         if (mailErr) {
           console.error("Email error:", mailErr);
@@ -662,7 +672,8 @@ router.post("/bookings", verifyToken, (req, res) => {
     return res.json({ success: false, message: "Please fill in all required booking details" });
   }
 
-  // Obtain dedicated connection to execute an atomic transaction
+  // Booking creation route
+  // Request a dedicated database connection from the pool 
   db.getConnection((connErr, connection) => {
     if (connErr) return res.json({ success: false, message: "Database connection failed" });
 
@@ -674,6 +685,7 @@ router.post("/bookings", verifyToken, (req, res) => {
       const facilitySql = `SELECT facility_name, booking_flow_type, max_people, availability_status FROM facilities WHERE facility_id = ? FOR UPDATE`;
       connection.query(facilitySql, [facility_id], (facilityErr, facilityResult) => {
 
+        // .............. Validation logic for capacity limits and time overlap ..................
         if (facilityErr || facilityResult.length === 0) {
           return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Facility not found" }); });
         }
@@ -696,6 +708,7 @@ router.post("/bookings", verifyToken, (req, res) => {
         const paymentStatus = paymentRequired ? "pending_payment" : "not_required";
         const paymentAmount = 0; 
 
+        // Notification variables 
         let nTitle = "Booking Submitted";
         let nMsg = `Your booking request for ${facilityName} has been submitted successfully.`;
 
@@ -725,6 +738,8 @@ router.post("/bookings", verifyToken, (req, res) => {
           if (checkResult.length >= maxCapacity) {
             return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Capacity reached." }); });
           }
+
+          //....................................................................................................
 
           const insertSql = `
             INSERT INTO bookings 
