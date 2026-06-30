@@ -13,12 +13,15 @@ router.get("/admin/reports", verifyToken, requireRole(['admin']), (req, res) => 
     facilityId
   } = req.query; // Removed keyStatus from here
 
+  // Reports API
+  // 1. Initialize the parameterized array and a true base WHERE clause
   let params = [];
   let where = "WHERE 1=1";
 
+  // 2. Dynamically concatenate AND conditions based on optional HTTP query parameters
   if (month && month !== "") {
     where += " AND MONTH(b.booking_date) = ?";
-    params.push(month);
+    params.push(month); // Push user input into the safe params array
   }
 
   if (year && year !== "") {
@@ -43,6 +46,8 @@ router.get("/admin/reports", verifyToken, requireRole(['admin']), (req, res) => 
     params.push(facilityId);
   }
 
+  // 3. Inject dynamically built 'where' string into the final query string
+  // Parameterized inputs (?) strictly prevent SQL Injection attacks
   const facilityUsageSql = `
     SELECT 
       f.facility_name,
@@ -55,6 +60,7 @@ router.get("/admin/reports", verifyToken, requireRole(['admin']), (req, res) => 
     ORDER BY total_bookings DESC
   `;
 
+  // Execute the dynamically generated query securely
   db.query(facilityUsageSql, params, (facilityUsageErr, facilityUsage) => {
     if (facilityUsageErr) {
       console.log("Facility usage report error:", facilityUsageErr);
@@ -72,7 +78,7 @@ router.get("/admin/reports", verifyToken, requireRole(['admin']), (req, res) => 
       GROUP BY booking_month
       ORDER BY booking_month ASC
     `;
-
+-
     db.query(bookingTrendsSql, params, (bookingTrendsErr, bookingTrends) => {
       if (bookingTrendsErr) {
         console.log("Booking trends report error:", bookingTrendsErr);
