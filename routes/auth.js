@@ -9,23 +9,34 @@ const fs = require("fs");
 const path = require("path");
 const { verifyToken, requireRole, JWT_SECRET } = require("../middleware/authMiddleware");
 
+// ============================================================================
+// 1. EMAIL NOTIFICATION SETUP
+// ============================================================================
 
+// Configure the SMTP transport layer securely using Gmail
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'courneyk8570@gmail.com',
-    pass: 'hlkmpewoamjcdfrn'
+    pass: 'hlkmpewoamjcdfrn' // Secure App Password integration goes here
   }
 });
 
+// Reusable helper to send emails asynchronously in the background
 function sendEmailNotification(userEmail, title, message) {
   const mailOptions = { from: 'courneyk8570@gmail.com', to: userEmail, subject: title, text: message };
+  // Non-blocking execution prevents the server from waiting for the email to send
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) console.error("Email error:", error);
     else console.log("Email sent: " + info.response);
   });
 }
 
+// ============================================================================
+// 2. AUTHENTICATION & SECURITY ROUTES
+// ============================================================================
+
+// Handle User Login and Stateless JWT Session Generation
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
@@ -38,14 +49,16 @@ router.post("/login", (req, res) => {
 
     if (result.length === 1) {
       const user = result[0];
-      const isHashed = user.password.startsWith("$2");
+      const isHashed = user.password.startsWith("$2"); // Check if password is encrypted
 
+      // Centralized success handler for token generation (DRY principle)
       const handleSuccess = () => {
         const tokenData = {
           id: user.user_id,
           role: user.role
         };
 
+        // Cryptographically sign a stateless token expiring in 8 hours
         const token = jwt.sign(tokenData, JWT_SECRET, { expiresIn: '8h' });
 
         return res.json({
@@ -63,12 +76,14 @@ router.post("/login", (req, res) => {
       };
 
       if (isHashed) {
+        // Compare entered plain-text password with stored bcrypt hash
         bcrypt.compare(password, user.password, (compareErr, isMatch) => {
           if (compareErr) return res.json({ success: false, message: "Error verifying credentials" });
           if (isMatch) return handleSuccess();
           return res.json({ success: false, message: "Invalid email or password" });
         });
       } else {
+        // Fallback for legacy plain-text passwords
         if (password === user.password) return handleSuccess();
         return res.json({ success: false, message: "Invalid email or password" });
       }
@@ -78,6 +93,7 @@ router.post("/login", (req, res) => {
   });
 });
 
+// Admin Route: Create a new user account with a hashed temporary password
 router.post("/users", verifyToken, requireRole(['admin']), (req, res) => {
   const { name, user_code, email, role } = req.body;
 
@@ -91,6 +107,7 @@ router.post("/users", verifyToken, requireRole(['admin']), (req, res) => {
 
   const defaultPassword = user_code;
 
+  // Hash the temporary password before storing it to secure the database
   bcrypt.hash(defaultPassword, 10, (hashErr, hashedPassword) => {
     if (hashErr) {
       return res.json({ success: false, message: "Error securing password" });
@@ -116,6 +133,7 @@ router.post("/users", verifyToken, requireRole(['admin']), (req, res) => {
   });
 });
 
+// Admin Route: Retrieve all users
 router.get("/users", verifyToken, requireRole(['admin']), (req, res) => {
   const sql = "SELECT user_id, name, user_code, email, role, status FROM users ORDER BY user_id DESC";
 
@@ -128,6 +146,7 @@ router.get("/users", verifyToken, requireRole(['admin']), (req, res) => {
   });
 });
 
+// Allow a user to change their password and enforce strong password policies
 router.post("/change-password", verifyToken, (req, res) => {
   const { user_id, newPassword } = req.body;
 
@@ -135,6 +154,7 @@ router.post("/change-password", verifyToken, (req, res) => {
     return res.json({ success: false, message: "Missing user ID or password" });
   }
 
+  // Regex enforcing uppercase, lowercase, number, special char, and length >= 8
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).{8,}$/;
 
   if (!passwordRegex.test(newPassword)) {
@@ -152,6 +172,7 @@ router.post("/change-password", verifyToken, (req, res) => {
   });
 });
 
+// Forgot Password Flow: Generates secure token and dispatches email
 router.post("/forgot-password", (req, res) => {
   const { email } = req.body;
 
@@ -164,10 +185,12 @@ router.post("/forgot-password", (req, res) => {
   db.query(checkUserSql, [email], (err, result) => {
     if (err) return res.json({ success: false, message: "Database error" });
     
+    // Anti-Enumeration Security: Always return success to hide registered emails from attackers
     if (result.length === 0) {
       return res.json({ success: true, message: "If the email exists, a reset link was sent." });
     }
 
+    // Generate a 32-byte secure hex token expiring in 1 hour
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 3600000);
 
@@ -200,6 +223,7 @@ router.post("/forgot-password", (req, res) => {
   });
 });
 
+// Finalize Password Reset: Validate token and update to newly hashed password
 router.post("/reset-password", (req, res) => {
   const { token, newPassword } = req.body;
 
@@ -218,6 +242,7 @@ router.post("/reset-password", (req, res) => {
   db.query(verifySql, [token], (err, result) => {
     if (err) return res.json({ success: false, message: "Database error" });
 
+    // Reject if token doesn't exist or time has expired
     if (result.length === 0) {
       return res.json({ success: false, message: "Invalid or expired reset token" });
     }
@@ -232,6 +257,7 @@ router.post("/reset-password", (req, res) => {
       db.query(updatePasswordSql, [hashedPassword, email], (updateErr) => {
         if (updateErr) return res.json({ success: false, message: "Failed to update password" });
 
+        // Clean up token after successful use to prevent reuse
         const deleteTokenSql = "DELETE FROM password_resets WHERE email = ?";
         db.query(deleteTokenSql, [email], (deleteErr) => {
           if (deleteErr) console.error("Failed to clean up token:", deleteErr);
@@ -242,6 +268,7 @@ router.post("/reset-password", (req, res) => {
   });
 });
 
+// Admin Route: Deactivate a user
 router.put("/users/:id/deactivate", verifyToken, requireRole(['admin']), (req, res) => {
   const userId = req.params.id;
 
@@ -256,6 +283,7 @@ router.put("/users/:id/deactivate", verifyToken, requireRole(['admin']), (req, r
   });
 });
 
+// Admin Route: Reactivate a user
 router.put("/users/:id/reactivate", verifyToken, requireRole(['admin']), (req, res) => {
   const userId = req.params.id;
 
@@ -270,6 +298,11 @@ router.put("/users/:id/reactivate", verifyToken, requireRole(['admin']), (req, r
   });
 });
 
+// ============================================================================
+// 3. FACILITY MANAGEMENT ROUTES
+// ============================================================================
+
+// Fetch facilities dynamically based on role visibility filters
 router.get("/facilities", verifyToken, (req, res) => {
   const role = req.query.role;
 
@@ -293,6 +326,7 @@ router.get("/facilities", verifyToken, (req, res) => {
   });
 });
 
+// Admin Route: Create a new facility with base64 image parsing
 router.post("/facilities", verifyToken, requireRole(['admin']), (req, res) => {
   const {
     facility_name, facility_type, location, max_people,
@@ -306,6 +340,7 @@ router.post("/facilities", verifyToken, requireRole(['admin']), (req, res) => {
   }
 
   let finalImagePath = null;
+  // Convert base64 image payload into physical JPG file
   if (image_path && image_path.startsWith("data:image")) {
     const uploadsDir = path.join(__dirname, "../public/uploads");
     if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -339,6 +374,7 @@ router.post("/facilities", verifyToken, requireRole(['admin']), (req, res) => {
   });
 });
 
+// Admin Route: Update an existing facility
 router.put("/facilities/:id", verifyToken, requireRole(['admin']), (req, res) => {
   const facilityId = req.params.id;
 
@@ -353,7 +389,8 @@ router.put("/facilities/:id", verifyToken, requireRole(['admin']), (req, res) =>
     return res.json({ success: false, message: "Please fill in all required facility details" });
   }
 
-    let finalImagePath = image_path || null;
+  let finalImagePath = image_path || null;
+  // Parse and save new image if updated
   if (image_path && image_path.startsWith("data:image")) {
     const uploadsDir = path.join(__dirname, "../public/uploads");
     if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -390,9 +427,11 @@ router.put("/facilities/:id", verifyToken, requireRole(['admin']), (req, res) =>
   });
 });
 
+// Admin Route: Delete a facility (Restricted if booking records exist)
 router.delete("/facilities/:id", verifyToken, requireRole(['admin']), (req, res) => {
   const facilityId = req.params.id;
 
+  // Verify usage integrity: Prevents deletion if history relies on this ID
   const checkSql = `SELECT booking_id FROM bookings WHERE facility_id = ? LIMIT 1`;
 
   db.query(checkSql, [facilityId], (checkErr, checkResult) => {
@@ -417,16 +456,23 @@ router.delete("/facilities/:id", verifyToken, requireRole(['admin']), (req, res)
   });
 });
 
+// ============================================================================
+// 4. DYNAMIC SLOT GENERATION & SCHEDULING
+// ============================================================================
+
 /* ===== AVAILABLE 1-HOUR TIME SLOTS ===== */
+// Constructs dynamic time arrays based on capacity and operating hours
 router.get("/facilities/:id/available-slots", verifyToken, (req, res) => {
   const facilityId = req.params.id;
   const selectedDate = req.query.date;
 
+  // Interceptor: Clean expired reservations first to ensure data accuracy
   updateCubicleBookingStatuses(() => {
     if (!selectedDate) {
       return res.json({ success: false, message: "Date is required", slots: [] });
     }
 
+    // Weekend validation (0 = Sunday, 6 = Saturday)
     const dayNumber = new Date(selectedDate).getDay();
     if (dayNumber === 0 || dayNumber === 6) {
       return res.json({ success: true, message: "Bookings are not available on Saturday and Sunday", slots: [] });
@@ -453,6 +499,7 @@ router.get("/facilities/:id/available-slots", verifyToken, (req, res) => {
 
       const maxCapacity = facility.max_people || 1; 
 
+      // Gather active bookings for conflict calculation
       const bookingSql = `
         SELECT start_time, end_time FROM bookings
         WHERE facility_id = ? AND booking_date = ?
@@ -471,19 +518,22 @@ router.get("/facilities/:id/available-slots", verifyToken, (req, res) => {
           const operatingStart = Number(facility.operating_start.substring(0, 2));
           const operatingEnd = Number(facility.operating_end.substring(0, 2));
 
+          // Calculate how many bookings overlap the target slot
           const getBookedCount = (start, end) => {
             return bookingResult.filter(b => isTimeOverlap(start, end, b.start_time, b.end_time)).length;
           };
 
           let slotList = [];
           if (slotsSource && slotsSource.length > 0) {
-          slotList = slotsSource
-            .map(slot => ({
-              start_time: slot.start + ":00",
-              end_time: slot.end + ":00"
-            }))
-            .sort((a, b) => a.start_time.localeCompare(b.start_time));
+            // Apply customized, pre-defined slot blocks
+            slotList = slotsSource
+              .map(slot => ({
+                start_time: slot.start + ":00",
+                end_time: slot.end + ":00"
+              }))
+              .sort((a, b) => a.start_time.localeCompare(b.start_time));
           } else {
+            // Dynamically generate default 1-hour intervals
             for (let hour = operatingStart; hour < operatingEnd; hour++) {
               slotList.push({
                 start_time: `${String(hour).padStart(2, "0")}:00:00`,
@@ -492,6 +542,7 @@ router.get("/facilities/:id/available-slots", verifyToken, (req, res) => {
             }
           }
 
+          // Validate slot availability against class timetable and capacity
           slotList.forEach(slot => {
             const startTime = slot.start_time;
             const endTime = slot.end_time;
@@ -502,6 +553,7 @@ router.get("/facilities/:id/available-slots", verifyToken, (req, res) => {
 
             const currentBookedCount = getBookedCount(startTime, endTime);
 
+            // Push to UI only if it has remaining capacity and no academic classes
             if (!isClassTime && currentBookedCount < maxCapacity) {
               slots.push({
                 start_time: startTime,
@@ -536,6 +588,7 @@ router.get("/facilities/:id", verifyToken, (req, res) => {
   });
 });
 
+// Helper: Format 24-hour SQL time to user-friendly AM/PM
 function formatSlotTime(time) {
   const [hour, minute] = time.split(":");
   let h = parseInt(hour);
@@ -545,10 +598,16 @@ function formatSlotTime(time) {
   return `${h}:${minute} ${ampm}`;
 }
 
+// Helper: Determine if two time boundaries intersect mathematically
 function isTimeOverlap(startA, endA, startB, endB) {
   return startA < endB && endA > startB;
 }
 
+// ============================================================================
+// 5. AUTOMATED BACKGROUND TIME EVALUATIONS
+// ============================================================================
+
+// Auto-releases reservations that missed the 15-minute QR check-in window
 function releaseExpiredCubicleBookings(callback) {
   const sql = `
     UPDATE bookings b
@@ -564,6 +623,7 @@ function releaseExpiredCubicleBookings(callback) {
   db.query(sql, callback);
 }
 
+// Marks checked-in cubicle bookings as completed once their time expires naturally
 function completeFinishedCubicleBookings(callback) {
   const sql = `
     UPDATE bookings b
@@ -576,6 +636,7 @@ function completeFinishedCubicleBookings(callback) {
   db.query(sql, callback);
 }
 
+// Orchestrator interceptor wrapper for lifecycle updates
 function updateCubicleBookingStatuses(callback) {
   releaseExpiredCubicleBookings((releaseErr) => {
     if (releaseErr) console.log("Release expired cubicle bookings error:", releaseErr);
@@ -586,6 +647,11 @@ function updateCubicleBookingStatuses(callback) {
   });
 }
 
+// ============================================================================
+// 6. BOOKING TRANSACTION WORKFLOW
+// ============================================================================
+
+// Main Endpoint: Processes new facility reservation requests transactionally
 router.post("/bookings", verifyToken, (req, res) => {
   const { user_id, facility_id, program, booking_date, start_time, end_time, purpose, equipmentRequired } = req.body;
   const userIdInt = parseInt(user_id);
@@ -596,14 +662,18 @@ router.post("/bookings", verifyToken, (req, res) => {
     return res.json({ success: false, message: "Please fill in all required booking details" });
   }
 
+  // Obtain dedicated connection to execute an atomic transaction
   db.getConnection((connErr, connection) => {
     if (connErr) return res.json({ success: false, message: "Database connection failed" });
 
+    // Begin atomic execution block to prevent concurrency anomalies
     connection.beginTransaction((transactionErr) => {
       if (transactionErr) { connection.release(); return res.json({ success: false, message: "Failed to start transaction" }); }
 
+      // FOR UPDATE: Locks the facility row, preventing multiple concurrent read/writes to capacity
       const facilitySql = `SELECT facility_name, booking_flow_type, max_people, availability_status FROM facilities WHERE facility_id = ? FOR UPDATE`;
       connection.query(facilitySql, [facility_id], (facilityErr, facilityResult) => {
+
         if (facilityErr || facilityResult.length === 0) {
           return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Facility not found" }); });
         }
@@ -616,6 +686,7 @@ router.post("/bookings", verifyToken, (req, res) => {
         const bookingFlowType = facilityResult[0].booking_flow_type || "normal_approval";
         const maxCapacity = facilityResult[0].max_people || 1;
         
+        // State initialization based on Facility flow configuration
         let bookingStatus = bookingFlowType === "normal_approval" ? "approved" : "pending";
         let keyStatus = (bookingFlowType === "normal_approval" || bookingFlowType === "staff_key_approval") ? "pending_collection" : "not_required";
         if (bookingFlowType === "payment_required") bookingStatus = "pending_payment";
@@ -643,6 +714,7 @@ router.post("/bookings", verifyToken, (req, res) => {
 
         const checkSql = `SELECT booking_id, user_id FROM bookings WHERE facility_id = ? AND booking_date = ? AND booking_status NOT IN ('cancelled', 'expired', 'completed') AND (? < end_time AND ? > start_time)`;
 
+        // Check for personal overlapping bookings or total capacity breach
         connection.query(checkSql, [facility_id, booking_date, start_time, end_time], (checkErr, checkResult) => {
           if (checkErr) return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Error" }); });
 
@@ -660,25 +732,30 @@ router.post("/bookings", verifyToken, (req, res) => {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `;
 
+          // Execute INSERT. If it fails, completely rollback the transaction state
           connection.query(insertSql, [user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose || "", equipmentRequired || "", bookingStatus, keyStatus, paymentRequired, paymentStatus, paymentAmount], (insertErr, insertResult) => {
             if (insertErr) {
               return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Booking failed", error: insertErr.message }); });
             }
 
+            // Lock released and changes persisted upon successful commit
             connection.commit((commitErr) => {
               if (commitErr) return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Commit failed" }); });
               connection.release();
               
+              // Broadcast system notification
               db.query(
                 "INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) VALUES (?, ?, ?, ?, 'booking', 0)", 
                 [user_id, insertResult.insertId, nTitle, nMsg],
                 (userNotifErr) => {
+                  // Trigger parallel email notification
                   db.query("SELECT email FROM users WHERE user_id = ?", [user_id], (err, rows) => {
                     if (!err && rows.length > 0) {
                       sendEmailNotification(rows[0].email, nTitle, nMsg);
                     }
                   });
 
+                  // Dispatch targeted admin notifications if approval is required
                   const requiresAdminAction = ["payment_required", "staff_key_approval"].includes(bookingFlowType);
 
                   if (requiresAdminAction) {
@@ -703,6 +780,7 @@ router.post("/bookings", verifyToken, (req, res) => {
   });
 });
 
+// Fetch personal booking history for users
 router.get("/activities/:user_id", verifyToken, (req, res) => {
   const userId = req.params.user_id;
 
@@ -731,6 +809,7 @@ router.get("/activities/:user_id", verifyToken, (req, res) => {
   });
 });
 
+// Retrieve system notifications
 router.get("/notifications/:user_id", verifyToken, (req, res) => {
   const sql = `SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC`;
   db.query(sql, [req.params.user_id], (err, result) => {
@@ -765,6 +844,7 @@ router.put("/notifications/:user_id/unread-all", verifyToken, (req, res) => {
   });
 });
 
+// Profile modifications logic internally bound
 router.put("/settings/change-password", verifyToken, (req, res) => {
   const { user_id, currentPassword, newPassword } = req.body;
 
@@ -825,6 +905,7 @@ router.get("/profile/:user_id", verifyToken, (req, res) => {
   });
 });
 
+// Process QR Code Check-in and evaluate Grace Periods
 router.put("/bookings/:id/check-in", verifyToken, (req, res) => {
   const bookingId = req.params.id;
   const { user_id } = req.body;
@@ -850,6 +931,7 @@ router.put("/bookings/:id/check-in", verifyToken, (req, res) => {
     const createdAt = new Date(booking.created_at);
     const now = new Date();
 
+    // Logic: Validates if current time falls within [-15m, +15m] window
     const baseTime = createdAt > startDateTime ? createdAt : startDateTime;
 
     const checkInStart = new Date(baseTime);
@@ -861,6 +943,7 @@ router.put("/bookings/:id/check-in", verifyToken, (req, res) => {
     if (now < checkInStart) return res.json({ success: false, message: "Check-in is not open yet" });
     if (now > checkInEnd) return res.json({ success: false, message: "Check-in time has expired" });
 
+    // Transition state from reserved -> checked_in
     const updateSql = `UPDATE bookings SET booking_status = 'checked_in' WHERE booking_id = ?`;
 
     db.query(updateSql, [bookingId], (updateErr) => {
@@ -900,6 +983,7 @@ router.get("/bookings/:id", verifyToken, (req, res) => {
   });
 });
 
+// Enforce 1-hour cancellation deadline
 router.put("/bookings/:id/cancel", verifyToken, (req, res) => {
   const bookingId = req.params.id;
   const { user_id } = req.body;
@@ -918,6 +1002,7 @@ router.put("/bookings/:id/cancel", verifyToken, (req, res) => {
     const booking = result[0];
     const status = booking.booking_status ? booking.booking_status.trim().toLowerCase() : "";
 
+    // Lock states that are finalized or active
     if (["cancelled", "completed", "expired", "checked_in", "key_collected"].includes(status)) {
       return res.json({ success: false, message: "This booking cannot be cancelled" });
     }
@@ -949,6 +1034,10 @@ router.put("/bookings/:id/cancel", verifyToken, (req, res) => {
   });
 });
 
+// ============================================================================
+// 7. ADMIN DASHBOARDS & LIFECYCLE CONTROLS
+// ============================================================================
+
 router.get("/admin/bookings", verifyToken, requireRole(['admin']), (req, res) => {
   const sql = `
     SELECT 
@@ -974,6 +1063,7 @@ router.get("/admin/bookings", verifyToken, requireRole(['admin']), (req, res) =>
   });
 });
 
+// Administrative booking approval transition logic
 router.put("/admin/bookings/:id/approve", verifyToken, requireRole(['admin']), (req, res) => {
   const bookingId = req.params.id;
 
@@ -1049,6 +1139,7 @@ router.put("/admin/bookings/:id/cancel", verifyToken, requireRole(['admin']), (r
   });
 });
 
+// Retrieve physical key dependencies for tracking and monitoring
 router.get("/admin/key-management", verifyToken, requireRole(['admin']), (req, res) => {
   const sql = `
     SELECT
@@ -1083,6 +1174,7 @@ router.get("/admin/key-management", verifyToken, requireRole(['admin']), (req, r
   });
 });
 
+// Admin executes 'Collect Key' action
 router.put("/admin/bookings/:id/collect-key", verifyToken, requireRole(['admin']), (req, res) => {
   const bookingId = req.params.id;
 
@@ -1102,6 +1194,7 @@ router.put("/admin/bookings/:id/collect-key", verifyToken, requireRole(['admin']
   });
 });
 
+// QR Return Key execution
 router.put("/bookings/:id/return-key", verifyToken, (req, res) => {
   const bookingId = req.params.id;
   const { user_id } = req.body;
@@ -1126,6 +1219,7 @@ router.put("/bookings/:id/return-key", verifyToken, (req, res) => {
   });
 });
 
+// Generate automated prompt for completed sessions
 function createKeyReturnReminders(callback) {
   const sql = `
     INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
@@ -1147,6 +1241,7 @@ function createKeyReturnReminders(callback) {
   });
 }
 
+// Redirect logic mapping physical QR codes to system reservations
 router.get("/bookings/current-booking/:facility_id/:user_id", verifyToken, (req, res) => {
   const facilityId = req.params.facility_id;
   const userId = req.params.user_id;
@@ -1187,6 +1282,7 @@ router.get("/bookings/current-booking/:facility_id/:user_id", verifyToken, (req,
   });
 });
 
+// Critical System Alert: Flags users 30+ minutes past session end to mitigate access breaches
 function createOverdueKeyNotifications(callback) {
   const userSql = `
     INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
