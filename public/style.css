@@ -4702,3 +4702,41 @@ div#customTimeSection button[type="button"][onclick="addTimeSlotRow()"]:hover {
   background: #fde8e7;
   transform: translateY(-1px);
 }
+
+.password-requirements {
+  text-align: left;
+  color: #9ca3af;
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 15px;
+  font-size: 13px;
+}
+
+.password-requirements ul {
+  text-align: left;
+  list-style-position: outside;
+  padding-left: 18px;
+  margin: 5px 0 0 0;
+}
+
+.password-requirements li {
+  text-align: left;
+}
+
+#equipmentSection label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+#equipmentSection .equipment-list {
+  margin-top: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#equipmentSection .equipment-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
