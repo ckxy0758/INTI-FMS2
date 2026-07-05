@@ -56,8 +56,8 @@
 
           </div>
 
-          <label>Purpose</label>
-          <textarea id="purpose" placeholder="Enter booking purpose"></textarea>
+          <label>Remark</label>
+          <textarea id="purpose" placeholder="Enter booking remark"></textarea>
 
           <button onclick="submitBooking()">Confirm Booking</button>
 
@@ -496,6 +496,27 @@
 
         equipmentList.innerHTML = "";
 
+        // Add "No equipment needed" only for STEM Lab
+        if (
+            currentFacility &&
+            currentFacility.facility_name.toLowerCase() === "stem lab"
+        ) {
+            const noEquipmentLabel = document.createElement("label");
+            noEquipmentLabel.className = "equipment-row";
+
+            noEquipmentLabel.innerHTML = `
+                <input
+                    type="checkbox"
+                    value="No equipment needed"
+                    class="equipment"
+                    id="noEquipment"
+                >
+                <span>No equipment needed</span>
+            `;
+
+            equipmentList.appendChild(noEquipmentLabel);
+        }
+
         if (!equipmentText || equipmentText.trim() === "") {
             return;
         }
@@ -522,6 +543,37 @@
 
         });
 
+        // Handle mutual exclusiveness
+        const noEquipment = document.getElementById("noEquipment");
+
+        if (noEquipment) {
+
+            noEquipment.addEventListener("change", function () {
+
+                const others = document.querySelectorAll(".equipment:not(#noEquipment)");
+
+                if (this.checked) {
+                    others.forEach(cb => {
+                        cb.checked = false;
+                        cb.disabled = true;
+                    });
+                } else {
+                    others.forEach(cb => {
+                        cb.disabled = false;
+                    });
+                }
+            });
+
+            document.querySelectorAll(".equipment:not(#noEquipment)").forEach(cb => {
+
+                cb.addEventListener("change", function () {
+
+                    if (this.checked) {
+                        noEquipment.checked = false;
+                    }
+                });
+            });
+        }
     }
 
     function isWithin30Minutes(bookingDate, startTime) {
