@@ -57,7 +57,7 @@
           </div>
 
           <label>Remark</label>
-          <textarea id="purpose" placeholder="Enter booking remark"></textarea>
+          <textarea id="remark" placeholder="Enter booking remark"></textarea>
 
           <button onclick="submitBooking()">Confirm Booking</button>
 
@@ -312,7 +312,7 @@
       const program = document.getElementById("program").value;
       const bookingDate = document.getElementById("bookingDate").value;
       const selectedSlot = document.getElementById("timeSlot").value;
-      const purpose = document.getElementById("purpose").value;
+      const remark = document.getElementById("remark").value;
       const message = document.getElementById("message");
 
       let startTime = "";
@@ -382,7 +382,7 @@
           booking_date: bookingDate,
           start_time: startTime,
           end_time: endTime,
-          purpose: purpose,
+          remark: remark,
           equipmentRequired: equipmentRequired
         })
       })

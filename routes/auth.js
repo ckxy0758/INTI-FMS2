@@ -663,7 +663,7 @@ function updateCubicleBookingStatuses(callback) {
 
 // Main Endpoint: Processes new facility reservation requests transactionally
 router.post("/bookings", verifyToken, (req, res) => {
-  const { user_id, facility_id, program, booking_date, start_time, end_time, purpose, equipmentRequired } = req.body;
+  const { user_id, facility_id, program, booking_date, start_time, end_time, remark, equipmentRequired } = req.body;
   const userIdInt = parseInt(user_id);
 
   const duration_hours = (new Date(`${booking_date}T${end_time}`) - new Date(`${booking_date}T${start_time}`)) / (1000 * 60 * 60);
@@ -743,12 +743,12 @@ router.post("/bookings", verifyToken, (req, res) => {
 
           const insertSql = `
             INSERT INTO bookings 
-            (user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose, equipment_required, booking_status, key_status, payment_required, payment_status, payment_amount) 
+            (user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, remark, equipment_required, booking_status, key_status, payment_required, payment_status, payment_amount) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `;
 
           // Execute INSERT. If it fails, completely rollback the transaction state
-          connection.query(insertSql, [user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, purpose || "", equipmentRequired || "", bookingStatus, keyStatus, paymentRequired, paymentStatus, paymentAmount], (insertErr, insertResult) => {
+          connection.query(insertSql, [user_id, facility_id, program, booking_date, start_time, end_time, duration_hours, remark || "", equipmentRequired || "", bookingStatus, keyStatus, paymentRequired, paymentStatus, paymentAmount], (insertErr, insertResult) => {
             if (insertErr) {
               return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Booking failed", error: insertErr.message }); });
             }
@@ -978,7 +978,7 @@ router.get("/bookings/:id", verifyToken, (req, res) => {
         DATE_FORMAT(b.booking_date, '%Y-%m-%d') AS booking_date,
         TIME_FORMAT(b.start_time, '%H:%i:%s') AS start_time,
         TIME_FORMAT(b.end_time, '%H:%i:%s') AS end_time,
-        b.duration_hours, b.purpose, b.booking_status, b.key_status,
+        b.duration_hours, b.remark, b.booking_status, b.key_status,
         b.payment_required, b.payment_status, b.payment_amount,
         f.facility_name, f.facility_type, f.booking_flow_type, f.description, f.location, f.image_path
       FROM bookings b
@@ -1060,7 +1060,7 @@ router.get("/admin/bookings", verifyToken, requireRole(['admin']), (req, res) =>
       DATE_FORMAT(b.booking_date, '%Y-%m-%d') AS booking_date,
       TIME_FORMAT(b.start_time, '%H:%i:%s') AS start_time,
       TIME_FORMAT(b.end_time, '%H:%i:%s') AS end_time,
-      b.purpose, b.booking_status, b.payment_status, b.key_status,
+      b.remark, b.booking_status, b.payment_status, b.key_status,
       u.name AS user_name, u.role AS user_role, f.facility_name
     FROM bookings b
     JOIN users u ON b.user_id = u.user_id

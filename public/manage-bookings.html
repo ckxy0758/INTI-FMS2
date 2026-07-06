@@ -68,7 +68,7 @@
               <th>User</th>
               <th>Room</th>
               <th>Date & Time</th>
-              <th>Purpose</th>
+              <th>Remark</th>
               <th>Action</th>
               <th>More</th>
             </tr>
@@ -301,7 +301,7 @@
             </td>
 
             <td>
-              <strong style="display:block; max-width:200px; word-break:break-word; white-space:normal; line-height:1.5;">${booking.purpose || "-"}</strong>
+              <strong style="display:block; max-width:200px; word-break:break-word; white-space:normal; line-height:1.5;">${booking.remark || "-"}</strong>
             </td>
 
             <td class="booking-action-icons">
@@ -419,7 +419,7 @@
       }
 
       // 1. Define Spreadsheet Headers
-      let csvContent = "ID,User Name,Role,Facility,Date,Start Time,End Time,Purpose,Status\n";
+      let csvContent = "ID,User Name,Role,Facility,Date,Start Time,End Time,Remark,Status\n";
 
       // 2. Loop through the currently filtered array and map the values
       currentFilteredBookings.forEach(booking => {
@@ -439,7 +439,7 @@
           escapeCSV(formatDate(booking.booking_date)),
           escapeCSV(formatTime(booking.start_time)),
           escapeCSV(formatTime(booking.end_time)),
-          escapeCSV(booking.purpose || "N/A"),
+          escapeCSV(booking.remark || "N/A"),
           escapeCSV(formatStatus(booking.booking_status))
         ];
 

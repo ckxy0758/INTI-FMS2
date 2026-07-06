@@ -1871,13 +1871,13 @@ body.sidebar-collapsed .main-content {
   margin: 0;
 }
 
-.booking-purpose-box {
+.booking-remark-box {
   margin-top: 22px;
   border-top: 1px solid #e5e7eb;
   padding-top: 16px;
 }
 
-.booking-purpose-box p {
+.booking-remark-box p {
   color: #374151;
   font-weight: 400;
   font-size: 14px;
