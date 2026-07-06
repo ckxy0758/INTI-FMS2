@@ -41,8 +41,8 @@
             </label>
             <hr>
             <label class="dropdown-item">
-                <input type="checkbox" value="Laboratory" checked>
-                <span>Laboratory</span>
+                <input type="checkbox" value="Laboratory,Classroom" checked>
+                <span>Lab / Classroom</span>
             </label>
             <label class="dropdown-item">
                 <input type="checkbox" value="Sports Facility" checked>
@@ -55,14 +55,6 @@
             <label class="dropdown-item">
                 <input type="checkbox" value="Music Facility" checked>
                 <span>Music Facility</span>
-            </label>
-            <label class="dropdown-item">
-                <input type="checkbox" value="Meeting Room" checked>
-                <span>Meeting Room</span>
-            </label>
-            <label class="dropdown-item">
-                <input type="checkbox" value="Classroom" checked>
-                <span>Classroom</span>
             </label>
             <label class="dropdown-item">
                 <input type="checkbox" value="Other" checked>
@@ -222,13 +214,10 @@
     function applyFilters() {
         const checked = [...facilityCheckboxes]
             .filter(cb => cb.checked)
-            .map(cb => cb.value);
+            .flatMap(cb => cb.value.split(','));
 
         let filtered = [...allFacilities];
-        if (
-            checked.length > 0 &&
-            checked.length < facilityCheckboxes.length
-        ) {
+        if (!document.getElementById("toggleAll").checked) {
             filtered = filtered.filter(facility =>
                 checked.includes(facility.facility_type)
             );
@@ -238,11 +227,9 @@
     }
 
     function updateDropdown() {
-        const checked = [...facilityCheckboxes]
-            .filter(cb => cb.checked)
-            .map(cb => cb.value);
+        const checkedBoxes = [...facilityCheckboxes].filter(cb => cb.checked);
 
-        if (checked.length === facilityCheckboxes.length) {
+        if (checkedBoxes.length === facilityCheckboxes.length) {
             toggleAll.checked = true;
             toggleAllLabel.textContent = "Deselect All";
         } else {
@@ -251,12 +238,13 @@
         }
 
         if (
-            checked.length === 0 ||
-            checked.length === facilityCheckboxes.length
+            checkedBoxes.length === 0 ||
+            checkedBoxes.length === facilityCheckboxes.length
         ) {
             dropdownLabel.textContent = "Facility Type";
         } else {
-            const label = checked.join(", ");
+            // Grabs the clean text label for the dropdown display instead of the raw value
+            const label = checkedBoxes.map(cb => cb.nextElementSibling.textContent.trim()).join(", ");
             dropdownLabel.textContent =
                 label.length > 20
                     ? label.substring(0, 20) + "..."

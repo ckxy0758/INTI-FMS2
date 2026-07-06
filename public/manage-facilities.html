@@ -95,12 +95,10 @@
 
               <select id="facility_type" onchange="toggleOtherFacilityType()">
                 <option value="">Select Facility Type</option>
-                <option value="Laboratory">Laboratory</option>
+                <option value="Lab / Classroom">Lab / Classroom</option>
                 <option value="Sports Facility">Sports Facility</option>
                 <option value="Study Space">Study Space</option>
                 <option value="Music Facility">Music Facility</option>
-                <option value="Meeting Room">Meeting Room</option>
-                <option value="Classroom">Classroom</option>
                 <option value="Other">Other</option>
               </select>
 
@@ -503,13 +501,16 @@
     }
 
     function setFacilityType(type) {
+      // If editing a facility that was saved with old values, automatically map it to the new combined category
+      if (type === "Laboratory" || type === "Classroom") {
+        type = "Lab / Classroom";
+      }
+
       const predefinedTypes = [
-        "Laboratory",
+        "Lab / Classroom",
         "Sports Facility",
         "Study Space",
-        "Music Facility",
-        "Meeting Room",
-        "Classroom"
+        "Music Facility"
       ];
 
       if (predefinedTypes.includes(type)) {
