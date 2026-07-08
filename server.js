@@ -18,5 +18,5 @@ app.use("/api", adminReportsRoutes);
 app.use('/api', adminDashboardRoutes);
 
 app.listen(3000, () => {
-  console.log("Server running at http://localhost:3000");
+  console.log("Server running at http://0.0.0.0:3000");
 });
