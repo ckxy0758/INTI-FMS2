@@ -32,6 +32,42 @@ function sendEmailNotification(userEmail, title, message) {
   });
 }
 
+// --- GLOBAL NOTIFICATION HELPERS ---
+
+// 1. Notify all active admins
+function notifyAllAdmins(bookingId, title, message, type) {
+  db.query("SELECT user_id, email FROM users WHERE role = 'admin' AND status = 'active'", (err, admins) => {
+    if (err || admins.length === 0) return;
+    admins.forEach(admin => {
+      db.query("INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) VALUES (?, ?, ?, ?, ?, 0)", 
+        [admin.user_id, bookingId, title, message, type]);
+      sendEmailNotification(admin.email, title, message);
+    });
+  });
+}
+
+// 2. Notify a specific user using their User ID
+function notifySpecificUser(userId, bookingId, title, message, type) {
+  db.query("SELECT email FROM users WHERE user_id = ?", [userId], (err, rows) => {
+    if (!err && rows.length > 0) {
+      db.query("INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) VALUES (?, ?, ?, ?, ?, 0)", 
+        [userId, bookingId, title, message, type]);
+      sendEmailNotification(rows[0].email, title, message);
+    }
+  });
+}
+
+// 3. Notify a specific user using a Booking ID (Useful for admin actions)
+function notifyUserByBooking(bookingId, title, message, type) {
+  db.query("SELECT b.user_id, u.email FROM bookings b JOIN users u ON b.user_id = u.user_id WHERE b.booking_id = ?", [bookingId], (err, rows) => {
+    if (!err && rows.length > 0) {
+      db.query("INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) VALUES (?, ?, ?, ?, ?, 0)", 
+        [rows[0].user_id, bookingId, title, message, type]);
+      sendEmailNotification(rows[0].email, title, message);
+    }
+  });
+}
+
 // ============================================================================
 // 2. AUTHENTICATION & SECURITY ROUTES
 // ============================================================================
@@ -758,35 +794,23 @@ router.post("/bookings", verifyToken, (req, res) => {
               if (commitErr) return connection.rollback(() => { connection.release(); res.json({ success: false, message: "Commit failed" }); });
               connection.release();
               
-              // Broadcast system notification
-              db.query(
-                "INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) VALUES (?, ?, ?, ?, 'booking', 0)", 
-                [user_id, insertResult.insertId, nTitle, nMsg],
-                (userNotifErr) => {
-                  // Trigger parallel email notification
-                  db.query("SELECT email FROM users WHERE user_id = ?", [user_id], (err, rows) => {
-                    if (!err && rows.length > 0) {
-                      sendEmailNotification(rows[0].email, nTitle, nMsg);
-                    }
-                  });
+              // Send system notification and email to the user using the helper
+              notifySpecificUser(user_id, insertResult.insertId, nTitle, nMsg, 'booking');
 
-                  // Dispatch targeted admin notifications if approval is required
-                  const requiresAdminAction = ["payment_required", "staff_key_approval"].includes(bookingFlowType);
+              // Dispatch targeted admin notifications if approval is required
+              const requiresAdminAction = ["payment_required", "staff_key_approval"].includes(bookingFlowType);
 
-                  if (requiresAdminAction) {
-                    let adminTitle = "New Booking Request";
-                    let adminMsg = `A new booking request for ${facilityName} has been submitted and requires review.`;
-                    if (bookingFlowType === "payment_required") adminMsg = `A new booking request for ${facilityName} has been submitted, if user have make payment then approved.`;
-                    
-                    db.query("INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read) SELECT user_id, ?, ?, ?, 'system', 0 FROM users WHERE role = 'admin' AND status = 'active'", 
-                    [insertResult.insertId, adminTitle, adminMsg], () => {
-                      return res.json({ success: true, title: nTitle, message: nMsg });
-                    });
-                  } else {
-                    return res.json({ success: true, title: nTitle, message: nMsg });
+              if (requiresAdminAction) {
+                let adminTitle = "New Booking Request";
+                let adminMsg = `A new booking request for ${facilityName} has been submitted and requires review.`;
+                if (bookingFlowType === "payment_required") adminMsg = `A new booking request for ${facilityName} has been submitted, if user have make payment then approved.`;
+                
+                // Replaces the raw SQL query with the helper
+                notifyAllAdmins(insertResult.insertId, adminTitle, adminMsg, 'system');
+                return res.json({ success: true, title: nTitle, message: nMsg });
+              } else {
+                return res.json({ success: true, title: nTitle, message: nMsg });
                   }
-                }
-              );
             });
           });
         });
@@ -1032,20 +1056,17 @@ router.put("/bookings/:id/cancel", verifyToken, (req, res) => {
 
     const updateSql = `UPDATE bookings SET booking_status = 'cancelled' WHERE booking_id = ?`;
 
-    db.query(updateSql, [bookingId], (updateErr) => {
-      if (updateErr) return res.json({ success: false, message: "Failed to cancel booking" });
+      db.query(updateSql, [bookingId], (updateErr) => {
+        if (updateErr) return res.json({ success: false, message: "Failed to cancel booking" });
 
-      const adminNotifSql = `
-        INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
-        SELECT user_id, ?, 'Booking Cancelled', 'User has cancelled a previously approved booking.', 'system', 0
-        FROM users WHERE role = 'admin' AND status = 'active'
-      `;
-      db.query(adminNotifSql, [bookingId], (adminErr) => {
-        if (adminErr) console.error("Failed to send admin cancellation notif:", adminErr);
+        // 1. Alert all admins that the user cancelled (Already in your code)
+        notifyAllAdmins(bookingId, 'Booking Cancelled', 'User has cancelled a previously approved booking.', 'system');
+
+        // 2. NEW: Send an email & system notification to the student/staff confirming success
+        notifySpecificUser(user_id, bookingId, 'Cancellation Confirmed', 'You have successfully cancelled your booking.', 'booking_cancelled');
+
+        return res.json({ success: true, message: "Booking cancelled successfully" });
       });
-
-      return res.json({ success: true, message: "Booking cancelled successfully" });
-    });
   });
 });
 
@@ -1091,41 +1112,19 @@ router.put("/admin/bookings/:id/approve", verifyToken, requireRole(['admin']), (
     if (err) return res.json({ success: false, message: "Failed to approve booking" });
     if (result.affectedRows === 0) return res.json({ success: false, message: "This booking cannot be approved" });
 
-    const notificationSql = `
-      INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
-      SELECT b.user_id, b.booking_id, 'Booking Approved',
-        CASE WHEN f.booking_flow_type = 'staff_key_approval'
-          THEN CONCAT('Your booking request of ', f.facility_name, ' has been approved. Please go to AFM to collect the key.')
-          ELSE CONCAT('Your booking request of ', f.facility_name, ' has been approved.')
-        END, 'booking_approved', 0
-      FROM bookings b
-      JOIN facilities f ON b.facility_id = f.facility_id
-      WHERE b.booking_id = ?
-    `;
-
-    db.query(notificationSql, [bookingId], (notificationErr) => {
-      if (notificationErr) console.log("Approval notification error:", notificationErr);
-
-      const emailSql = `
-        SELECT u.email, f.facility_name, f.booking_flow_type
-        FROM bookings b
-        JOIN users u ON b.user_id = u.user_id
-        JOIN facilities f ON b.facility_id = f.facility_id
-        WHERE b.booking_id = ? LIMIT 1
-      `;
-
-      db.query(emailSql, [bookingId], (emailErr, emailResult) => {
-        if (!emailErr && emailResult.length > 0) {
-          const user = emailResult[0];
-          const emailMessage = user.booking_flow_type === "staff_key_approval"
-            ? `Your booking request of ${user.facility_name} has been approved. Please go to AFM to collect the key.`
-            : `Your booking request of ${user.facility_name} has been approved.`;
-          sendEmailNotification(user.email, "Booking Approved", emailMessage);
-        }
-      });
-
-      return res.json({ success: true, message: "Booking approved successfully" });
+    // Using the helper function instead of massive raw SQL
+    db.query("SELECT f.facility_name, f.booking_flow_type FROM bookings b JOIN facilities f ON b.facility_id = f.facility_id WHERE b.booking_id = ?", [bookingId], (err, rows) => {
+      if (!err && rows.length > 0) {
+        const facility = rows[0];
+        const emailMessage = facility.booking_flow_type === "staff_key_approval"
+          ? `Your booking request of ${facility.facility_name} has been approved. Please go to AFM to collect the key.`
+          : `Your booking request of ${facility.facility_name} has been approved.`;
+        
+        notifyUserByBooking(bookingId, "Booking Approved", emailMessage, "booking_approved");
+      }
     });
+
+    return res.json({ success: true, message: "Booking approved successfully" });
   });
 });
 
@@ -1141,16 +1140,10 @@ router.put("/admin/bookings/:id/cancel", verifyToken, requireRole(['admin']), (r
     if (err) return res.json({ success: false, message: "Failed to cancel booking" });
     if (result.affectedRows === 0) return res.json({ success: false, message: "This booking cannot be cancelled" });
 
-    const userNotifSql = `
-      INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
-      SELECT user_id, booking_id, 'Booking Cancelled', 'Admin did not approve your booking.', 'booking_cancelled', 0
-      FROM bookings WHERE booking_id = ?
-    `;
-    db.query(userNotifSql, [bookingId], (userErr) => {
-      if (userErr) console.error("Failed to send user cancellation notif:", userErr);
-    });
+    // Replaces the raw SQL query with the helper
+        notifyUserByBooking(bookingId, 'Booking Cancelled', 'Admin did not approve your booking.', 'booking_cancelled');
 
-    return res.json({ success: true, message: "Booking cancelled successfully" });
+        return res.json({ success: true, message: "Booking cancelled successfully" });
   });
 });
 
@@ -1237,10 +1230,7 @@ router.put("/bookings/:id/return-key", verifyToken, (req, res) => {
 // Generate automated prompt for completed sessions
 function createKeyReturnReminders(callback) {
   const sql = `
-    INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
-    SELECT b.user_id, b.booking_id, 'Key Return Reminder', 
-           CONCAT('Reminder: Please return the key for ', f.facility_name, '.'), 
-           'key_return_reminder', 0
+    SELECT b.booking_id, b.user_id, f.facility_name
     FROM bookings b
     JOIN facilities f ON b.facility_id = f.facility_id
     WHERE b.booking_status = 'key_collected'
@@ -1250,9 +1240,14 @@ function createKeyReturnReminders(callback) {
         WHERE n.booking_id = b.booking_id AND n.notification_type = 'key_return_reminder'
     )
   `;
-  db.query(sql, (err, result) => {
-    if (err) console.error("Error creating reminders:", err);
-    callback();
+  db.query(sql, (err, results) => {
+    if (!err && results.length > 0) {
+      results.forEach(row => {
+        const msg = `Reminder: Please return the key for ${row.facility_name}.`;
+        notifySpecificUser(row.user_id, row.booking_id, 'Key Return Reminder', msg, 'key_return_reminder');
+      });
+    }
+    if (callback) callback();
   });
 }
 
@@ -1299,11 +1294,8 @@ router.get("/bookings/current-booking/:facility_id/:user_id", verifyToken, (req,
 
 // Critical System Alert: Flags users 30+ minutes past session end to mitigate access breaches
 function createOverdueKeyNotifications(callback) {
-  const userSql = `
-    INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
-    SELECT b.user_id, b.booking_id, 'OVERDUE: Key Return', 
-      CONCAT('URGENT: Your booking for ', f.facility_name, ' ended over 30 minutes ago. Please return the key immediately to avoid penalties.'), 
-      'key_overdue_warning', 0
+  const sql = `
+    SELECT b.booking_id, b.user_id, f.facility_name
     FROM bookings b
     JOIN facilities f ON b.facility_id = f.facility_id
     WHERE f.booking_flow_type IN ('staff_key_approval', 'normal_approval')
@@ -1311,34 +1303,23 @@ function createOverdueKeyNotifications(callback) {
     AND NOW() >= DATE_ADD(TIMESTAMP(b.booking_date, b.end_time), INTERVAL 30 MINUTE)
     AND NOT EXISTS (
       SELECT 1 FROM notifications n 
-      WHERE n.booking_id = b.booking_id AND n.notification_type = 'key_overdue_warning' AND n.user_id = b.user_id
+      WHERE n.booking_id = b.booking_id AND n.notification_type = 'key_overdue_warning'
     )
   `;
-
-  const adminSql = `
-    INSERT INTO notifications (user_id, booking_id, title, message, notification_type, is_read)
-    SELECT u.user_id, b.booking_id, 'OVERDUE: Key Return Alert', 
-      CONCAT('URGENT: A key for ', f.facility_name, ' is overdue by over 30 minutes.'), 
-      'admin_key_overdue', 0
-    FROM bookings b
-    JOIN facilities f ON b.facility_id = f.facility_id
-    CROSS JOIN users u
-    WHERE f.booking_flow_type IN ('staff_key_approval', 'normal_approval')
-    AND b.booking_status = 'key_collected' AND b.key_status = 'collected'
-    AND NOW() >= DATE_ADD(TIMESTAMP(b.booking_date, b.end_time), INTERVAL 30 MINUTE)
-    AND u.role = 'admin' AND u.status = 'active'
-    AND NOT EXISTS (
-      SELECT 1 FROM notifications n 
-      WHERE n.booking_id = b.booking_id AND n.notification_type = 'admin_key_overdue' AND n.user_id = u.user_id
-    )
-  `;
-
-  db.query(userSql, (err) => {
-    if (err) console.error("Error creating user overdue reminders:", err);
-    db.query(adminSql, (adminErr) => {
-      if (adminErr) console.error("Error creating admin overdue reminders:", adminErr);
-      if (callback) callback();
-    });
+  
+  db.query(sql, (err, results) => {
+    if (!err && results.length > 0) {
+      results.forEach(row => {
+        // 1. Email & notify the user
+        const userMsg = `URGENT: Your booking for ${row.facility_name} ended over 30 minutes ago. Please return the key immediately to avoid penalties.`;
+        notifySpecificUser(row.user_id, row.booking_id, 'OVERDUE: Key Return', userMsg, 'key_overdue_warning');
+        
+        // 2. Email & notify all admins
+        const adminMsg = `URGENT: A key for ${row.facility_name} is overdue by over 30 minutes.`;
+        notifyAllAdmins(row.booking_id, 'OVERDUE: Key Return Alert', adminMsg, 'admin_key_overdue');
+      });
+    }
+    if (callback) callback();
   });
 }
 
