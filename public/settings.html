@@ -30,13 +30,40 @@
         <h2>Change Password</h2>
 
         <label>Current Password</label>
-        <input type="password" id="currentPassword" placeholder="Enter current password">
+        <div class="password-input">
+          <input type="password" id="currentPassword" placeholder="Enter current password">
+          <span class="toggle-eye" onclick="togglePassword('currentPassword', 'eyeCurrent')">
+            <img src="images/eye-open.png" class="eye-icon" id="eyeCurrent">
+          </span>
+        </div>
 
         <label>New Password</label>
-        <input type="password" id="newPassword" placeholder="Enter new password">
+        <div class="password-input">
+          <input type="password" id="newPassword" placeholder="Enter new password">
+          <span class="toggle-eye" onclick="togglePassword('newPassword', 'eyeNew')">
+            <img src="images/eye-open.png" class="eye-icon" id="eyeNew">
+          </span>
+        </div>
 
         <label>Confirm New Password</label>
-        <input type="password" id="confirmPassword" placeholder="Confirm new password">
+        <div class="password-input">
+          <input type="password" id="confirmPassword" placeholder="Confirm new password">
+          <span class="toggle-eye" onclick="togglePassword('confirmPassword', 'eyeConfirm')">
+            <img src="images/eye-open.png" class="eye-icon" id="eyeConfirm">
+          </span>
+        </div>
+        <br>
+
+        <div style="margin-bottom:12px;">
+          <p style="text-align:left; margin:0 0 4px;font-size:13px;font-weight:600;color:#374151;">Password must contain:</p>
+          <ul style="margin:0;padding-left:18px;color:#6b7280;font-size:13px;font-weight:500;line-height:1.8;">
+            <li>At least 8 characters</li>
+            <li>One uppercase letter (A-Z)</li>
+            <li>One lowercase letter (a-z)</li>
+            <li>One number (0-9)</li>
+            <li>One special character (!@#$%^&*)</li>
+          </ul>
+        </div>
 
         <div class="settings-btn-row">
           <button class="cancel-btn" onclick="hidePasswordForm()">Cancel</button>
@@ -84,9 +111,20 @@
         return;
       }
 
-      if (newPassword.length < 6) {
+      if (currentPassword === newPassword) {
         message.style.color = "red";
-        message.innerText = "New password must be at least 6 characters.";
+        message.innerText =
+          "New password cannot be the same as your current password.";
+        return;
+      }
+
+      const passwordRegex =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).{8,}$/;
+
+      if (!passwordRegex.test(newPassword)) {
+        message.style.color = "red";
+        message.innerText =
+          "Password must be at least 8 characters with uppercase, lowercase, number and special character.";
         return;
       }
 
@@ -128,6 +166,21 @@
       localStorage.removeItem("user");
       sessionStorage.removeItem("user");
       window.location.href = "login.html";
+    }
+
+    function togglePassword(inputId, eyeId) {
+      const password = document.getElementById(inputId);
+      const eye = document.getElementById(eyeId);
+
+      const hidden = password.type === "password";
+
+      if (hidden) {
+        password.type = "text";
+        eye.src = "images/eye-close.png";
+      } else {
+        password.type = "password";
+        eye.src = "images/eye-open.png";
+      }
     }
   </script>
 
