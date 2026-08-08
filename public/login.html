@@ -2,34 +2,41 @@
 <html>
 <head>
   <title>INTI Facility Management System</title>
+  <!-- Google Fonts: Poppins, used throughout the UI -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="login-page">
 
+  <!-- Top Notification Bar with the system title and the "?" -->
   <header class="topbar">
     <h2>INTI Facility Management System</h2>
     <span class="help-icon">
     ?
+    <!-- The text shown when hover to the "?" -->
     <span class="help-tooltip">
       The INTI Facilities Booking Management System is designed to streamline facility services within INTI. Users can submit maintenance requests, track service status, and manage facility-related issues all in one platform.
     </span>
   </span>
   </header>
 
+  <!-- Main Login form container -->
   <main class="login-hero">
     <div class="login-card">
       <div style="text-align:center; margin-bottom: 28px;">
+      <!-- Page heading -->
       <h1 style="font-size:28px; font-weight:800; color:#111827; margin:0 0 6px;">Welcome Back</h1>
       <p style="font-size:14px; color:#6b7280; font-weight:500; margin:0;">Sign in to book and manage campus facilities</p>
     </div>
 
+      <!-- Email Input field -->
       <label>Email</label>
       <input type="email" id="email" placeholder="username@roles.newinti.edu.my">
 
       <div class="password-wrapper">
         <label>Password</label>
 
+        <!-- Password input field with a show or hide icon -->
         <div class="password-input">
           <input type="password" id="password" placeholder="********">
           <span class="toggle-eye" onclick="togglePassword()">
@@ -37,11 +44,13 @@
           </span>
         </div>
 
+        <!-- Link to the reset password flow -->
         <div style="text-align:left; margin-top: 8px; margin-bottom: 15px;">
           <a href="forgot-password.html" style="color:#D12E26; font-size:13px; font-weight:600; text-decoration:none;">Forgot Password?</a>
         </div>
       </div>
 
+      <!-- 'Remember Me' checkbox: controls whether session persists after the browser close -->
     <div class="remember-row">
     <label class="custom-checkbox">
         <input type="checkbox" id="remember">
@@ -50,27 +59,34 @@
     </label>
     </div>
 
+      <!-- Submit button, triggers login() -->
       <button onclick="login()">Log In</button>
 
+      <!-- Placeholder for success/error feedback messages -->
       <p id="message" style="margin-top: 30px;"></p>
     </div>
   </main>
 
   <script>
+    // Handles the login button click: validates input, calls the API,
+    // and routes the user based on the server's response.
     function login() {
 
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
         const message = document.getElementById("message");
 
+        // Clear any previous error message
         message.innerText = "";
 
+        // Basic client-side validation: both fields must be filled
         if (!email || !password) {
           message.style.color = "#D12E26";
           message.innerText = "Please enter email and password";
           return;
         }
 
+        // Send credentials to the backend for authentication
         fetch("/api/login", {
           method: "POST",
           headers: {
@@ -83,9 +99,14 @@
 
           if (data.success) {
 
+            // Store the auth token so subsequent requests can be authenticated
             localStorage.setItem("authToken", data.token);
+
             const remember = document.getElementById("remember").checked;
 
+            // "Remember me" determines where the user object is stored:
+            // localStorage = persists after browser closes 就是记住那个device不需要login when 再enter的system
+            // sessionStorage = cleared when the tab/browser closes
             if (remember) {
               localStorage.setItem("user", JSON.stringify(data.user));
               sessionStorage.removeItem("user");
@@ -94,21 +115,23 @@
               localStorage.removeItem("user");
             }
 
-            // Security Check: Enforce password change if required
+            // Security Check: force non-admin users to change their password
+            // if the server flagged their account as requiring one
             if (data.user.must_change_password == 1 && data.user.role !== "admin") {
               window.location.href = "change-password.html";
-              return; // Stop further execution
+              return; // Stop further execution — skip normal routing below
             } 
             
-            // Check if we need to return the user to the QR scanner bridge
+            // Check if the user arrived here via a QR code scan flow.
+            // If so, "return_to" tells us where to send them after login.
             const urlParams = new URLSearchParams(window.location.search);
             const returnUrl = urlParams.get('return_to');
 
             if (returnUrl) {
-              // Safely decode the URL and redirect back to the scan page
+              // Decode and redirect back to the original scan destination
               window.location.href = decodeURIComponent(returnUrl);
             } else {
-              // Standard routing if they logged in normally
+              // Default routing: send user to their role-specific dashboard
               if (data.user.role === "admin") {
                 window.location.href = "admin.html";
               } else if (data.user.role === "student") {
@@ -119,17 +142,21 @@
             }
 
           } else {
+            // Login failed — show the server's error message
             message.style.color = "#D12E26";
             message.innerText = data.message;
           }
         })
         .catch(() => {
+          // Network/server error — fetch itself failed
           message.style.color = "#D12E26";
           message.innerText = "Server connection failed";
         });
       }
 
 
+    // Toggles the password field between hidden (dots) and visible (plain text),
+    // swapping the eye icon to reflect the current state.
     function togglePassword() {
       const password = document.getElementById("password");
       const eye = document.getElementById("eyeIcon");
@@ -138,10 +165,10 @@
 
       if (hidden) {
         password.type = "text";
-        eye.src = "images/eye-close.png"; // closed eye
+        eye.src = "images/eye-close.png"; // closed eye = currently visible
       } else {
         password.type = "password";
-        eye.src = "images/eye-open.png";  // open eye
+        eye.src = "images/eye-open.png";  // open eye = currently hidden
       }
     }
   </script>

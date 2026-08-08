@@ -1,61 +1,134 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <!-- Page title shown on the browser tab -->
   <title>Settings</title>
+
+  <!-- Google Font: Poppins is used for consistent font style across the system -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Main external CSS file for the system design -->
   <link rel="stylesheet" href="style.css">
 </head>
 
+<!--
+  Body class:
+  - dashboard-body is used for pages inside the dashboard layout
+-->
 <body class="dashboard-body">
 
+  <!-- Reusable header section loaded from component.js -->
   <div id="appHeader"></div>
 
+  <!-- Main dashboard layout containing sidebar and main content -->
   <div class="dashboard-layout">
+
+    <!-- Reusable sidebar section loaded from component.js -->
     <div id="appSidebar"></div>
 
+    <!-- Main content area for the Settings page -->
     <main class="main-content">
+
+      <!-- Page title -->
       <h1 class="page-title">Settings</h1>
+
+      <!-- Short description of what this page is used for -->
       <p class="page-subtitle">Change your login credentials.</p>
 
+      <!-- Settings option card for password management -->
       <div class="settings-option-card">
         <div>
+          <!-- Password setting title -->
           <h3>Password</h3>
+
+          <!-- Short explanation for changing password -->
           <p>Set a unique password to protect your account.</p>
         </div>
 
+        <!--
+          Button to display the change password form.
+          When clicked, showPasswordForm() will run.
+        -->
         <button onclick="showPasswordForm()">Change Password</button>
       </div>
 
+      <!--
+        Change password form.
+
+        This form is hidden by default using display: none.
+        It will appear when the user clicks the "Change Password" button.
+      -->
       <div id="passwordForm" class="settings-card" style="display: none;">
+
+        <!-- Form title -->
         <h2>Change Password</h2>
 
+        <!-- Current password input label -->
         <label>Current Password</label>
+
+        <!-- Current password input field with show/hide icon -->
         <div class="password-input">
+
+          <!--
+            User enters their current password here.
+            This is needed to verify the user before changing the password.
+          -->
           <input type="password" id="currentPassword" placeholder="Enter current password">
+
+          <!--
+            Eye icon for showing or hiding the current password.
+            togglePassword() changes the input type between password and text.
+          -->
           <span class="toggle-eye" onclick="togglePassword('currentPassword', 'eyeCurrent')">
             <img src="images/eye-open.png" class="eye-icon" id="eyeCurrent">
           </span>
         </div>
 
+        <!-- New password input label -->
         <label>New Password</label>
+
+        <!-- New password input field with show/hide icon -->
         <div class="password-input">
+
+          <!--
+            User enters the new password here.
+            The new password must follow the password requirements below.
+          -->
           <input type="password" id="newPassword" placeholder="Enter new password">
+
+          <!-- Eye icon for showing or hiding the new password -->
           <span class="toggle-eye" onclick="togglePassword('newPassword', 'eyeNew')">
             <img src="images/eye-open.png" class="eye-icon" id="eyeNew">
           </span>
         </div>
 
+        <!-- Confirm password input label -->
         <label>Confirm New Password</label>
+
+        <!-- Confirm new password input field with show/hide icon -->
         <div class="password-input">
+
+          <!--
+            User re-enters the new password here.
+            This is used to confirm that the new password was typed correctly.
+          -->
           <input type="password" id="confirmPassword" placeholder="Confirm new password">
+
+          <!-- Eye icon for showing or hiding the confirm password field -->
           <span class="toggle-eye" onclick="togglePassword('confirmPassword', 'eyeConfirm')">
             <img src="images/eye-open.png" class="eye-icon" id="eyeConfirm">
           </span>
         </div>
         <br>
 
+        <!--
+          Password requirement section.
+          This tells the user what rules the new password must follow.
+        -->
         <div style="margin-bottom:12px;">
           <p style="text-align:left; margin:0 0 4px;font-size:13px;font-weight:600;color:#374151;">Password must contain:</p>
+
+          <!-- List of password requirements shown to the user -->
           <ul style="margin:0;padding-left:18px;color:#6b7280;font-size:13px;font-weight:500;line-height:1.8;">
             <li>At least 8 characters</li>
             <li>One uppercase letter (A-Z)</li>
@@ -65,52 +138,146 @@
           </ul>
         </div>
 
+        <!-- Button row for cancelling or saving password change -->
         <div class="settings-btn-row">
+
+          <!--
+            Cancel button.
+            When clicked, it hides the password form.
+          -->
           <button class="cancel-btn" onclick="hidePasswordForm()">Cancel</button>
+
+          <!--
+            Save button.
+            When clicked, it runs changePassword() to validate and update password.
+          -->
           <button onclick="changePassword()">Save Password</button>
         </div>
 
+        <!--
+          Message area.
+          Used to display validation errors or success messages.
+        -->
         <p id="message"></p>
       </div>
     </main>
   </div>
 
+  <!-- JavaScript file used to load the shared header and sidebar layout -->
   <script src="component.js"></script>
 
   <script>
+    /*
+      Load the dashboard layout and highlight the Settings menu.
+
+      "settings" tells component.js that the Settings page is currently active.
+    */
     loadLayout("settings");
 
+    /*
+      Get the logged-in user from browser storage.
+
+      localStorage:
+      - Keeps the user data even after the browser is closed.
+
+      sessionStorage:
+      - Keeps the user data only while the current browser tab is open.
+
+      The system checks localStorage first.
+      If there is no user there, it checks sessionStorage.
+    */
     const user =
       JSON.parse(localStorage.getItem("user")) ||
       JSON.parse(sessionStorage.getItem("user"));
 
+    /*
+      If no user data is found, it means the user is not logged in.
+
+      The user will be redirected to the login page.
+    */
     if (!user) {
       window.location.href = "login.html";
     }
 
+    /*
+      Show the change password form.
+
+      This function is called when the user clicks the "Change Password" button.
+    */
     function showPasswordForm() {
       document.getElementById("passwordForm").style.display = "block";
     }
 
+    /*
+      Hide the change password form.
+
+      This function is called when the user clicks the "Cancel" button.
+      It also clears any message shown in the message area.
+    */
     function hidePasswordForm() {
       document.getElementById("passwordForm").style.display = "none";
       document.getElementById("message").innerText = "";
     }
 
+    /*
+      Change the user's password.
+
+      Main purpose:
+      1. Get the current password, new password, and confirm password.
+      2. Check that all fields are filled in.
+      3. Make sure the new password is not the same as the current password.
+      4. Validate the new password format.
+      5. Check that new password and confirm password match.
+      6. Send the password change request to the backend.
+      7. Show success or error message based on backend response.
+    */
     function changePassword() {
+
+      /*
+        Get the current password entered by the user.
+      */
       const currentPassword = document.getElementById("currentPassword").value;
+
+      /*
+        Get the new password entered by the user.
+      */
       const newPassword = document.getElementById("newPassword").value;
+
+      /*
+        Get the confirmation password entered by the user.
+      */
       const confirmPassword = document.getElementById("confirmPassword").value;
+
+      /*
+        Get the message paragraph.
+        This is used to show validation errors or success messages.
+      */
       const message = document.getElementById("message");
 
+      /*
+        Clear previous message before running validation again.
+      */
       message.innerText = "";
 
+      /*
+        Check whether all password fields are filled in.
+
+        If any field is empty:
+        - show an error message
+        - stop the function using return
+      */
       if (!currentPassword || !newPassword || !confirmPassword) {
         message.style.color = "red";
         message.innerText = "Please fill in all password fields.";
         return;
       }
 
+      /*
+        Check whether the new password is the same as the current password.
+
+        The system does not allow this because the new password should be different
+        from the old password for better account security.
+      */
       if (currentPassword === newPassword) {
         message.style.color = "red";
         message.innerText =
@@ -118,9 +285,26 @@
         return;
       }
 
+      /*
+        Password validation regular expression.
+
+        This checks that the new password contains:
+        - at least one lowercase letter
+        - at least one uppercase letter
+        - at least one number
+        - at least one special character
+        - at least 8 characters in total
+      */
       const passwordRegex =
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).{8,}$/;
 
+      /*
+        Check whether the new password follows the password rules.
+
+        If the new password does not meet the requirements:
+        - show an error message
+        - stop the function
+      */
       if (!passwordRegex.test(newPassword)) {
         message.style.color = "red";
         message.innerText =
@@ -128,12 +312,37 @@
         return;
       }
 
+      /*
+        Check whether the new password and confirm password are the same.
+
+        If they do not match:
+        - show an error message
+        - stop the function
+      */
       if (newPassword !== confirmPassword) {
         message.style.color = "red";
         message.innerText = "New password and confirm password do not match.";
         return;
       }
 
+      /*
+        Send the password change request to the backend.
+
+        API endpoint:
+        /api/settings/change-password
+
+        Method:
+        PUT is used because the system is updating an existing password.
+
+        Headers:
+        - Content-Type tells the backend that JSON data is being sent.
+        - Authorization sends the JWT token for user authentication.
+
+        Body:
+        - user_id identifies which user's password should be changed.
+        - currentPassword is used by the backend to verify the old password.
+        - newPassword is the new password to be saved.
+      */
       fetch("/api/settings/change-password", {
         method: "PUT",
         headers: {
@@ -146,15 +355,37 @@
           newPassword: newPassword
         })
       })
+
+      /*
+        Convert the backend response into JSON format.
+      */
       .then(res => res.json())
+
+      /*
+        Handle the response returned by the backend.
+      */
       .then(data => {
+
+        /*
+          If the backend returns success = true:
+          - show success message in green
+          - clear all password input fields
+        */
         if (data.success) {
           message.style.color = "green";
           message.innerText = data.message;
 
+          /*
+            Clear the input fields after password is changed successfully.
+          */
           document.getElementById("currentPassword").value = "";
           document.getElementById("newPassword").value = "";
           document.getElementById("confirmPassword").value = "";
+
+        /*
+          If the backend returns success = false:
+          - show the error message returned by the backend
+        */
         } else {
           message.style.color = "red";
           message.innerText = data.message;
@@ -162,21 +393,64 @@
       });
     }
 
+    /*
+      Logout function.
+
+      This removes the user data from browser storage and redirects the user
+      back to the login page.
+    */
     function logout() {
       localStorage.removeItem("user");
       sessionStorage.removeItem("user");
       window.location.href = "login.html";
     }
 
+    /*
+      Show or hide password input.
+
+      Parameters:
+      - inputId: the ID of the password input field
+      - eyeId: the ID of the eye icon image
+
+      This function is reused for:
+      - current password
+      - new password
+      - confirm password
+    */
     function togglePassword(inputId, eyeId) {
+
+      /*
+        Get the password input field by its ID.
+      */
       const password = document.getElementById(inputId);
+
+      /*
+        Get the eye icon image by its ID.
+      */
       const eye = document.getElementById(eyeId);
 
+      /*
+        Check whether the password is currently hidden.
+        If the input type is "password", it means the password is hidden.
+      */
       const hidden = password.type === "password";
 
+      /*
+        If password is hidden:
+        - change input type to text
+        - password becomes visible
+        - change icon to eye-close image
+      */
       if (hidden) {
         password.type = "text";
         eye.src = "images/eye-close.png";
+
+      /*
+        If password is visible:
+        - change input type back to password
+        - password becomes hidden again
+        - change icon to eye-open image
+      */
       } else {
         password.type = "password";
         eye.src = "images/eye-open.png";

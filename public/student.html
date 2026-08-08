@@ -1,67 +1,153 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <!--
+    Browser tab title.
+    This is the name shown at the top of the browser tab for this page.
+  -->
   <title>Student Dashboard</title>
+
+  <!--
+    Import Google Font: Poppins.
+    This font is used to keep the system text style consistent.
+  -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!--
+    Link to the main external stylesheet.
+    Most of the dashboard layout, cards, filter bar, and facility grid styling comes from this CSS file.
+  -->
   <link rel="stylesheet" href="style.css">
 </head>
 
+<!--
+  Main body of the student dashboard page.
+
+  The class "dashboard-body" is used by CSS to apply the dashboard page layout and background.
+-->
 <body class="dashboard-body">
   <!-- Testing 123 -->
 
   <!-- REUSABLE HEADER -->
+  <!--
+    This empty div is used as a placeholder for the reusable header.
+    The actual header content is loaded by component.js through loadLayout().
+  -->
   <div id="appHeader"></div>
 
   <!-- ===== MAIN LAYOUT ===== -->
+  <!--
+    Main dashboard layout container.
+    It normally contains:
+    1. Sidebar on the left
+    2. Main content area on the right
+  -->
   <div class="dashboard-layout">
 
     <!-- REUSABLE SIDEBAR -->
+    <!--
+      This empty div is used as a placeholder for the reusable sidebar.
+      The sidebar content is also loaded by component.js.
+    -->
     <div id="appSidebar"></div>
 
     <!-- ===== CONTENT ===== -->
+    <!--
+      Main content area for the student dashboard.
+      This section displays the page title, filters, and facility list.
+    -->
     <main class="main-content">
 
+      <!-- Main heading shown at the top of the student dashboard -->
       <h1 class="page-title">
         Welcome to INTI Facilities Management System
       </h1>
 
+      <!-- Short description under the main heading -->
       <p class="page-subtitle">
         Find your space now! Reserve equipment, studios, and more.
       </p>
 
       <!-- ===== FILTER BAR ===== -->
+      <!--
+        Filter bar section.
+        Students can use this area to filter facilities by date and facility type.
+      -->
       <div class="filter-bar">
 
+        <!-- Label for the filtering section -->
         <label>Filter By:</label>
 
+        <!--
+          Date filter input.
+          The selected date can be used to filter or refresh facility display.
+        -->
         <input type="date" id="filterDate">
+
+        <!--
+          Custom dropdown container for facility type filtering.
+          This replaces a normal select box so multiple facility types can be selected.
+        -->
         <div class="custom-dropdown" id="typeDropdown">
+
+        <!--
+          Dropdown button.
+          When clicked, toggleDropdown() opens or closes the facility type menu.
+        -->
         <button class="custom-dropdown-btn" onclick="toggleDropdown()">
+
+          <!-- Text shown on the dropdown button -->
           <span id="dropdownLabel">Facility Type</span>
+
+          <!-- Dropdown arrow icon -->
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
+
+        <!--
+          Dropdown menu containing all facility type checkbox options.
+          Each checkbox controls whether that facility type is shown.
+        -->
         <div class="custom-dropdown-menu" id="dropdownMenu">
+
+          <!--
+            Select All / Deselect All option.
+            This checkbox controls all facility type checkboxes at once.
+          -->
           <label class="dropdown-item">
               <input type="checkbox" id="toggleAll" checked>
               <span id="toggleAllLabel">Deselect All</span>
           </label>
           <hr>
+
+          <!--
+            Facility type option:
+            Laboratory and Classroom are grouped together.
+            The value contains two types separated by a comma.
+          -->
           <label class="dropdown-item">
               <input type="checkbox" value="Laboratory,Classroom" checked>
               <span>Lab / Classroom</span>
           </label>
+
+          <!-- Facility type option: Sports Facility -->
           <label class="dropdown-item">
               <input type="checkbox" value="Sports Facility" checked>
               <span>Sports Facility</span>
           </label>
+
+          <!-- Facility type option: Study Space -->
           <label class="dropdown-item">
               <input type="checkbox" value="Study Space" checked>
               <span>Study Space</span>
           </label>
+
+          <!-- Facility type option: Music Facility -->
           <label class="dropdown-item">
               <input type="checkbox" value="Music Facility" checked>
               <span>Music Facility</span>
           </label>
+
+          <!-- Facility type option: Other -->
           <label class="dropdown-item">
               <input type="checkbox" value="Other" checked>
               <span>Other</span>
@@ -72,6 +158,10 @@
       </div>
 
       <!-- ===== FACILITY LIST ===== -->
+      <!--
+        Facility list container.
+        Facility cards are inserted into this div dynamically using JavaScript.
+      -->
       <div id="facilityList" class="facility-grid"></div>
 
     </main>
@@ -79,68 +169,194 @@
   </div>
 
   <!-- COMPONENT -->
+  <!--
+    component.js contains reusable layout functions.
+    It is used to load the common header and sidebar.
+  -->
   <script src="component.js"></script>
 
   <!-- ===== SCRIPT ===== -->
   <script>
 
-    loadLayout("facilities");
+    /*
+      Load the reusable layout for the Facilities page.
+
+      The value "facilities" tells component.js to:
+      - Load the correct header/sidebar
+      - Highlight the Facilities menu in the sidebar
+    */
     loadLayout("facilities");
 
+    /*
+      This line also loads the Facilities layout.
+
+      It is kept exactly as in the original code.
+      The instruction is not to change anything, so this duplicate line remains.
+    */
+    loadLayout("facilities");
+
+    /*
+      Get the date filter input element.
+      This is used below to add and remove the "active" class when the input is focused or blurred.
+    */
     const filterDate = document.getElementById("filterDate");
 
+    /*
+      When the date input is focused/clicked,
+      add the "active" class so CSS can apply active styling.
+    */
     filterDate.addEventListener("focus", function() {
       this.classList.add("active");
     });
 
+    /*
+      When the date input loses focus,
+      remove the "active" class so it returns to the normal styling.
+    */
     filterDate.addEventListener("blur", function() {
       this.classList.remove("active");
     });
 
+    /*
+      Get the logged-in user from browser storage.
+
+      localStorage:
+      - Stores user data for a longer period.
+
+      sessionStorage:
+      - Stores user data only while the browser tab/session is open.
+
+      The code checks localStorage first.
+      If no user is found there, it checks sessionStorage.
+    */
     const user =
       JSON.parse(localStorage.getItem("user")) ||
       JSON.parse(sessionStorage.getItem("user"));
 
+    /*
+      Page access control.
+
+      This page is only for students.
+      If:
+      - no user is logged in, or
+      - the logged-in user role is not "student"
+
+      then the user is redirected to the login page.
+    */
     if (!user || user.role !== "student") {
       window.location.href = "login.html";
     }
 
+    /*
+      Store all facilities retrieved from the backend.
+
+      This array is useful because:
+      - the original full facility list is saved here
+      - filters can be applied without fetching the data again
+    */
     let allFacilities = [];
 
+    /*
+      Check whether a selected filter date and time is already in the past.
+
+      Parameters:
+      - filterDate: selected date
+      - filterTime: selected time
+
+      Returns:
+      - false if date or time is missing
+      - true if selected date/time is earlier than the current time
+      - false if selected date/time is still valid
+    */
     function isPastFilterDateTime(filterDate, filterTime) {
       if (!filterDate || !filterTime) return false;
 
+      /*
+        Combine date and time into one Date object.
+        Example result:
+        2026-07-09T13:00
+      */
       const selectedDateTime = new Date(`${filterDate}T${filterTime}`);
+
+      /*
+        Get the current date and time.
+      */
       const now = new Date();
 
+      /*
+        Compare selected date/time with current date/time.
+      */
       return selectedDateTime < now;
     }
 
+    /*
+      Load facilities immediately when the page runs.
+    */
     loadFacilities();
 
+    /*
+      Fetch the facility list from the backend API.
+
+      The role is sent as a query parameter:
+      /api/facilities?role=student
+
+      This allows the backend to return facilities that are visible/available to students.
+    */
     function loadFacilities() {
 
       fetch(`/api/facilities?role=${user.role}`, {
         headers: {
+          /*
+            Send the authentication token to the backend.
+            The backend can use this token to verify that the request is from a logged-in user.
+          */
           "Authorization": "Bearer " + localStorage.getItem("authToken")
         }
       })
 
+      /*
+        Convert the API response to JSON format.
+      */
       .then(res => res.json())
 
+      /*
+        Handle the data returned from the backend.
+      */
       .then(data => {
 
+        /*
+          If the API response is not successful, stop the function.
+        */
         if (!data.success) {
           return;
         }
 
+        /*
+          Store all facilities from the backend into allFacilities.
+          This array will be reused when filters are applied.
+        */
         allFacilities = data.facilities;
 
+        /*
+          Display all facilities on the page first.
+        */
         renderFacilities(allFacilities);
+
+        /*
+          Update the dropdown state and apply the default filter settings.
+        */
         updateDropdown();
       });
     }
 
+    /*
+      Convert facility availability status from database format into user-friendly text.
+
+      Example:
+      - available becomes Available Now
+      - unavailable becomes Unavailable
+      - maintenance becomes Maintenance
+    */
     function formatAvailability(status) {
       if (status === "available") return "Available Now";
       if (status === "unavailable") return "Unavailable";
@@ -148,27 +364,61 @@
       return "Unknown";
     }
 
+    /*
+      Render facility cards on the page.
+
+      Parameter:
+      - facilities: an array of facility records to display
+
+      This function clears the current facility list and rebuilds the cards based on the given array.
+    */
     function renderFacilities(facilities) {
+
+      /*
+        Get the facility list container.
+      */
       const facilityList = document.getElementById("facilityList");
+
+      /*
+        Clear previous facility cards before rendering new ones.
+      */
       facilityList.innerHTML = "";
 
+      /*
+        If no facilities match the filter, show a message.
+      */
       if (facilities.length === 0) {
         facilityList.innerHTML = "<p>No facilities found.</p>";
         return;
       }
 
+      /*
+        Loop through each facility and create one card for each facility.
+      */
       facilities.forEach(facility => {
         // Determine if facility is available
         const isAvailable = facility.availability_status === 'available';
-        
+
         // Use a CSS class for styling the disabled state
         const cardClass = isAvailable ? 'facility-card' : 'facility-card facility-disabled';
-        
+
         // Define button state and appearance
         const buttonHtml = isAvailable 
           ? `<button onclick="window.location.href='facility-details.html?id=${facility.facility_id}'">View Details</button>`
           : `<button disabled style="background:#ccc; cursor:not-allowed;">${formatAvailability(facility.availability_status)}</button>`;
 
+        /*
+          Add a facility card into the facility list.
+
+          Each card displays:
+          - Facility image
+          - Availability badge
+          - Facility name
+          - Location
+          - Maximum capacity
+          - Operating time
+          - View Details button or disabled availability button
+        */
         facilityList.innerHTML += `
           <div class="${cardClass}">
             <div class="facility-img">
@@ -216,11 +466,24 @@
     }
 
     /* ===== FILTERS ===== */
+
+    /*
+      Open or close the facility type dropdown menu.
+
+      It toggles:
+      - "open" class on the dropdown menu
+      - "active" class on the dropdown button
+    */
     function toggleDropdown() {
       document.getElementById("dropdownMenu").classList.toggle("open");
       document.querySelector(".custom-dropdown-btn").classList.toggle("active");
     }
 
+    /*
+      Close the dropdown automatically when the user clicks outside the dropdown area.
+
+      This improves user experience because the dropdown will not stay open unnecessarily.
+    */
     document.addEventListener("click", function(e) {
       const dropdown = document.getElementById("typeDropdown");
       if (dropdown && !dropdown.contains(e.target)) {
@@ -229,15 +492,44 @@
       }
     });
 
+    /*
+      Get all facility type checkboxes.
+      This selects only checkbox inputs that have a value attribute.
+      It excludes the toggleAll checkbox because toggleAll does not use a value.
+    */
     const facilityCheckboxes = document.querySelectorAll('.dropdown-item input[value]');
+
+    /*
+      Get the dropdown label text element.
+      This is the text shown on the dropdown button.
+    */
     const dropdownLabel = document.getElementById("dropdownLabel");
+
+    /*
+      Get the Select All / Deselect All checkbox.
+    */
     const toggleAll = document.getElementById("toggleAll");
+
+    /*
+      Get the text beside the Select All / Deselect All checkbox.
+    */
     const toggleAllLabel = document.getElementById("toggleAllLabel");
 
+    /*
+      Add a change event to each facility type checkbox.
+      Whenever a checkbox is selected or unselected, updateDropdown() will run.
+    */
     facilityCheckboxes.forEach(cb => {
         cb.addEventListener("change", updateDropdown);
     });
 
+    /*
+      Handle Select All / Deselect All behavior.
+
+      When the toggleAll checkbox is changed:
+      - If all facility types are currently selected, deselect all.
+      - Otherwise, select all.
+    */
     toggleAll.addEventListener("change", function () {
         const allSelected = [...facilityCheckboxes].every(cb => cb.checked);
 
@@ -247,24 +539,59 @@
             facilityCheckboxes.forEach(cb => cb.checked = true);
         }
 
+        /*
+          Refresh dropdown label and reapply filters.
+        */
         updateDropdown();
     });
 
+    /*
+      Apply selected facility type filters to the facility list.
+
+      This function:
+      1. Reads which facility type checkboxes are checked.
+      2. Filters allFacilities based on selected types.
+      3. Re-renders the facility cards.
+    */
     function applyFilters() {
+
+      /*
+        Get selected checkbox values.
+
+        flatMap is used because some checkbox values contain multiple types.
+        Example:
+        "Laboratory,Classroom" becomes ["Laboratory", "Classroom"].
+      */
       const checked = [...facilityCheckboxes]
         .filter(cb => cb.checked)
         .flatMap(cb => cb.value.split(','));
 
+      /*
+        Start from the full facility list.
+      */
       let filtered = [...allFacilities];
-      
+
+      /*
+        If toggleAll is not checked, filter facilities by selected facility types.
+        If toggleAll is checked, all facilities remain visible.
+      */
       if (!document.getElementById("toggleAll").checked) {
         filtered = filtered.filter(facility =>
           checked.includes(facility.facility_type)
         );
       }
+
+      /*
+        Display the filtered facilities.
+      */
       renderFacilities(filtered);
     }
 
+    /*
+      Update the dropdown UI text and checkbox state.
+
+      This function keeps the dropdown display synchronized with the selected checkboxes.
+    */
     function updateDropdown() {
         const checkedBoxes = [...facilityCheckboxes].filter(cb => cb.checked);
 
@@ -282,6 +609,10 @@
             checkedBoxes.length === 0 ||
             checkedBoxes.length === facilityCheckboxes.length
         ) {
+            /*
+              If no option is selected or all options are selected,
+              show the default label "Facility Type".
+            */
             dropdownLabel.textContent = "Facility Type";
         } else {
             // Extract text label for display instead of raw value
@@ -291,6 +622,10 @@
                     ? label.substring(0, 20) + "..."
                     : label;
         }
+
+        /*
+          Apply filters after updating the dropdown display.
+        */
         applyFilters();
     }
 
@@ -305,29 +640,73 @@
       } */
 
     /* ===== DATE PICKER ===== */
+
+    /*
+      When the filter date changes, apply filters again.
+
+      In this current code, applyFilters() mainly filters by facility type.
+      The date input is still kept as part of the filter bar interface.
+    */
     document.getElementById("filterDate").addEventListener("change", function() {
       applyFilters();
     });
+
     /* ===== TIME FORMAT ===== */
 
+    /*
+      Convert 24-hour time format into 12-hour AM/PM format.
+
+      Example:
+      13:30 becomes 1:30 PM
+      09:00 becomes 9:00 AM
+    */
     function formatTime(time) {
 
+      /*
+        Split the time value into hour and minute.
+      */
       const [hour, minute] = time.split(":");
 
+      /*
+        Convert hour from string to number.
+      */
       let h = parseInt(hour);
 
+      /*
+        Decide whether the time is AM or PM.
+      */
       const ampm =
         h >= 12 ? "PM" : "AM";
 
+      /*
+        Convert 24-hour format into 12-hour format.
+      */
       h = h % 12;
 
+      /*
+        If the hour becomes 0, display it as 12.
+        Example:
+        00:30 becomes 12:30 AM
+        12:30 remains 12:30 PM
+      */
       if (h === 0) h = 12;
 
+      /*
+        Return formatted time.
+      */
       return `${h}:${minute} ${ampm}`;
     }
 
     /* ===== LOGOUT ===== */
 
+    /*
+      Log the user out of the system.
+
+      This function:
+      1. Removes user data from localStorage.
+      2. Removes user data from sessionStorage.
+      3. Redirects the user to login.html.
+    */
     function logout() {
 
       localStorage.removeItem("user");
@@ -337,7 +716,7 @@
       window.location.href = "login.html";
     }
 
-    
+
 
   </script>
 

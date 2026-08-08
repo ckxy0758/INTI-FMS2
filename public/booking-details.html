@@ -1,29 +1,68 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <!-- Browser tab title -->
   <title>Booking Details</title>
+
+  <!--
+    Google Font: Poppins
+    This font is used to keep the page design consistent with the rest of the system.
+  -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Main stylesheet for the whole system -->
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body class="dashboard-body">
 
+  <!--
+    Shared header placeholder.
+    The actual header content is inserted by loadLayout() from component.js.
+  -->
   <div id="appHeader"></div>
 
+  <!--
+    Main dashboard layout wrapper.
+    It contains the sidebar on the left and the main page content on the right.
+  -->
   <div class="dashboard-layout">
+
+    <!--
+      Shared sidebar placeholder.
+      The actual sidebar content is inserted by loadLayout() from component.js.
+    -->
     <div id="appSidebar"></div>
 
+    <!-- Main content area of this booking details page -->
     <main class="main-content">
 
+      <!-- Page heading -->
       <h1 class="page-title">Booking Details</h1>
+
+      <!-- Short page description shown below the title -->
       <p class="page-subtitle">View your booking information and status.</p>
 
 
+      <!--
+        Booking details two-column layout.
+      -->
       <div class="booking-details-layout">
+
+        <!--
+          Left booking detail card.
+          It shows a loading message first.
+          JavaScript will replace this content after the booking data is fetched.
+        -->
         <div class="booking-detail-card" id="bookingLeftCard">
           Loading booking details...
         </div>
 
+        <!--
+          Right action/status card.
+          It shows a loading message first.
+          JavaScript will replace this content after the booking data is fetched.
+        -->
         <div class="booking-action-card" id="bookingRightCard">
           Loading action...
         </div>
@@ -32,73 +71,263 @@
     </main>
   </div>
 
+  <!--
+    Shared JavaScript file.
+    This file contains loadLayout(), which loads the header and sidebar.
+  -->
   <script src="component.js"></script>
 
   <script>
+    /*
+      Read the "source" value from the page URL.
+
+      Example URLs:
+      booking-details.html?id=12
+      booking-details.html?id=12&source=key-management
+      booking-details.html?id=12&source=manage-bookings
+
+      Purpose:
+      The source tells this page where the user came from.
+      This helps the system highlight the correct sidebar menu and show the correct back button.
+    */
     const source = new URLSearchParams(window.location.search).get("source");
 
-    // Determine which sidebar tab should be highlighted based on the URL
+    /*
+      Determine which sidebar tab should be highlighted.
+
+      Default:
+      - activities
+
+      If admin comes from Key Management:
+      - highlight key-management
+
+      If admin comes from Manage Bookings:
+      - highlight manage-bookings
+    */
     let activeSidebarMenu = "activities"; 
 
+    /*
+      If the source is key-management, highlight Key Management in the sidebar.
+      This is mainly used when admin opens booking details from the Key Management page.
+    */
     if (source === "key-management") {
       activeSidebarMenu = "key-management";
     } else if (source === "manage-bookings") {
+      /*
+        If the source is manage-bookings, highlight Manage Bookings in the sidebar.
+        This is mainly used when admin opens booking details from the Manage Bookings page.
+      */
       activeSidebarMenu = "manage-bookings";
     }
 
+    /*
+      Load the shared layout and pass in the active sidebar menu name.
+      This keeps the sidebar highlight correct based on where the user came from.
+    */
     loadLayout(activeSidebarMenu);
-    
-    // 1. Authenticate User
+
+    /*
+      1. Authenticate User
+
+      The system checks whether a user object exists in browser storage.
+
+      localStorage: (有remember me)
+      - Usually used when the user chooses to stay logged in.
+
+      sessionStorage: （没有选remember me）
+      - Usually used when the login should only last for the current browser session.
+
+      If the user is not found in either storage, the user is redirected to login.html.
+    */
     const user =
       JSON.parse(localStorage.getItem("user")) ||
       JSON.parse(sessionStorage.getItem("user"));
 
+    /*
+      If there is no logged-in user, block access to this page.
+      This prevents users from directly opening booking-details.html without logging in.
+    */
     if (!user) {
       window.location.href = "login.html";
     }
 
-    // 2. Read the Booking ID from the URL
+    /*
+      2. Read the Booking ID from the URL
+
+      The booking ID tells the page which booking record to load.
+
+      Example:
+      booking-details.html?id=8
+
+      In the example above:
+      - bookingId will be "8"
+    */
     const params = new URLSearchParams(window.location.search);
     const bookingId = params.get("id");
 
+    /*
+      If no booking ID is provided in the URL, redirect the user away from this page.
+
+      Admin:
+      - Redirect to admin.html
+
+      Student/Staff:
+      - Redirect to activities.html
+
+      This prevents the page from trying to load booking details without knowing which booking to fetch.
+    */
     if (!bookingId) {
       window.location.href = user.role === "admin" ? "admin.html" : "activities.html";
     }
 
+    /*
+      Store the current booking record after it is fetched from the backend.
+
+      This variable is useful because:
+      - It keeps the booking data available globally in this page.
+      - Other functions can reuse the loaded booking details if needed.
+    */
     let currentBooking = null;
 
+    /*
+      Start loading the booking details immediately after the page script runs.
+      This function will call the backend API and then render the page content.
+    */
     loadBookingDetails();
 
-    // 3. Fetch Data  
+    /*
+      3. Fetch Data
+
+      Function: loadBookingDetails()
+
+      Purpose:
+      - Sends a GET request to the backend API.
+      - Gets the full details of the selected booking.
+      - Displays the booking details on the page.
+      - Displays the correct action panel based on the booking status and booking flow.
+      - Handles QR scan auto actions if the URL contains auto_checkin=true.
+    */
     function loadBookingDetails() {
+      /*
+        API endpoint:
+        /api/bookings/${bookingId}
+
+        Example:
+        If bookingId is 8, the request becomes:
+        /api/bookings/8
+      */
       fetch(`/api/bookings/${bookingId}`, {
         headers: {
+          /*
+            Send the JWT token to the backend for authentication.
+
+            The backend can use this token to verify:
+            - Whether the user is logged in.
+            - Whether the user has permission to view this booking.
+          */
           "Authorization": "Bearer " + localStorage.getItem("authToken")
         }
       })
         .then(res => res.json())
         .then(data => {
+          /*
+            If the backend returns success: false,
+            show the error message and send the user back to activities.html.
+
+            This may happen if:
+            - Booking does not exist.
+            - User is not allowed to view it.
+            - Backend has an issue fetching the record.
+          */
           if (!data.success) {
             alert(data.message);
             window.location.href = "activities.html";
             return;
           }
 
+          /*
+            Save the returned booking object into currentBooking.
+            This makes the booking data available for this page.
+          */
           currentBooking = data.booking;
+
+          /*
+            Render the left side booking details card.
+            This shows the facility image, date, time, duration, purpose, and status.
+          */
           renderBookingDetails(currentBooking);
+
+          /*
+            Render the right side action/status panel.
+            This changes depending on:
+            - user role
+            - booking flow type
+            - booking status
+          */
           renderActionPanel(currentBooking);
 
           // --- NEW: AUTO CHECK-IN & KEY RETURN LOGIC ---
+
+          /*
+            Read the auto_checkin parameter from the URL.
+
+            Example:
+            booking-details.html?id=8&auto_checkin=true
+
+            Purpose:
+            This is used after a user scans a QR code.
+            The QR code can redirect the user to this page with auto_checkin=true,
+            so the system can automatically trigger the correct action.
+          */
           const autoCheckin = params.get("auto_checkin");
+
+          /*
+            Only run auto action if auto_checkin=true exists in the URL.
+          */
           if (autoCheckin === "true") {
-            // Remove parameter from URL so it doesn't loop if page is refreshed
+            /*
+              Remove auto_checkin=true from the URL after it has been detected.
+
+              Reason:
+              If the user refreshes the page, the action should not run repeatedly.
+              This prevents repeated check-in or repeated key-return attempts.
+            */
             window.history.replaceState(null, '', window.location.pathname + '?id=' + bookingId);
 
+            /*
+              Clean and normalize booking status.
+
+              Example:
+              "Key_Collected", " key_collected ", and "KEY_COLLECTED"
+              will all become:
+              "key_collected"
+
+              This makes status checking more reliable.
+            */
             const status = currentBooking.booking_status ? currentBooking.booking_status.trim().toLowerCase() : "";
 
+            /*
+              Auto check-in for direct reservation bookings.
+
+              This is mainly for cubicle-type bookings where:
+              - booking_flow_type is direct_reservation
+              - status is reserved or pending
+
+              If conditions are met, the system automatically calls checkInCubicle().
+            */
             if (currentBooking.booking_flow_type === "direct_reservation" && (status === "reserved" || status === "pending")) {
               checkInCubicle();
             } 
+            /*
+              Auto key return for bookings that involve key collection.
+
+              This applies to:
+              - staff_key_approval
+              - normal_approval
+
+              The key can only be returned when the current status is key_collected.
+              If conditions are met, the system automatically calls returnKey().
+            */
             else if ((currentBooking.booking_flow_type === "staff_key_approval" || currentBooking.booking_flow_type === "normal_approval") && status === "key_collected") {
               returnKey(); // Automatically triggers the key return pop-up
             }
@@ -107,12 +336,50 @@
 
         })
         .catch(() => {
+          /*
+            If the fetch request fails completely, show a simple error message.
+
+            This may happen if:
+            - Backend server is not running.
+            - Network request fails.
+            - API route is unavailable.
+          */
           alert("Failed to load booking details.");
         });
     }
 
-    // 4. Render Left Side (Information)
+    /*
+      4. Render Left Side (Information)
+
+      Function: renderBookingDetails(booking)
+
+      Purpose:
+      - Displays the main booking information inside bookingLeftCard.
+      - Uses template literals to insert booking data into the HTML.
+
+      Data shown:
+      - Booking ID
+      - Booking status
+      - Facility image
+      - Facility name
+      - Facility description
+      - Location
+      - Booking date
+      - Booking time
+      - Duration
+      - Purpose/remark
+    */
     function renderBookingDetails(booking) {
+      /*
+        Insert booking details into the left card.
+
+        Note:
+        String(booking.booking_id).padStart(3, "0")
+        formats booking IDs like:
+        1  -> 001
+        12 -> 012
+        123 -> 123
+      */
       document.getElementById("bookingLeftCard").innerHTML = `
         <div class="booking-detail-header">
           <h2>Booking ID: #${String(booking.booking_id).padStart(3, "0")}</h2>
@@ -146,21 +413,84 @@
       `;
     }
 
-    // 5. Render Right Side (Action Buttons)
+    /*
+      5. Render Right Side (Action Buttons)
+
+      Function: renderActionPanel(booking)
+
+      Purpose:
+      This function decides what should appear in the right-side action card.
+
+      The output depends on:
+      1. User role
+         - admin
+         - student/staff
+
+      2. Booking flow type
+         - direct_reservation
+         - staff_key_approval
+         - normal_approval
+         - other/default flows
+
+      3. Booking status
+         - pending
+         - reserved
+         - approved
+         - key_collected
+         - completed
+         - etc.
+    */
     function renderActionPanel(booking) {
+      /*
+        Get the right-side card element where action information will be displayed.
+      */
       const card = document.getElementById("bookingRightCard");
+
+      /*
+        Normalize booking status so that later conditions are easier to compare.
+
+        Example:
+        " KEY_COLLECTED " becomes "key_collected"
+      */
       const status = booking.booking_status ? booking.booking_status.trim().toLowerCase() : "";
 
       // ADMIN SPECIFIC LOGIC 
+
+      /*
+        If the logged-in user is an admin:
+        - The admin only views the booking record.
+        - Admin does not see student/staff QR action buttons.
+        - The back button destination changes based on the source page.
+      */
       if (user.role === "admin") {
+        /*
+          Default admin back button.
+          If no source is provided, it simply goes back to the previous browser page.
+        */
         let backButtonHtml = `<button class="action-secondary-btn full-width-btn" style="margin-top: 15px;" onclick="window.history.back()">Go Back</button>`;
-        
+
+        /*
+          If admin came from Key Management,
+          show a direct button back to key-management.html.
+        */
         if (source === "key-management") {
           backButtonHtml = `<button class="action-secondary-btn full-width-btn" style="margin-top: 15px;" onclick="window.location.href='key-management.html'">Back to Key Management</button>`;
         } else if (source === "manage-bookings") {
+          /*
+            If admin came from Manage Bookings,
+            show a direct button back to manage-bookings.html.
+          */
           backButtonHtml = `<button class="action-secondary-btn full-width-btn" style="margin-top: 15px;" onclick="window.location.href='manage-bookings.html'">Back to Manage Bookings</button>`;
         }
 
+        /*
+          Admin action panel content.
+          It displays:
+          - Admin Record View title
+          - Short explanation
+          - Current booking status
+          - Back button
+        */
         card.innerHTML = `
           <h2>Admin Record View</h2>
           <p>You are viewing this booking record as a system administrator.</p>
@@ -172,15 +502,44 @@
 
           ${backButtonHtml}
         `;
+
+        /*
+          Stop the function here because admin does not need the student/staff action logic below.
+        */
         return; 
       }
 
       // STUDENT / STAFF LOGIC
 
       // Cubicle Flow
+
+      /*
+        Direct reservation flow:
+        This is used for bookings that do not need admin approval.
+        In this system, it is used for cubicle-style reservations.
+
+        User action:
+        - User must scan a QR code to check in.
+        - The button is disabled because the action should be triggered by QR scan,
+          not by manually clicking the button.
+      */
       if (booking.booking_flow_type === "direct_reservation") {
+        /*
+          Check whether the booking is currently within the allowed check-in time window.
+          The check-in window is calculated using isWithinCheckInWindow().
+        */
         const canCheckIn = isWithinCheckInWindow(booking);
 
+        /*
+          Render cubicle check-in panel.
+          It shows:
+          - QR scan instruction
+          - check-in window
+          - booking start time
+          - current status
+          - disabled check-in button
+          - back to activities button
+        */
         card.innerHTML = `
           <h2>Cubicle Check In</h2>
           <p>Please scan the QR code located at your cubicle to check in.</p>
@@ -205,11 +564,39 @@
             Back to Activities
           </button>
         `;
+
+        /*
+          Stop the function after direct reservation panel is rendered.
+        */
         return;
       }
 
       // Key Approval Flow (UPDATED FOR SCANNER)
+
+      /*
+        Key approval flow:
+        This applies when the booking needs key collection and key return.
+
+        Supported booking flow types:
+        - staff_key_approval
+        - normal_approval
+
+        User action:
+        - User scans QR code at facility desk to return key.
+        - Button is disabled because the real action is triggered by QR scan.
+      */
       if (booking.booking_flow_type === "staff_key_approval" || booking.booking_flow_type === "normal_approval") {
+          /*
+            Render key return panel.
+
+            Button display logic:
+            1. If status is key_collected:
+               - Show "Return Key (Scan QR Code)" button.
+            2. If status is completed:
+               - Show "Key Already Returned".
+            3. Otherwise:
+               - Show "Return Key Not Available Yet".
+          */
           card.innerHTML = `
           <h2>Key Return</h2>
           <p>Please scan the QR code at the facility desk to return the key.</p>
@@ -231,10 +618,21 @@
             Back to Activities
           </button>
         `;
+
+        /*
+          Stop the function after key return panel is rendered.
+        */
         return;
       }
 
       // Default Pending Flow
+
+      /*
+        Default action panel:
+        This is used when the booking does not match direct reservation or key approval flow.
+
+        It simply shows the booking status and tells the user the request is being processed.
+      */
       card.innerHTML = `
         <h2>Booking Status</h2>
         <p>Your booking request is being processed.</p>
@@ -250,48 +648,171 @@
       `;
     }
 
-    // 6. Action Functions
+    /*
+      6. Action Functions
+
+      These functions send update requests to the backend.
+
+      checkInCubicle():
+      - Used for QR-based cubicle check-in.
+
+      returnKey():
+      - Used for QR-based key return.
+    */
+
+    /*
+      Function: checkInCubicle()
+
+      Purpose:
+      - Sends a PUT request to the backend to check in a direct reservation booking.
+      - Usually triggered automatically after scanning a QR code.
+
+      Backend endpoint:
+      /api/bookings/${bookingId}/check-in
+
+      Request body:
+      - user_id is sent so the backend knows which user is performing the action.
+    */
     function checkInCubicle() {
       fetch(`/api/bookings/${bookingId}/check-in`, {
         method: "PUT",
         headers: { 
+          /*
+            Tell the backend that request body is JSON.
+          */
           "Content-Type": "application/json",
+
+          /*
+            Send JWT token for authentication.
+          */
           "Authorization": "Bearer " + localStorage.getItem("authToken")
         },
+        /*
+          Send logged-in user ID to the backend.
+        */
         body: JSON.stringify({ user_id: user.id })
       })
       .then(res => res.json())
       .then(data => {
+        /*
+          Show success or error modal based on backend response.
+
+          If successful:
+          - showAlert() receives a callback.
+          - After user clicks OK, loadBookingDetails() runs again to refresh status.
+        */
         showAlert(data.message, data.success ? "success" : "error", data.success ? () => loadBookingDetails() : null);
       })
       .catch(() => {
+        /*
+          Show error modal if request fails.
+        */
         showAlert("Check-in failed. Please try again.", "error");
       });
     }
 
+    /*
+      Function: returnKey()
+
+      Purpose:
+      - Sends a PUT request to the backend to mark the key as returned.
+      - Usually triggered automatically after scanning the QR code at the facility desk.
+
+      Backend endpoint:
+      /api/bookings/${bookingId}/return-key
+
+      Request body:
+      - user_id is sent so the backend knows who is returning the key.
+    */
     function returnKey() {
     fetch(`/api/bookings/${bookingId}/return-key`, {
         method: "PUT",
         headers: { 
+          /*
+            Tell the backend that request body is JSON.
+          */
           "Content-Type": "application/json",
+
+          /*
+            Send JWT token for authentication.
+          */
           "Authorization": "Bearer " + localStorage.getItem("authToken")
         },
+        /*
+          Send logged-in user ID to the backend.
+        */
         body: JSON.stringify({ user_id: user.id })
       })
       .then(res => res.json())
       .then(data => {
+        /*
+          Show success or error modal based on backend response.
+
+          If successful:
+          - Refresh booking details after user closes the modal.
+        */
         showAlert(data.message, data.success ? "success" : "error", data.success ? () => loadBookingDetails() : null);
       })
       .catch(() => {
+        /*
+          Show error modal if request fails.
+        */
         showAlert("Key return failed. Please try again.", "error");
       });
     }
 
-    // 7. Utility Functions
+    /*
+      7. Utility Functions
+
+      These helper functions are used to:
+      - Format booking status into user-friendly wording.
+      - Check whether the current time is inside the check-in window.
+      - Format dates and times.
+      - Log out the user.
+      - Show and close the custom modal.
+    */
+
+    /*
+      Function: formatStatus(booking)
+
+      Purpose:
+      Converts database status values into user-friendly display text.
+
+      Why this is needed:
+      Database values are usually stored in technical format, such as:
+      - pending
+      - key_collected
+      - pending_payment
+      - direct_reservation
+
+      Users should see clearer words, such as:
+      - Submitted
+      - Key Collected
+      - Pending Payment
+      - Cubicle Reserved
+
+      This function also handles different booking flow types differently.
+    */
     function formatStatus(booking) {
+      /*
+        Normalize booking_status.
+        If booking_status does not exist, use an empty string.
+      */
       const bookingStatus = booking.booking_status ? booking.booking_status.trim().toLowerCase() : "";
+
+      /*
+        Normalize payment_status.
+        If payment_status does not exist, use an empty string.
+      */
       const paymentStatus = booking.payment_status ? booking.payment_status.trim().toLowerCase() : "";
 
+      /*
+        Status display for direct reservation bookings.
+
+        Example:
+        - reserved becomes Cubicle Reserved
+        - checked_in becomes Checked In
+      */
       if (booking.booking_flow_type === "direct_reservation") {
         if (bookingStatus === "reserved") return "Cubicle Reserved";
         if (bookingStatus === "checked_in") return "Checked In";
@@ -299,6 +820,14 @@
         if (bookingStatus === "completed") return "Completed";
       }
 
+      /*
+        Status display for bookings that involve approval and key handling.
+
+        Example:
+        - pending becomes Submitted
+        - key_collected becomes Key Collected
+        - completed becomes Returned
+      */
     if (booking.booking_flow_type === "staff_key_approval" || booking.booking_flow_type === "normal_approval") {
         if (bookingStatus === "pending") return "Submitted";
         if (bookingStatus === "approved") return "Approved";
@@ -306,107 +835,405 @@
         if (bookingStatus === "completed") return "Returned";
       }
 
+      /*
+        Status display for payment-required bookings.
+
+        This checks payment_status instead of only booking_status.
+      */
       if (booking.payment_required === 1 || booking.payment_required === "1") {
         if (paymentStatus === "pending_payment") return "Pending Payment";
         if (paymentStatus === "payment_submitted") return "Payment Submitted";
         if (paymentStatus === "verified") return "Payment Verified";
       }
 
+      /*
+        General fallback status display.
+        These are used when the booking does not match the special flow types above.
+      */
       if (bookingStatus === "pending") return "Pending";
       if (bookingStatus === "approved") return "Approved";
       if (bookingStatus === "rejected") return "Rejected";
       if (bookingStatus === "cancelled") return "Cancelled";
       if (bookingStatus === "completed") return "Completed";
 
+      /*
+        If no condition matches, return Unknown.
+        This helps avoid showing empty text to the user.
+      */
       return "Unknown";
     }
 
+    /*
+      Function: isWithinCheckInWindow(booking)
+
+      Purpose:
+      Checks whether the current time is inside the allowed check-in time window.
+
+      Logic:
+      1. Convert booking date and start time into a Date object.
+      2. Convert booking created_at into a Date object.
+      3. Choose the later time between:
+         - booking start time
+         - booking created time
+
+      Reason for choosing later time:
+      - If the user books before the start time, use the booking start time.
+      - If the user books after the start time, use the created time.
+
+      Check-in window:
+      - 15 minutes before base time
+      - 15 minutes after base time
+    */
     function isWithinCheckInWindow(booking) {
+      /*
+        Combine booking_date and start_time into one full date-time value.
+      */
       const startDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
+
+      /*
+        Convert created_at from database into Date object.
+      */
       const createdAt = new Date(booking.created_at);
-      
+
+      /*
+        Use the later time as the base time.
+      */
       const baseTime = createdAt > startDateTime ? createdAt : startDateTime;
 
+      /*
+        Calculate check-in start time: 15 minutes before base time.
+      */
       const checkInStart = new Date(baseTime);
       checkInStart.setMinutes(checkInStart.getMinutes() - 15);
+
+      /*
+        Calculate check-in end time: 15 minutes after base time.
+      */
       const checkInEnd = new Date(baseTime);
       checkInEnd.setMinutes(checkInEnd.getMinutes() + 15);
-      
+
+      /*
+        Get the current time and check whether it is within the allowed window.
+      */
       const now = new Date();
       return now >= checkInStart && now <= checkInEnd;
     }
 
+    /*
+      Function: getCheckInStartTime(booking)
+
+      Purpose:
+      Calculates and displays the start time of the check-in window.
+
+      Example:
+      If base time is 10:00 AM,
+      check-in start time will be 9:45 AM.
+    */
     function getCheckInStartTime(booking) {
+      /*
+        Convert booking start date and time into a Date object.
+      */
       const startDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
+
+      /*
+        Convert created_at into a Date object.
+      */
       const createdAt = new Date(booking.created_at);
+
+      /*
+        Use the later time as the base time.
+      */
       const baseTime = createdAt > startDateTime ? createdAt : startDateTime;
 
+      /*
+        Move base time 15 minutes earlier to get the check-in start time.
+      */
       baseTime.setMinutes(baseTime.getMinutes() - 15);
+
+      /*
+        Format the time into 12-hour format before displaying.
+      */
       return formatTimeFromDate(baseTime);
     }
 
+    /*
+      Function: getCheckInEndTime(booking)
+
+      Purpose:
+      Calculates and displays the end time of the check-in window.
+
+      Example:
+      If base time is 10:00 AM,
+      check-in end time will be 10:15 AM.
+    */
     function getCheckInEndTime(booking) {
+      /*
+        Convert booking start date and time into a Date object.
+      */
       const startDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
+
+      /*
+        Convert created_at into a Date object.
+      */
       const createdAt = new Date(booking.created_at);
+
+      /*
+        Use the later time as the base time.
+      */
       const baseTime = createdAt > startDateTime ? createdAt : startDateTime;
 
+      /*
+        Move base time 15 minutes later to get the check-in end time.
+      */
       baseTime.setMinutes(baseTime.getMinutes() + 15);
+
+      /*
+        Format the time into 12-hour format before displaying.
+      */
       return formatTimeFromDate(baseTime);
     }
 
+    /*
+      Function: formatTimeFromDate(date)
+
+      Purpose:
+      Converts a JavaScript Date object into a readable 12-hour time format.
+
+      Example:
+      13:05 becomes 1:05 PM
+      09:30 becomes 9:30 AM
+    */
     function formatTimeFromDate(date) {
+      /*
+        Get hour from Date object.
+      */
       let h = date.getHours();
+
+      /*
+        Get minutes and ensure it always has two digits.
+        Example:
+        5 becomes 05
+      */
       const minute = String(date.getMinutes()).padStart(2, "0");
+
+      /*
+        Determine whether the time is AM or PM.
+      */
       const ampm = h >= 12 ? "PM" : "AM";
+
+      /*
+        Convert 24-hour format into 12-hour format.
+      */
       h = h % 12;
+
+      /*
+        If hour becomes 0, it should be displayed as 12.
+        Example:
+        00:30 becomes 12:30 AM
+        12:30 stays 12:30 PM
+      */
       if (h === 0) h = 12;
+
+      /*
+        Return formatted time.
+      */
       return `${h}:${minute} ${ampm}`;
     }
 
+    /*
+      Function: formatDate(dateValue)
+
+      Purpose:
+      Converts a date value into a readable Malaysian English date format.
+
+      Example output:
+      09 Jul 2026
+    */
     function formatDate(dateValue) {
       return new Date(dateValue).toLocaleDateString("en-MY", {
         day: "2-digit", month: "short", year: "numeric"
       });
     }
 
+    /*
+      Function: formatTime(time)
+
+      Purpose:
+      Converts a time string from 24-hour format into 12-hour format.
+
+      Expected input format:
+      HH:mm:ss or HH:mm
+
+      Example:
+      14:30:00 becomes 2:30 PM
+      09:00:00 becomes 9:00 AM
+    */
     function formatTime(time) {
+      /*
+        Split the time string into hour and minute.
+      */
       const [hour, minute] = time.split(":");
+
+      /*
+        Convert hour from string to number.
+      */
       let h = parseInt(hour);
+
+      /*
+        Decide AM or PM based on the hour.
+      */
       const ampm = h >= 12 ? "PM" : "AM";
+
+      /*
+        Convert 24-hour format to 12-hour format.
+      */
       h = h % 12;
+
+      /*
+        Display 0 as 12 for midnight/noon format.
+      */
       if (h === 0) h = 12;
+
+      /*
+        Return formatted time.
+      */
       return `${h}:${minute} ${ampm}`;
     }
 
+    /*
+      Function: logout()
+
+      Purpose:
+      Clears the stored user login data and redirects the user to login.html.
+
+      Note:
+      This function removes user data from localStorage and sessionStorage.
+    */
     function logout() {
       localStorage.removeItem("user");
       sessionStorage.removeItem("user");
       window.location.href = "login.html";
     }
 
+    /*
+      Function: showAlert(message, type, onClose)
+
+      Purpose:
+      Displays a custom modal alert instead of using the browser alert.
+
+      Parameters:
+      - message:
+        The text message shown in the modal.
+
+      - type:
+        Determines whether the modal is success or error.
+        If type is "success", green check icon is shown.
+        Otherwise, red error icon is shown.
+
+      - onClose:
+        Optional callback function.
+        If provided, it runs after the user closes the modal by clicking OK.
+    */
     function showAlert(message, type, onClose) {
+      /*
+        Set modal icon based on the alert type.
+
+        Success:
+        - Green circle with check icon.
+
+        Error:
+        - Red circle with cross icon.
+      */
       document.getElementById("modalIcon").innerHTML = type === "success"
         ? `<div style="width:44px;height:44px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;"><svg xmlns="http://www.w3.org/2000/svg" height="36px" viewBox="0 -960 960 960" width="36px" fill="#22c55e"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg></div>`
         : `<div style="width:44px;height:44px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;"><svg xmlns="http://www.w3.org/2000/svg" height="36px" viewBox="0 -960 960 960" width="36px" fill="#D12E26"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg></div>`;
+
+      /*
+        Set modal title depending on success or error.
+      */
       document.getElementById("modalTitle").innerText = type === "success" ? "Success" : "Error";
+
+      /*
+        Apply modal title styling.
+      */
       document.getElementById("modalTitle").style.color = "#D12E26";
       document.getElementById("modalTitle").style.fontSize = "24px";
+
+      /*
+        Display the message passed into the function.
+      */
       document.getElementById("modalMessage").innerText = message;
       document.getElementById("modalMessage").style.fontSize = "16px";
+
+      /*
+        Add OK button to close the modal.
+
+        The button calls closeModal('cb').
+        The 'cb' value is used to tell closeModal() to run callback if one exists.
+      */
       document.getElementById("modalButtons").innerHTML = `
         <button onclick="closeModal('cb')" class="custom-modal-btn-ok">OK</button>
       `;
+
+      /*
+        Store callback function globally if provided.
+
+        This allows closeModal() to run the callback later after the user clicks OK.
+      */
       if (onClose) window._modalCallback = onClose;
+
+      /*
+        Show the custom modal by changing display to flex.
+      */
       document.getElementById("customModal").style.display = "flex";
     }
 
+    /*
+      Function: closeModal(cb)
+
+      Purpose:
+      Closes the custom modal.
+
+      Parameter:
+      - cb:
+        If cb equals 'cb' and a callback exists,
+        the callback will run after the modal closes.
+
+      This is useful when the page needs to refresh booking details after a successful action.
+    */
     function closeModal(cb) {
+      /*
+        Hide the modal.
+      */
       document.getElementById("customModal").style.display = "none";
+
+      /*
+        If a callback exists, run it and then clear it.
+        This prevents the same callback from running again accidentally.
+      */
       if (cb === 'cb' && window._modalCallback) { window._modalCallback(); window._modalCallback = null; }
     }
 
   </script>
 
+  <!--
+    Custom modal structure.
+
+    This modal is used by showAlert() to display success/error messages.
+
+    Elements:
+    - modalIcon:
+      The success or error icon.
+
+    - modalTitle:
+      The modal title, usually "Success" or "Error".
+
+    - modalMessage:
+      The message returned from backend or error handling.
+
+    - modalButtons:
+      The OK button is inserted here dynamically by JavaScript.
+  -->
 <div id="customModal" class="custom-modal-overlay">
     <div class="custom-modal-box">
       <div id="modalIcon" class="custom-modal-icon"></div>

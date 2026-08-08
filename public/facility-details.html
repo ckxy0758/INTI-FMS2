@@ -5,25 +5,38 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body class="dashboard-body">
-
   <div id="appHeader"></div>
-
   <div class="dashboard-layout">
-
     <div id="appSidebar"></div>
-
     <main class="main-content">
-
+      <!--
+        details-layout separates the page into two main sections:
+        1. Left side: facility details
+        2. Right side: booking form
+      -->
       <div class="details-layout">
 
+        <!--
+          Left side container.
+          Facility details such as image, name, description, location, rules, and additional information
+          will be inserted here using JavaScript after fetching data from the backend.
+        -->
         <div class="details-left" id="facilityDetails"></div>
 
+        <!--
+          Right side booking panel.
+          Users fill in this form to submit a facility booking request.
+        -->
         <div class="booking-panel">
 
+          <!-- Booking form heading -->
           <h2>Booking Details</h2>
 
+          <!--
+            Program selection.
+            The user must choose which school/program they belong to before booking.
+          -->
           <label>Select Program</label>
           <select id="program">
             <option value="">Select Program</option>
@@ -37,30 +50,59 @@
             <option value="Centre of Continuous Learning (CCL)">Centre of Continuous Learning (CCL)</option>
 
 
-            
+
           </select>
 
+          <!--
+            Booking date input.
+            The minimum date will be set to today's date using setMinimumBookingDate(),
+            so users cannot select dates before today.
+          -->
           <label>Date</label>
           <input type="date" id="bookingDate">
 
+          <!--
+            Available time slot dropdown.
+            The options are loaded dynamically after the user selects a date.
+          -->
           <label>Available Time Slot</label>
           <select id="timeSlot">
             <option value="">Select a date first</option>
           </select>
 
+          <!--
+            Equipment section.
+            This section is displayed only when the selected facility has equipment options.
+            If the facility has no equipment, JavaScript hides this section.
+          -->
           <div id="equipmentSection">
 
             <label>Equipment / Requirements</label>
 
+            <!--
+              Equipment checkboxes will be generated here using renderEquipment().
+            -->
             <div id="equipmentList" class="equipment-list"></div>
 
           </div>
 
+          <!--
+            Remark field.
+            Users can explain their booking purpose or special request here.
+          -->
           <label>Remark</label>
           <textarea id="remark" placeholder="Enter booking remark"></textarea>
 
+          <!--
+            Submit button.
+            When clicked, it calls submitBooking() to validate the form and send the booking request.
+          -->
           <button onclick="submitBooking()">Confirm Booking</button>
 
+          <!--
+            Message area.
+            This is used to display validation errors or backend error messages.
+          -->
           <p id="message"></p>
 
         </div>
@@ -71,70 +113,186 @@
 
   </div>
 
+  <!--
+    Booking success / information modal.
+    This modal appears after the booking request is submitted successfully.
+    The title and message can change depending on the backend response.
+  -->
   <div id="bookingModal" class="modal-overlay">
     <div class="booking-modal">
+
+      <!--
+        Modal icon.
+        Usually shows ✓, but changes to RM when payment is required.
+      -->
       <div class="success-icon" id="modalIcon">✓</div>
 
+      <!-- Modal title, updated dynamically from backend response -->
       <h2 id="modalTitle">Booking Request Submitted</h2>
 
+      <!-- Modal message, updated dynamically from backend response -->
       <p id="modalMessage">
         Your booking request has been submitted successfully.
       </p>
 
+      <!--
+        OK button with countdown.
+        The countdown automatically redirects the user after 3 seconds.
+      -->
       <button onclick="closeBookingModal()">
         OK (<span id="countdown">3</span>s)
       </button>
     </div>
   </div>
 
+  <!--
+    Shared component script.
+    This contains the loadLayout() function used to load the header and sidebar.
+  -->
   <script src="component.js"></script>
 
   <script>
+    /*
+      Load the common page layout and highlight the "facilities" sidebar menu.
+
+      This means:
+      - Header will be loaded into appHeader
+      - Sidebar will be loaded into appSidebar
+      - Facilities menu will be shown as the active/current page
+    */
     loadLayout("facilities");
 
+    /*
+      Get the logged-in user data from browser storage.
+
+      localStorage:
+      - Stores user data even after the browser is closed.
+
+      sessionStorage:
+      - Stores user data only while the current browser tab/session is open.
+
+      The system checks localStorage first.
+      If no user is found there, it checks sessionStorage.
+    */
     const user =
       JSON.parse(localStorage.getItem("user")) ||
       JSON.parse(sessionStorage.getItem("user"));
 
+    /*
+      Authentication check.
+
+      If there is no user data in storage, it means the user is not logged in.
+      The system redirects the user back to the login page.
+    */
     if (!user) {
       window.location.href = "login.html";
     }
 
+    /*
+      Read the facility ID from the page URL.
+
+      Example URL:
+      facility-details.html?id=3
+
+      In this example:
+      - id is 3
+      - facilityId becomes "3"
+
+      The facility ID is needed to fetch the correct facility details from the backend.
+    */
     const params = new URLSearchParams(window.location.search);
     const facilityId = params.get("id");
 
+    /*
+      If no facility ID exists in the URL, the page does not know which facility to display.
+
+      In that case, redirect the user back to their correct dashboard:
+      - Staff goes to staff.html
+      - Student goes to student.html
+    */
     if (!facilityId) {
       window.location.href =
         user.role === "staff" ? "staff.html" : "student.html";
     }
 
+    /*
+      Store the currently loaded facility data.
+
+      This variable is used later when submitting a booking,
+      especially to check whether the facility is still available.
+    */
     let currentFacility = null;
 
+    /*
+      Initialize the page.
+
+      setMinimumBookingDate():
+      - Prevents users from selecting past dates.
+
+      loadFacility():
+      - Loads the selected facility information from the backend.
+    */
     setMinimumBookingDate();
     loadFacility();
 
+    /*
+      When the user selects or changes a booking date,
+      automatically load available time slots for that selected date.
+    */
     document
       .getElementById("bookingDate")
       .addEventListener("change", loadAvailableSlots);
 
+    /*
+      Set the minimum selectable booking date to today.
+
+      This prevents users from selecting a date before today in the date picker.
+    */
     function setMinimumBookingDate() {
       const today = new Date().toISOString().split("T")[0];
       document.getElementById("bookingDate").setAttribute("min", today);
     }
 
+    /*
+      Load available booking time slots for the selected facility and date.
+
+      This function:
+      1. Gets the selected booking date.
+      2. Checks whether a date is selected.
+      3. Blocks weekend bookings.
+      4. Calls the backend API to get available slots.
+      5. Filters out slots that start less than 30 minutes from now.
+      6. Displays the available slots in the dropdown.
+    */
     function loadAvailableSlots() {
       const bookingDate = document.getElementById("bookingDate").value;
       const timeSlot = document.getElementById("timeSlot");
       const message = document.getElementById("message");
 
+      /*
+        Show a loading option while waiting for the backend response.
+        Also clear any previous error message.
+      */
       timeSlot.innerHTML = `<option value="">Loading available slots...</option>`;
       message.innerText = "";
 
+      /*
+        If the user has not selected a date, reset the dropdown
+        and stop the function.
+      */
       if (!bookingDate) {
         timeSlot.innerHTML = `<option value="">Select a date first</option>`;
         return;
       }
 
+      /*
+        Do not allow bookings on weekends.
+
+        If the selected date is Saturday or Sunday:
+        - Show "No booking on weekends" in the dropdown.
+        - Show an error message to the user.
+        - Stop the function.
+      */
       if (isWeekend(bookingDate)) {
         timeSlot.innerHTML = `<option value="">No booking on weekends</option>`;
         message.style.color = "red";
@@ -142,27 +300,69 @@
         return;
       }
 
+      /*
+        Request available slots from the backend.
+
+        API endpoint:
+        /api/facilities/:facilityId/available-slots?date=selectedDate
+
+        The Authorization header sends the JWT token so the backend can verify the user.
+      */
       fetch(`/api/facilities/${facilityId}/available-slots?date=${bookingDate}`, {
         headers: {
           "Authorization": "Bearer " + localStorage.getItem("authToken")
         }
       })
-        
+
+        /*
+          Convert the backend response into JSON format.
+        */
         .then(res => res.json())
+
+        /*
+          Process the available slot data returned from the backend.
+        */
         .then(data => {
+          /*
+            Reset the dropdown before adding available slots.
+          */
           timeSlot.innerHTML = `<option value="">Select Available Time Slot</option>`;
 
+          /*
+            If the backend response is not successful or there are no slots,
+            show "No available slots" and stop.
+          */
           if (!data.success || data.slots.length === 0) {
             timeSlot.innerHTML = `<option value="">No available slots</option>`;
             return;
           }
 
+          /*
+            Get the current date and time.
+            This is used to make sure users cannot book a time slot too close to the current time.
+          */
           const now = new Date();
 
+          /*
+            Loop through each available slot from the backend.
+          */
           data.slots.forEach(slot => {
+            /*
+              Combine selected booking date with the slot start time
+              to create a full date-time value.
+            */
             const slotDateTime = new Date(`${bookingDate}T${slot.start_time}`);
+
+            /*
+              Calculate how many minutes are left before the slot starts.
+            */
             const diffMinutes = (slotDateTime - now) / (1000 * 60);
 
+            /*
+              Only show time slots that are at least 30 minutes away.
+
+              This prevents users from booking too close to the start time.
+            */
             if (diffMinutes >= 30) {
               timeSlot.innerHTML += `
                 <option value="${slot.start_time}|${slot.end_time}">
@@ -172,63 +372,152 @@
             }
           });
 
+          /*
+            If no valid slot was added after filtering,
+            show "No available slots".
+          */
           if (timeSlot.options.length === 1) {
             timeSlot.innerHTML = `<option value="">No available slots</option>`;
           }
         })
+
+        /*
+          If the API request fails, show an error option in the dropdown.
+        */
         .catch(() => {
           timeSlot.innerHTML = `<option value="">Failed to load slots</option>`;
         });
     }
 
+    /*
+      Check whether the selected booking date and start time have already passed.
+
+      Returns:
+      - true if the selected time is in the past
+      - false if the selected time is still in the future
+    */
     function isPastBookingDateTime(bookingDate, startTime) {
       const selectedDateTime = new Date(`${bookingDate}T${startTime}`);
       const now = new Date();
       return selectedDateTime < now;
     }
 
+    /*
+      Check whether a selected date falls on a weekend.
+
+      JavaScript getDay() returns:
+      - 0 for Sunday
+      - 6 for Saturday
+
+      Returns:
+      - true if the date is Saturday or Sunday
+      - false if the date is Monday to Friday
+    */
     function isWeekend(dateValue) {
       const day = new Date(dateValue).getDay();
       return day === 0 || day === 6;
     }
 
+    /*
+      Load facility information from the backend based on the facility ID.
+
+      This function:
+      1. Fetches the selected facility details.
+      2. Checks if the facility exists.
+      3. Checks if the facility is available.
+      4. Stores the facility data in currentFacility.
+      5. Displays equipment options if available.
+      6. Renders the facility details on the left side of the page.
+    */
     function loadFacility() {
       fetch(`/api/facilities/${facilityId}`, {
         headers: {
           "Authorization": "Bearer " + localStorage.getItem("authToken")
         }
       })
+        /*
+          Convert backend response to JSON.
+        */
         .then(res => res.json())
+
+        /*
+          Handle the facility data returned from the backend.
+        */
         .then(data => {
           const container = document.getElementById("facilityDetails");
 
+          /*
+            If the facility cannot be found, show an error message in the details area.
+          */
           if (!data.success) {
             container.innerHTML = "<p>Facility not found.</p>";
             return;
           }
 
+          /*
+            Store the facility object returned from the backend.
+          */
           const facility = data.facility;
 
+          /*
+            Check whether the facility is currently available.
+
+            If the facility is unavailable or under maintenance:
+            - Show an alert.
+            - Redirect the user back to their dashboard.
+            - Stop the function.
+          */
           if (facility.availability_status !== 'available') {
              alert("This facility is currently " + facility.availability_status + ".");
              window.location.href = (user.role === "staff" ? "staff.html" : "student.html");
              return;
           }
 
+          /*
+            Save the loaded facility into currentFacility
+            so it can be reused later during booking submission.
+          */
           currentFacility = facility;
 
+          /*
+            Create equipment checkboxes based on the facility equipment list.
+          */
           renderEquipment(facility.equipment);
 
+          /*
+            Get the booking flow type of the facility.
+
+            If no booking flow type is provided, use "normal_approval" as the default.
+          */
           const bookingFlowType = facility.booking_flow_type || "normal_approval";
 
           const equipmentSection = document.getElementById("equipmentSection");
 
+          /*
+            Show the equipment section only if the facility has equipment data.
+
+            If equipment is empty, hide the equipment section.
+          */
           if (facility.equipment && facility.equipment.trim() !== "") {
               equipmentSection.style.display = "block";
           } else {
               equipmentSection.style.display = "none";
           }
 
+          /*
+            Display facility details in the left side of the page.
+
+            The content includes:
+            - Facility image
+            - Availability badge
+            - Facility name
+            - Description
+            - Facility type
+            - Location
+            - Maximum number of people
+            - Rules
+            - Additional information
+          */
           container.innerHTML = `
             <div class="facility-image-wrapper">
               <img
@@ -290,6 +579,16 @@
         });
     }
 
+    /*
+      Format facility rules into bullet-style lines.
+
+      The rules are usually stored as a text block with multiple lines.
+      This function:
+      - Splits the text by line breaks
+      - Removes empty lines
+      - Removes existing dash symbols at the start of each line
+      - Converts each rule into a styled bullet row
+    */
     function formatRules(rules) {
       if (!rules) return "No rules provided.";
       const lines = rules
@@ -305,6 +604,20 @@
       return lines;
     }
 
+    /*
+      Submit the booking form.
+
+      This function:
+      1. Gets all form values.
+      2. Extracts start time and end time from the selected slot.
+      3. Collects selected equipment if equipment is available.
+      4. Validates required fields.
+      5. Blocks weekend bookings.
+      6. Blocks past bookings.
+      7. Blocks bookings made less than 30 minutes before start time.
+      8. Sends the booking request to the backend.
+      9. Shows a modal if the booking is successful.
+    */
     function submitBooking() {
       const program = document.getElementById("program").value;
       const bookingDate = document.getElementById("bookingDate").value;
@@ -312,60 +625,144 @@
       const remark = document.getElementById("remark").value;
       const message = document.getElementById("message");
 
+      /*
+        These variables will be filled after splitting the selected time slot.
+
+        selectedSlot format:
+        start_time|end_time
+
+        Example:
+        09:00:00|10:00:00
+      */
       let startTime = "";
       let endTime = "";
 
+      /*
+        Safety check before booking submission.
+
+        If the facility is no longer available,
+        stop the booking and alert the user.
+      */
       if (currentFacility && currentFacility.availability_status !== 'available') {
       alert("This facility is currently " + currentFacility.availability_status + " and cannot be booked.");
       return;
   } 
 
+      /*
+        If a time slot is selected, split it into start time and end time.
+
+        Example:
+        selectedSlot = "09:00:00|10:00:00"
+        startTime = "09:00:00"
+        endTime = "10:00:00"
+      */
       if (selectedSlot) {
         const slotParts = selectedSlot.split("|");
         startTime = slotParts[0];
         endTime = slotParts[1];
       }
 
+      /*
+        Store selected equipment values.
+
+        If no equipment is selected or the facility has no equipment,
+        this will remain an empty string.
+      */
       let equipmentRequired = "";
 
+      /*
+        Only collect equipment if the equipment section is visible.
+
+        This prevents unnecessary equipment data from being submitted
+        for facilities that do not have equipment options.
+      */
       if (document.getElementById("equipmentSection").style.display !== "none") {
         const selectedEquipment = [];
 
+        /*
+          Find all checked equipment checkboxes
+          and add their values into the selectedEquipment array.
+        */
         document
         .querySelectorAll(".equipment:checked")
         .forEach(item => {
             selectedEquipment.push(item.value);
         });
 
+        /*
+          Convert selected equipment array into a comma-separated string.
+
+          Example:
+          ["Projector", "HDMI"] becomes "Projector, HDMI"
+        */
         equipmentRequired = selectedEquipment.join(", ");
       }
 
+      /*
+        Clear previous messages before validating the form.
+      */
       message.innerText = "";
 
+      /*
+        Validate required fields.
+
+        Program, booking date, and time slot are required.
+        Remark and equipment are optional.
+      */
       if (!program || !bookingDate || !selectedSlot) {
         message.style.color = "red";
         message.innerText = "Please fill in all required booking details.";
         return;
       }
 
+      /*
+        Do not allow bookings on Saturday or Sunday.
+      */
       if (isWeekend(bookingDate)) {
         message.style.color = "red";
         message.innerText = "Bookings are not allowed on Saturday and Sunday.";
         return;
       }
 
+      /*
+        Do not allow booking a date/time that has already passed.
+      */
       if (isPastBookingDateTime(bookingDate, startTime)) {
         message.style.color = "red";
         message.innerText = "You cannot book a date or time that has already passed.";
         return;
       }
 
+      /*
+        Enforce the 30-minute booking rule.
+
+        Users must book at least 30 minutes before the selected start time.
+      */
       if (isWithin30Minutes(bookingDate, startTime)) {
         message.style.color = "red";
         message.innerText = "Booking must be made at least 30 minutes before the start time.";
         return;
       }
 
+    /*
+      Submit booking data to the backend.
+
+      API endpoint:
+      /api/bookings
+
+      Method:
+      POST, because a new booking record is being created.
+
+      The request body includes:
+      - user_id
+      - facility_id
+      - program
+      - booking_date
+      - start_time
+      - end_time
+      - remark
+      - equipmentRequired
+    */
     fetch("/api/bookings", {
         method: "POST",
         headers: {
@@ -383,8 +780,19 @@
           equipmentRequired: equipmentRequired
         })
       })
+      /*
+        Convert backend response to JSON.
+      */
       .then(res => res.json())
+
+      /*
+        Handle the backend booking response.
+      */
       .then(data => {
+        /*
+          If booking is successful, show the booking modal.
+          If booking fails, show the backend error message.
+        */
         if (data.success) {
           showBookingModal(data);
         } else {
@@ -392,12 +800,27 @@
           message.innerText = data.message;
         }
       })
+
+      /*
+        If the request fails, show a general error message.
+      */
       .catch(() => {
         message.style.color = "red";
         message.innerText = "Booking submission failed. Please try again.";
       });
     }
 
+    /*
+      Show the booking modal after a successful booking submission.
+
+      The modal message is based on the backend response.
+      This allows the system to show different messages for different booking flows.
+
+      Example:
+      - Normal booking submitted
+      - Payment required
+      - Direct reservation confirmed
+    */
     function showBookingModal(data) {
       const modal = document.getElementById("bookingModal");
       const modalIcon = document.getElementById("modalIcon");
@@ -416,10 +839,19 @@
         modalIcon.innerText = "✓";
       }
 
+      /*
+        Start a 3-second countdown before redirecting the user.
+
+        The countdown value is displayed inside the OK button.
+      */
       let count = 3;
       countdownText.innerText = count;
       modal.style.display = "flex";
 
+      /*
+        Decrease the countdown every second.
+        When it reaches 0, closeBookingModal() redirects the user.
+      */
       const timer = setInterval(() => {
         count--;
         countdownText.innerText = count;
@@ -431,11 +863,23 @@
       }, 1000);
     }
 
+    /*
+      Close the booking modal and redirect the user back to their dashboard.
+
+      Staff users go back to staff.html.
+      Student users go back to student.html.
+    */
     function closeBookingModal() {
       window.location.href =
         user.role === "staff" ? "staff.html" : "student.html";
     }
 
+    /*
+      Convert booking flow type values into readable text.
+
+      These values come from the database/backend.
+      This function makes them easier to display to users.
+    */
     function formatBookingFlow(flow) {
       if (flow === "normal_approval") return "Normal Approval";
       if (flow === "payment_required") return "Payment Required";
@@ -444,6 +888,13 @@
       return "Normal Approval";
     }
 
+    /*
+      Convert availability status values into readable text.
+
+      Example:
+      - "available" becomes "Available Now"
+      - "maintenance" becomes "Maintenance"
+    */
     function formatAvailability(status) {
       if (status === "available") return "Available Now";
       if (status === "unavailable") return "Unavailable";
@@ -451,6 +902,15 @@
       return "Available Now";
     }
 
+    /*
+      Provide default additional information when the facility does not have custom additional_info.
+
+      The message depends on the booking flow type:
+      - payment_required
+      - direct_reservation
+      - staff_key_approval
+      - normal_approval
+    */
     function getDefaultAdditionalInfo(facility, bookingFlowType) {
       if (bookingFlowType === "payment_required") {
         return `${facility.facility_name} requires payment before the booking can be verified. Please proceed to the AFM Office after submitting the booking request.`;
@@ -467,6 +927,13 @@
       return `${facility.facility_name} requires admin approval. Users will be notified once the booking request has been reviewed.`;
     }
 
+    /*
+      Convert 24-hour time format into 12-hour AM/PM format.
+
+      Example:
+      - "13:30:00" becomes "1:30 PM"
+      - "09:00:00" becomes "9:00 AM"
+    */
     function formatTime(time) {
       if (!time) return "-";
 
@@ -481,28 +948,64 @@
       return `${h}:${minute} ${ampm}`;
     }
 
+    /*
+      Log the user out.
+
+      This removes user data from storage and redirects to the login page.
+    */
     function logout() {
       localStorage.removeItem("user");
       sessionStorage.removeItem("user");
       window.location.href = "login.html";
     }
 
+    /*
+      Render facility equipment as checkbox options.
+
+      equipmentText is expected to be a comma-separated string.
+
+      Example:
+      equipmentText = "Projector, HDMI, Computer"
+
+      This function will create one checkbox for each equipment item.
+    */
     function renderEquipment(equipmentText) {
 
         const equipmentList = document.getElementById("equipmentList");
 
+        /*
+          Clear the previous equipment list before adding new items.
+        */
         equipmentList.innerHTML = "";
 
+        /*
+          If the facility has no equipment data, stop the function.
+        */
         if (!equipmentText || equipmentText.trim() === "") {
             return;
         }
 
+        /*
+          Split equipment by comma and create checkbox rows.
+        */
         equipmentText.split(",").forEach(item => {
 
+            /*
+              Remove extra spacing around the equipment name.
+            */
             const equipment = item.trim();
 
+            /*
+              Skip empty equipment values.
+            */
             if (!equipment) return;
 
+            /*
+              Create a label element for each equipment option.
+              The label contains:
+              - Checkbox input
+              - Equipment name
+            */
             const label = document.createElement("label");
             label.className = "equipment-row";
 
@@ -515,12 +1018,22 @@
                 <span>${equipment}</span>
             `;
 
+            /*
+              Add the equipment row into the equipment list container.
+            */
             equipmentList.appendChild(label);
 
         });
 
     }
 
+    /*
+      Check whether the selected booking start time is within 30 minutes from now.
+
+      Returns:
+      - true if the booking starts in less than 30 minutes
+      - false if the booking starts after 30 minutes or more
+    */
     function isWithin30Minutes(bookingDate, startTime) {
       const selectedDateTime = new Date(`${bookingDate}T${startTime}`);
       const now = new Date();

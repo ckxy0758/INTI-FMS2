@@ -1,9 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <!-- Page title shown on the browser tab -->
   <title>Notifications</title>
+
+  <!-- Google Font: Poppins is used for consistent font styling across the system -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Main external CSS file for the dashboard design -->
   <link rel="stylesheet" href="style.css">
+
   <style>
     /* This stops the mouse cursor from looking like a clickable link */
     .notification-card {
@@ -12,24 +18,48 @@
   </style>
 </head>
 
+<!--
+  Body class:
+  - dashboard-body is used for pages inside the main dashboard layout
+-->
 <body class="dashboard-body">
 
+  <!-- Reusable header section loaded from component.js -->
   <div id="appHeader"></div>
 
+  <!-- Main dashboard layout containing sidebar and main content -->
   <div class="dashboard-layout">
 
+    <!-- Reusable sidebar section loaded from component.js -->
     <div id="appSidebar"></div>
 
+    <!-- Main content area for the Notifications page -->
     <main class="main-content">
 
+      <!-- Header row for the Notifications page -->
       <div class="notification-header-row">
         <div>
+          <!-- Page title -->
           <h1 class="page-title">Notifications</h1>
+
+          <!--
+            Subtitle showing how many unread notifications the user has.
+            The unread count will be updated using JavaScript.
+          -->
           <p class="page-subtitle">
             You have <span id="unreadCount">0</span> new notifications
           </p>
         </div>
 
+        <!--
+          Button to toggle notification read status.
+
+          If there are unread notifications:
+          - Button shows "Mark all as read"
+
+          If all notifications are already read:
+          - Button shows "Mark all as unread"
+        -->
         <button
           class="mark-read-btn"
           id="markToggleBtn"
@@ -39,40 +69,128 @@
         </button>
       </div>
 
+      <!--
+        Notification list container.
+        Notifications will be inserted here dynamically using JavaScript.
+      -->
       <div id="notificationList"></div>
 
     </main>
 
   </div>
 
+  <!-- JavaScript file used to load reusable header and sidebar layout -->
   <script src="component.js"></script>
 
   <script>
+    /*
+      Load the dashboard layout and highlight the Notifications menu.
+
+      "notifications" tells component.js that the current active page
+      is the Notifications page.
+    */
     loadLayout("notifications");
 
+    /*
+      Get the logged-in user data from browser storage.
+
+      localStorage:
+      - Stores user data for a longer period.
+
+      sessionStorage:
+      - Stores user data only while the current browser tab is open.
+
+      The system checks localStorage first.
+      If no user is found there, it checks sessionStorage.
+    */
     const user =
       JSON.parse(localStorage.getItem("user")) ||
       JSON.parse(sessionStorage.getItem("user"));
 
+    /*
+      Check whether the user is logged in.
+
+      If no user data is found:
+      - Redirect the user to the login page.
+    */
     if (!user) {
       window.location.href = "login.html";
     }
 
+    /*
+      Store all notifications loaded from the backend.
+
+      This array is used so the system can:
+      - display notifications
+      - count unread notifications
+      - check whether all notifications are read
+    */
     let allNotifications = [];
+
+    /*
+      Track whether all notifications are currently read.
+
+      false:
+      - There are still unread notifications.
+
+      true:
+      - All notifications are already read.
+    */
     let allRead = false;
 
+    /*
+      Load notifications immediately when the page opens.
+    */
     loadNotifications();
 
+    /*
+      Fetch notifications from the backend API.
+
+      Main purpose:
+      1. Get notifications that belong to the logged-in user.
+      2. Store the notifications in allNotifications.
+      3. Check whether there are unread notifications.
+      4. Update the Mark all button text.
+      5. Render the notifications on the page.
+    */
     function loadNotifications() {
+      /*
+        Send request to backend notification API.
+
+        API endpoint:
+        /api/notifications/:userId
+
+        Example:
+        /api/notifications/1
+
+        Authorization header:
+        - Sends the JWT token so the backend can verify the user.
+      */
       fetch(`/api/notifications/${user.id}`, {
         headers: {
           "Authorization": "Bearer " + localStorage.getItem("authToken")
         }
       })
+
+        /*
+          Convert the backend response into JSON format.
+        */
         .then(res => res.json())
+
+        /*
+          Handle the notification data returned from the backend.
+        */
         .then(data => {
+          /*
+            If the backend response is not successful,
+            stop the function.
+          */
           if (!data.success) return;
 
+          /*
+            Save all notifications returned by the backend
+            into the allNotifications array.
+          */
           allNotifications = data.notifications;
 
           // Update the toggle state based on current data
@@ -81,41 +199,110 @@
           const hasUnread = allNotifications.some(n => n.is_read == 0);
           allRead = !hasUnread; // If hasUnread is false, allRead is true
 
+          /*
+            Update the button text based on allRead value.
+          */
           updateToggleButton();
+
+          /*
+            Display the notifications on the page.
+          */
           renderNotifications(allNotifications);
         });
     }
 
+    /*
+      Render notifications on the page.
+
+      Main purpose:
+      1. Clear the old notification list.
+      2. Count unread notifications.
+      3. Group notifications into Today, Yesterday, and Older.
+      4. Display each notification card.
+    */
     function renderNotifications(notifications) {
+      /*
+        Get the notification list container.
+      */
       const list = document.getElementById("notificationList");
+
+      /*
+        Clear the current notification list before rendering again.
+        This prevents duplicate notifications from appearing.
+      */
       list.innerHTML = "";
 
+      /*
+        Count how many notifications are unread.
+
+        is_read == 0 means the notification is unread.
+      */
       const unread = notifications.filter(n => n.is_read == 0).length;
+
+      /*
+        Update the unread notification count shown in the subtitle.
+      */
       document.getElementById("unreadCount").innerText = unread;
 
+      /*
+        If there are no notifications, show a simple empty message.
+      */
       if (notifications.length === 0) {
         list.innerHTML = "<p>No notifications found.</p>";
         return;
       }
 
+      /*
+        Create groups for notifications.
+
+        Notifications will be separated into:
+        - Today
+        - Yesterday
+        - Older
+      */
       const grouped = {
         Today: [],
         Yesterday: [],
         Older: []
       };
 
+      /*
+        Loop through each notification and decide which group it belongs to.
+      */
       notifications.forEach(item => {
         const group = getNotificationGroup(item.created_at);
         grouped[group].push(item);
       });
 
+      /*
+        Loop through each notification group and display it on the page.
+      */
       Object.keys(grouped).forEach(group => {
+        /*
+          If a group has no notifications, skip it.
+        */
         if (grouped[group].length === 0) return;
 
+        /*
+          Add the group title, such as Today, Yesterday, or Older.
+        */
         list.innerHTML += `<h3 class="notification-group-title">${group}</h3>`;
 
+        /*
+          Display each notification inside the current group.
+        */
         grouped[group].forEach(item => {
           // REMOVED the onclick="openNotification(...)" from here!
+
+          /*
+            Insert one notification card.
+
+            If item.is_read == 0:
+            - Add unread class
+
+            Otherwise:
+            - Add read class
+          */
           list.innerHTML += `
                 <div class="notification-card ${item.is_read == 0 ? 'unread' : 'read'}">       
                 <div class="notification-icon">
@@ -138,37 +325,142 @@
       });
     }
 
+    /*
+      Decide which date group a notification belongs to.
+
+      Groups:
+      - Today
+      - Yesterday
+      - Older
+
+      The function compares the notification date with today's date
+      and yesterday's date.
+    */
     function getNotificationGroup(dateValue) {
+      /*
+        Convert the notification created_at value into a Date object.
+      */
       const notificationDate = new Date(dateValue);
+
+      /*
+        Get today's date.
+      */
       const today = new Date();
 
+      /*
+        Create a date object for yesterday.
+      */
       const yesterday = new Date();
+
+      /*
+        Move yesterday's date one day before today.
+      */
       yesterday.setDate(today.getDate() - 1);
 
+      /*
+        Convert dates into readable date strings.
+
+        This helps compare only the date,
+        without comparing the exact time.
+      */
       const nDate = notificationDate.toDateString();
       const tDate = today.toDateString();
       const yDate = yesterday.toDateString();
 
+      /*
+        If notification date is the same as today,
+        return "Today".
+      */
       if (nDate === tDate) return "Today";
+
+      /*
+        If notification date is the same as yesterday,
+        return "Yesterday".
+      */
       if (nDate === yDate) return "Yesterday";
+
+      /*
+        If it is not today or yesterday,
+        return "Older".
+      */
       return "Older";
     }
 
+    /*
+      Format notification time into a user-friendly display.
+
+      Examples:
+      - Just now
+      - 5 min ago
+      - 2h ago
+      - Yesterday
+      - 05 Jul 2026
+    */
     function formatNotificationTime(dateValue) {
+      /*
+        Convert notification date value into a Date object.
+      */
       const date = new Date(dateValue);
+
+      /*
+        Get current date and time.
+      */
       const now = new Date();
 
+      /*
+        Calculate time difference between now and notification time.
+      */
       const diffMs = now - date;
+
+      /*
+        Convert milliseconds into minutes.
+      */
       const diffMinutes = Math.floor(diffMs / 60000);
+
+      /*
+        Convert minutes into hours.
+      */
       const diffHours = Math.floor(diffMinutes / 60);
+
+      /*
+        Convert hours into days.
+      */
       const diffDays = Math.floor(diffHours / 24);
 
+      /*
+        If the notification was created less than 1 minute ago,
+        show "Just now".
+      */
       if (diffMinutes < 1) return "Just now";
+
+      /*
+        If the notification was created less than 1 hour ago,
+        show minutes ago.
+      */
       if (diffMinutes < 60) return `${diffMinutes} min ago`;
+
+      /*
+        If the notification was created less than 24 hours ago,
+        show hours ago.
+      */
       if (diffHours < 24) return `${diffHours}h ago`;
+
+      /*
+        If the notification was created 1 day ago,
+        show Yesterday.
+      */
       if (diffDays === 1) return "Yesterday";
+
+      /*
+        If the notification was created less than 7 days ago,
+        show number of days ago.
+      */
       if (diffDays < 7) return `${diffDays} days ago`;
 
+      /*
+        If the notification is older than 7 days,
+        show the full formatted date.
+      */
       return date.toLocaleDateString("en-MY", {
         day: "2-digit",
         month: "short",
@@ -176,26 +468,83 @@
       });
     }
 
+    /*
+      Update the Mark all button text.
+
+      If allRead is true:
+      - Button shows "Mark all as unread"
+
+      If allRead is false:
+      - Button shows "Mark all as read"
+    */
     function updateToggleButton() {
+      /*
+        Get the Mark all button.
+      */
       const btn = document.getElementById("markToggleBtn");
 
+      /*
+        Change button text based on current read status.
+      */
       btn.innerText =
         allRead
           ? "Mark all as unread"
           : "Mark all as read";
     }
 
+      /*
+        Toggle all notifications between read and unread.
+
+        If all notifications are already read:
+        - Call unread-all API
+
+        If there are unread notifications:
+        - Call read-all API
+      */
       function toggleNotificationReadStatus() {
+        /*
+          Choose which backend endpoint to use.
+
+          allRead = true:
+          - Use unread-all endpoint
+
+          allRead = false:
+          - Use read-all endpoint
+        */
         const endpoint = allRead ? "unread-all" : "read-all";
 
+        /*
+          Send request to backend to update notification read status.
+
+          API endpoint:
+          /api/notifications/:userId/read-all
+          or
+          /api/notifications/:userId/unread-all
+
+          Method:
+          PUT is used because existing notification records are being updated.
+        */
         fetch(`/api/notifications/${user.id}/${endpoint}`, {
           method: "PUT",
           headers: {
             "Authorization": "Bearer " + localStorage.getItem("authToken")
           }
         })
+
+        /*
+          Convert backend response into JSON format.
+        */
         .then(res => res.json())
+
+        /*
+          Handle backend response after updating notifications.
+        */
         .then(data => {
+          /*
+            If update is successful:
+            - Flip allRead value
+            - Reload notifications so the UI shows the latest status
+          */
           if (data.success) {
             // 1. Force the local state to flip immediately for instant feedback
             allRead = !allRead; 
@@ -205,6 +554,14 @@
         });
       }
 
+    /*
+      Logout function.
+
+      Main purpose:
+      1. Remove user data from localStorage.
+      2. Remove user data from sessionStorage.
+      3. Redirect the user back to login page.
+    */
     function logout() {
       localStorage.removeItem("user");
       sessionStorage.removeItem("user");

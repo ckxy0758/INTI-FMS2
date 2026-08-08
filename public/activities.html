@@ -2,16 +2,20 @@
 <html>
 <head>
   <title>My Activities</title>
+  <!-- Google Fonts: Poppins family, multiple weights used across the dashboard UI -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Main stylesheet shared across the dashboard pages -->
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body class="dashboard-body activities-page">
 
+  <!-- Placeholder div; populated dynamically by loadLayout() in component.js -->
   <div id="appHeader"></div>
 
   <div class="dashboard-layout">
 
+    <!-- Placeholder div; populated dynamically by loadLayout() in component.js -->
     <div id="appSidebar"></div>
 
     <main class="main-content">
@@ -19,73 +23,100 @@
       <h1 class="page-title">My Activities</h1>
       <p class="page-subtitle">View and manage your facility bookings.</p>
 
+      <!-- Filter/sort control bar for the activities list -->
       <div class="activity-filter-row">
+        <!-- Each filter button calls filterActivities() with a category keyword and the click event -->
         <button class="activity-filter active" onclick="filterActivities('all', event)">All Activities</button>
         <button class="activity-filter" onclick="filterActivities('upcoming', event)">Upcoming Activities</button>
         <button class="activity-filter" onclick="filterActivities('past', event)">Past Activities</button>
         <button class="activity-filter" onclick="filterActivities('cancelled', event)">Cancelled Activities</button>
 
+        <!-- Dropdown to control sort order (newest/oldest); triggers sortActivityList() on change -->
         <select id="sortActivities" onchange="sortActivityList()">
           <option value="newest">Sort By: Newest First</option>
           <option value="oldest">Sort By: Oldest First</option>
         </select>
       </div>
 
+      <!-- Container that gets filled with activity cards by renderActivities() -->
       <div id="activityList"></div>
 
     </main>
 
   </div>
 
+  <!-- Shared component/layout loader script (defines loadLayout, etc.) -->
   <script src="component.js"></script>
 
   <script>
+    // Initialize the shared header/sidebar layout for this page ("activities" = active nav item)
     loadLayout("activities");
 
+    // Try to load the logged-in user object from localStorage first, then sessionStorage as fallback
+    // (supports both "remember me" persistent login and session-only login)
     const user =
       JSON.parse(localStorage.getItem("user")) ||
       JSON.parse(sessionStorage.getItem("user"));
 
+    // Route guard: if no user is found in either storage, redirect to the login page
     if (!user) {
       window.location.href = "login.html";
     }
 
+    // Master in-memory array holding all activities fetched from the API (unfiltered/unsorted source of truth)
     let allActivities = [];
 
+    // Kick off the initial data fetch as soon as the script runs
     loadActivities();
 
+    /**
+     * Fetches all activities/bookings for the current user from the backend API.
+     * Populates the global allActivities array and triggers the initial sort/render.
+     */
     function loadActivities() {
       fetch(`/api/activities/${user.id}`, {
         headers: {
+          // Bearer token auth using the token stored in localStorage
           "Authorization": "Bearer " + localStorage.getItem("authToken")
         }
       })
         .then(res => res.json())
         .then(data => {
+          // If the API reports failure, show an error message and stop
           if (!data.success) {
             document.getElementById("activityList").innerHTML =
               "<p>Failed to load activities.</p>";
             return;
           }
 
+        // Store the fetched activities and immediately sort/filter/render them
         allActivities = data.activities;
         sortActivityList();
         });
     }
 
+    /**
+     * Renders a given array of activity objects into the #activityList container as cards.
+     * Each card shows an image, facility info, date/time, a progress tracker, and action buttons.
+     * @param {Array} activities - The (already filtered/sorted) list of activities to display.
+     */
     function renderActivities(activities) {
       const activityList = document.getElementById("activityList");
+      // Clear any previously rendered cards before re-rendering
       activityList.innerHTML = "";
 
+      // Handle the empty-state case
       if (activities.length === 0) {
         activityList.innerHTML = "<p>No activities found.</p>";
         return;
       }
 
+      // Build and append a card for each activity
       activities.forEach(activity => {
         activityList.innerHTML += `
           <div class="activity-card">
 
+            <!-- Facility image; falls back to a default background image if none provided -->
             <div class="activity-img">
               <img 
                 src="${activity.image_path || 'images/bg-image-2.jpeg'}"
@@ -95,9 +126,11 @@
 
             <div class="activity-info">
               <h3>${activity.facility_name}</h3>
+              <!-- Falls back to a generic description if none provided by the API -->
               <p>${activity.description || "Technology & robotics workspace"}</p>
 
               <div class="activity-info-details">
+              <!-- Row showing the booking date, with a calendar icon -->
               <p class="activity-info-row">
                 <span class="activity-info-icon">
                   <svg xmlns="http://www.w3.org/2000/svg"
@@ -111,6 +144,7 @@
                 </span>
               </p>
 
+              <!-- Row showing the start/end time range, with a clock icon -->
               <p class="activity-info-row">
                 <span class="activity-info-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M582-298 440-440v-200h80v167l118 118-56 57ZM440-720v-80h80v80h-80Zm280 280v-80h80v80h-80ZM440-160v-80h80v80h-80ZM160-440v-80h80v80h-80ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>
@@ -124,10 +158,12 @@
 
             </div>
 
+            <!-- Visual step-tracker showing where this booking is in its workflow (varies by flow type) -->
             <div class="activity-progress">
               ${getProgress(activity)}
             </div>
 
+            <!-- Action buttons: view full details, or cancel the booking -->
             <div class="activity-actions">
               <button class="outline-btn" onclick="window.location.href='booking-details.html?id=${activity.booking_id}'">
                 View Details
@@ -143,15 +179,28 @@
       });
     }
 
+    /**
+     * Builds the HTML for the step-by-step progress tracker shown on each activity card.
+     * The tracker's shape (number of steps, labels) depends on the booking's flow type
+     * (direct_reservation, staff_key_approval, normal_approval, or the default/legacy flow)
+     * and its current status/payment state.
+     * @param {Object} activity - The activity/booking object.
+     * @returns {string} HTML markup for the progress-wrapper element.
+     */
     function getProgress(activity) {
+      // Normalize facility name for safe comparisons (currently computed but not used further below)
       const facilityName = activity.facility_name
         ? activity.facility_name.trim().toLowerCase()
         : "";
 
+      // Normalize booking status for safe, case-insensitive comparisons
       const bookingStatus = activity.booking_status
         ? activity.booking_status.trim().toLowerCase()
         : "";
 
+      // --- Case 1: Booking was cancelled ---
+      // Regardless of flow type, a cancelled booking shows a simple 2-step tracker:
+      // Submitted -> Cancelled
       if (bookingStatus === "cancelled") {
         return `
           <div class="progress-wrapper">
@@ -172,6 +221,9 @@
         `;
       }
 
+      // --- Case 2: Direct reservation flow (e.g. cubicle bookings) ---
+      // Steps: Cubicle Reserved -> Checked In -> Completed
+      // Special case: if the reservation expired, show a standalone warning message instead of the tracker.
       if (activity.booking_flow_type === "direct_reservation") {
         if (bookingStatus === "expired") {
         return `<p style="color:red;font-weight:400;text-align:center;">Reservation Expired</p>`;        }
@@ -207,6 +259,8 @@
         `;
       }
 
+    // --- Case 3: Staff key approval flow (e.g. rooms requiring a physical key from staff) ---
+    // Steps: Submitted -> Approved -> Key Collected -> Returned
     if (activity.booking_flow_type === "staff_key_approval") {
         let step = 1;
 
@@ -248,6 +302,8 @@
       }
 
       // --- ADD THIS NEW BLOCK FOR NORMAL APPROVAL ---
+      // --- Case 4: Normal approval flow (approval required, but no staff-issued key step at start) ---
+      // Steps: Approved -> Key Collected -> Returned
       if (activity.booking_flow_type === "normal_approval") {
         let step = 1;
 
@@ -281,16 +337,21 @@
       }
       // --- END OF NEW BLOCK ---
 
+      // --- Case 5: Default/legacy flow (no specific booking_flow_type matched above) ---
+      // Generic 3-step tracker: Submitted -> (Waiting List / Payment step) -> Approved
+      // Step 2's label and progression depend on whether payment is required for this activity.
       let step = 1;
       let step1Text = "Submitted";
       let step2Text = "Waiting List";
       let step3Text = "Approved";
 
+      // payment_required may come back from the API as either a number or a string "1"
       const paymentRequired =
         activity.payment_required === 1 ||
         activity.payment_required === "1";
 
       if (paymentRequired) {
+        // Payment-based sub-flow: step 2 reflects the payment status
         step2Text = "Pending Payment";
 
         if (activity.payment_status === "pending_payment") {
@@ -311,6 +372,7 @@
           step2Text = "Payment Verified";
         }
       } else {
+        // No payment required: step 2 reflects waitlist status instead
         if (bookingStatus === "waiting" || bookingStatus === "waitlist") {
           step = 2;
           step2Text = "Waiting List";
@@ -347,19 +409,31 @@
       `;
     }
 
+    /**
+     * Computes a single human-readable status label for an activity, based on its
+     * booking flow type, booking status, and payment status. This is a separate,
+     * simpler alternative to getProgress() (used elsewhere for compact status text,
+     * e.g. in lists/tables rather than the full visual tracker).
+     * @param {Object} activity - The activity/booking object.
+     * @returns {string} A display-friendly status label.
+     */
     function formatStatus(activity) {
+      // Normalize facility name (computed but not used further in this function)
       const facilityName = activity.facility_name
         ? activity.facility_name.trim().toLowerCase()
         : "";
 
+      // Normalize booking status for case-insensitive comparisons
       const bookingStatus = activity.booking_status
         ? activity.booking_status.trim().toLowerCase()
         : "";
 
+      // Normalize payment status for case-insensitive comparisons
       const paymentStatus = activity.payment_status
         ? activity.payment_status.trim().toLowerCase()
         : "";
 
+      // Direct reservation flow: map raw status directly to a label
       if (activity.booking_flow_type === "direct_reservation") {
         if (bookingStatus === "reserved") return "Cubicle Reserved";
         if (bookingStatus === "checked_in") return "Checked In";
@@ -367,6 +441,7 @@
         if (bookingStatus === "completed") return "Completed";
       }
 
+      // Staff key approval / normal approval flows share the same status labels here
       if (activity.booking_flow_type === "staff_key_approval" || activity.booking_flow_type === "normal_approval") {
         if (bookingStatus === "pending") return "Submitted";
         if (bookingStatus === "approved") return "Approved";
@@ -374,21 +449,31 @@
         if (bookingStatus === "completed") return "Returned";
       }
 
+      // For payment-required activities not covered by the flow types above,
+      // prefer showing the payment status as the label
       if (activity.payment_required === 1 || activity.payment_required === "1") {
         if (paymentStatus === "pending_payment") return "Pending Payment";
         if (paymentStatus === "payment_submitted") return "Payment Submitted";
         if (paymentStatus === "verified") return "Payment Verified";
       }
 
+      // Generic fallback mapping for any remaining/default booking statuses
       if (bookingStatus === "pending") return "Pending";
       if (bookingStatus === "approved") return "Approved";
       if (bookingStatus === "rejected") return "Rejected";
       if (bookingStatus === "cancelled") return "Cancelled";
       if (bookingStatus === "completed") return "Completed";
 
+      // Last resort: show the raw status string, or "Unknown" if nothing is set
       return activity.booking_status || "Unknown";
     }
 
+    /**
+     * Formats a raw date value (e.g. "2026-07-09") into a localized, readable string
+     * like "09 Jul 2026" using Malaysian English locale formatting.
+     * @param {string|Date} dateValue - The raw booking date.
+     * @returns {string} Formatted date string.
+     */
     function formatDate(dateValue) {
       const date = new Date(dateValue);
 
@@ -399,21 +484,42 @@
       });
     }
 
+    /**
+     * Combines an activity's booking_date and end_time into a single Date object,
+     * representing the exact moment the activity/booking ends. Used for
+     * upcoming/past filtering logic.
+     * @param {Object} activity - The activity/booking object.
+     * @returns {Date} The computed end date-time.
+     */
     function getActivityEndDateTime(activity) {
     return new Date(`${activity.booking_date}T${activity.end_time}`);
   }
 
+    /**
+     * Handles clicks on the filter buttons (All / Upcoming / Past / Cancelled).
+     * Updates the "active" button styling and re-applies filtering + sorting.
+     * @param {string} type - The filter category to apply ("all", "upcoming", "past", "cancelled").
+     * @param {Event} event - The click event, used to identify which button was pressed.
+     */
     function filterActivities(type, event) {
+      // Remove the active styling from all filter buttons...
       document.querySelectorAll(".activity-filter").forEach(btn => {
         btn.classList.remove("active");
       });
 
+      // ...then mark only the clicked button as active
       event.target.classList.add("active");
       currentFilter = type;
       sortActivityList();
     }
 
     // Newly added
+    /**
+     * Converts a raw facility availability status string into a display-friendly label.
+     * (Currently defined but not directly invoked elsewhere in this file.)
+     * @param {string} status - Raw availability status ("available", "unavailable", "maintenance").
+     * @returns {string} Human-readable availability label.
+     */
     function formatAvailability(status) {
       if (status === "available") return "Available Now";
       if (status === "unavailable") return "Unavailable";
@@ -421,15 +527,25 @@
       return "Unknown";
     }
 
+      // Tracks which filter category is currently selected; defaults to showing all activities
       let currentFilter = "all";
 
+    /**
+     * Central function that applies the current filter (All/Upcoming/Past/Cancelled)
+     * and the selected sort order (Newest/Oldest First) to allActivities, then
+     * passes the resulting list to renderActivities() for display.
+     * Called on initial load, whenever the filter buttons are clicked, and whenever
+     * the sort dropdown changes.
+     */
     function sortActivityList() {
       const sortType = document.getElementById("sortActivities").value;
       const now = new Date();
 
+      // Start from a shallow copy of the full activity list so filtering doesn't mutate the source data
       let filtered = [...allActivities];
 
       if (currentFilter === "upcoming") {
+        // "Upcoming" = booking is in an active (non-final) status AND its end time is still in the future
         filtered = filtered.filter(item => {
           const status = item.booking_status ? item.booking_status.trim().toLowerCase() : "";
           const endDateTime = getActivityEndDateTime(item);
@@ -437,57 +553,87 @@
           return isActiveStatus && endDateTime > now;
         });
       } else if (currentFilter === "past") {
+        // "Past" = booking's end time has already passed AND it wasn't cancelled
         filtered = filtered.filter(item => {
           const status = item.booking_status ? item.booking_status.trim().toLowerCase() : "";
           const endDateTime = getActivityEndDateTime(item);
           return endDateTime <= now && status !== "cancelled";
         });
       } else if (currentFilter === "cancelled") {
+        // "Cancelled" = booking_status is exactly "cancelled"
         filtered = filtered.filter(item => item.booking_status === "cancelled");
       }
+      // If currentFilter === "all", no additional filtering is applied
 
+      // Sort the filtered list by booking start date/time, ascending or descending
+      // based on the selected sort option
       filtered.sort((a, b) => {
         const dateA = new Date(`${a.booking_date}T${a.start_time}`);
         const dateB = new Date(`${b.booking_date}T${b.start_time}`);
         return sortType === "newest" ? dateB - dateA : dateA - dateB;
       });
 
+      // Render the final filtered + sorted list
       renderActivities(filtered);
     }
 
+    /**
+     * Converts a 24-hour "HH:MM" time string into a 12-hour format with AM/PM
+     * (e.g. "14:30" -> "2:30 PM").
+     * @param {string} time - Time string in "HH:MM" (24-hour) format.
+     * @returns {string} Formatted 12-hour time string.
+     */
     function formatTime(time) {
       const [hour, minute] = time.split(":");
       let h = parseInt(hour);
       const ampm = h >= 12 ? "PM" : "AM";
 
+      // Convert 0/13-23 hour values into the 12-hour clock equivalent
       h = h % 12;
-      if (h === 0) h = 12;
+      if (h === 0) h = 12; // Midnight/noon edge case: 0 should display as 12
 
       return `${h}:${minute} ${ampm}`;
     }
 
+    /**
+     * Initiates the cancel-booking flow for a given booking ID.
+     * Shows a confirmation modal first; if confirmed, sends a PUT request to cancel
+     * the booking, then shows a success/error alert and refreshes the activity list
+     * on success.
+     * @param {number|string} id - The booking_id to cancel.
+     */
     function modifyBooking(id) {
       showConfirm("Are you sure you want to cancel this booking? You can only cancel at least 1 hour before the booking starts.", () => {
         fetch(`/api/bookings/${id}/cancel`, {
           method: "PUT",
           headers: { 
             "Content-Type": "application/json",
+            // Bearer token auth using the token stored in localStorage
             "Authorization": "Bearer " + localStorage.getItem("authToken")
           },
           body: JSON.stringify({ user_id: user.id })
         })
         .then(res => res.json())
         .then(data => {
+          // Show success or error alert based on the API response
           showAlert(data.message, data.success ? "success" : "error");
+          // Refresh the activity list if the cancellation succeeded
           if (data.success) loadActivities();
         })
         .catch(() => {
+          // Network/unexpected error fallback
           showAlert("Failed to cancel booking. Please try again.", "error");
         });
       });
     }
 
+    /**
+     * Displays a simple informational modal (success or error) with a single "OK" button.
+     * @param {string} message - The message text to display in the modal body.
+     * @param {string} type - Either "success" or "error"; controls icon/color styling.
+     */
     function showAlert(message, type) {
+      // Choose a green checkmark icon for success, or a red "X" icon for error
       document.getElementById("modalIcon").innerHTML = type === "success"
         ? `<div style="width:44px;height:44px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;"><svg xmlns="http://www.w3.org/2000/svg" height="36px" viewBox="0 -960 960 960" width="36px" fill="#22c55e"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg></div>`
         : `<div style="width:44px;height:44px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;"><svg xmlns="http://www.w3.org/2000/svg" height="36px" viewBox="0 -960 960 960" width="36px" fill="#D12E26"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg></div>`;
@@ -496,13 +642,21 @@
       document.getElementById("modalTitle").style.fontSize = "24px";
       document.getElementById("modalMessage").innerText = message;
       document.getElementById("modalMessage").style.fontSize = "16px";
+      // Only a single "OK" button is needed to dismiss this type of modal
       document.getElementById("modalButtons").innerHTML = `
         <button onclick="closeModal()" class="custom-modal-btn-ok">OK</button>
       `;
       document.getElementById("customModal").style.display = "flex";
     }
 
+    /**
+     * Displays a confirmation modal with "Cancel" and "Confirm" buttons.
+     * If the user clicks "Confirm", the modal closes and the provided callback runs.
+     * @param {string} message - The confirmation question/message to display.
+     * @param {Function} onConfirm - Callback invoked only if the user confirms.
+     */
     function showConfirm(message, onConfirm) {
+      // Yellow "!" warning icon for confirmation dialogs
       document.getElementById("modalIcon").innerHTML = `<div style="width:44px;height:44px;background:#fef3c7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:32px;font-weight:800;color:#f59e0b;">!</div>`;
       document.getElementById("modalTitle").innerText = "Confirmation";
       document.getElementById("modalTitle").style.color = "#D12E26";
@@ -512,19 +666,29 @@
       document.getElementById("modalMessage").innerText = message;
       document.getElementById("modalMessage").style.fontSize = "16px";
       document.getElementById("modalMessage").style.marginBottom = "24px";
+      // Two buttons: Cancel (just closes the modal) and Confirm (runs the callback)
       document.getElementById("modalButtons").innerHTML = `
         <button onclick="closeModal()" class="custom-modal-btn-cancel">Cancel</button>
         <button id="confirmBtn" class="custom-modal-btn-confirm">Confirm</button>
       `;
+      // Wire up the Confirm button: close the modal, then run the caller's callback
       document.getElementById("confirmBtn").onclick = () => { closeModal(); onConfirm(); };
       document.getElementById("customModal").style.display = "flex";
     }
 
+    /**
+     * Hides the shared custom modal (used for alerts and confirmations).
+     */
     function closeModal() {
       document.getElementById("customModal").style.display = "none";
     }
 
 
+/**
+ * Logs the user out by clearing stored session/user data from both
+ * localStorage and sessionStorage, then redirects to the login page.
+ * A short delay is used to ensure storage removal completes before navigating away.
+ */
 function logout() {
       localStorage.removeItem("user");
       sessionStorage.removeItem("user");
@@ -535,6 +699,7 @@ function logout() {
     }
 </script>
 
+  <!-- Shared modal component used for alerts (success/error) and confirmations (e.g. cancel booking) -->
   <div id="customModal" class="custom-modal-overlay">
     <div class="custom-modal-box">
       <div id="modalIcon" class="custom-modal-icon"></div>

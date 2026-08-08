@@ -1,34 +1,64 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <!-- Page title shown on the browser tab -->
   <title>My Profile</title>
+
+  <!-- Google Font: Poppins is used for consistent font style across the system -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Main external CSS file for system styling -->
   <link rel="stylesheet" href="style.css">
 </head>
 
+<!--
+  Body class:
+  - dashboard-body is used for pages inside the dashboard layout
+-->
 <body class="dashboard-body">
 
+  <!-- Reusable header section loaded from component.js -->
   <div id="appHeader"></div>
 
+  <!-- Main dashboard layout containing sidebar and main content -->
   <div class="dashboard-layout">
 
+    <!-- Reusable sidebar section loaded from component.js -->
     <div id="appSidebar"></div>
 
+    <!-- Main content area for the Profile page -->
     <main class="main-content">
 
+      <!-- Page title -->
       <h1 class="page-title">My Profile</h1>
+
+      <!-- Short description of the profile page -->
       <p class="page-subtitle">View your personal information.</p>
 
+      <!-- Profile card container -->
       <div class="profile-card">
 
+        <!--
+          Profile avatar section.
+          The first letter of the user's name will be displayed here.
+        -->
         <div class="profile-avatar">
           <span id="profileInitial">U</span>
         </div>
 
+        <!-- Profile information section -->
         <div class="profile-info">
+
+          <!-- User's full name will be inserted here using JavaScript -->
           <h2 id="profileName">Loading...</h2>
+
+          <!-- User's role will be inserted here using JavaScript -->
           <p id="profileRole">-</p>
+
+          <!-- User's location is displayed here -->
           <p id="profileLocation">Bayan Lepas, Pulau Pinang</p>
+
+          <!-- User's email will be inserted here using JavaScript -->
           <p id="profileEmail">-</p>
         </div>
 
@@ -38,61 +68,200 @@
 
   </div>
 
+  <!-- JavaScript file used to load reusable header and sidebar layout -->
   <script src="component.js"></script>
 
   <script>
+    /*
+      Load the dashboard layout and highlight the Profile menu.
+
+      "profile" tells component.js that the current active page is Profile.
+    */
     loadLayout("profile");
 
+    /*
+      Get the logged-in user data from browser storage.
+
+      localStorage:
+      - Stores user data for a longer time.
+
+      sessionStorage:
+      - Stores user data only while the browser tab is open.
+
+      The system checks localStorage first.
+      If no user data is found there, it checks sessionStorage.
+    */
     const user =
       JSON.parse(localStorage.getItem("user")) ||
       JSON.parse(sessionStorage.getItem("user"));
 
+    /*
+      Check whether the user is logged in.
+
+      If no user data is found:
+      - The user is not authenticated
+      - Redirect the user back to the login page
+    */
     if (!user) {
       window.location.href = "login.html";
     }
 
+    /*
+      Load the user's profile information when the page opens.
+    */
     loadProfile();
 
+    /*
+      This function fetches the user's profile information from the backend.
+
+      Main purpose:
+      1. Send the logged-in user's ID to the backend.
+      2. Get the user's profile data.
+      3. Display the user's name, role, and email on the page.
+      4. Show an error message if the profile cannot be loaded.
+    */
     function loadProfile() {
+
+      /*
+        Send a request to the backend profile API.
+
+        API endpoint:
+        /api/profile/:userId
+
+        Example:
+        /api/profile/1
+
+        The user.id is used to retrieve the correct user's profile information.
+      */
       fetch(`/api/profile/${user.id}`, {
         headers: {
+          /*
+            Send JWT token to the backend for authentication.
+
+            This allows the backend to verify that the request
+            is made by a logged-in user.
+          */
           "Authorization": "Bearer " + localStorage.getItem("authToken")
         }
       })
+
+        /*
+          Convert the backend response into JSON format.
+        */
         .then(res => res.json())
+
+        /*
+          Handle the profile data returned from the backend.
+        */
         .then(data => {
+
+          /*
+            If the backend response is not successful:
+            - Show the error message
+            - Stop the function
+          */
           if (!data.success) {
             alert(data.message);
             return;
           }
 
+          /*
+            Store the user profile data returned from the backend.
+          */
           const profile = data.user;
 
+          /*
+            Display the first letter of the user's name as the profile avatar.
+
+            Example:
+            If the name is "Chloe", the avatar will show "C".
+
+            If the name does not exist, it will show "U" as default.
+          */
           document.getElementById("profileInitial").innerText =
             profile.name ? profile.name.charAt(0).toUpperCase() : "U";
 
+          /*
+            Display the user's full name.
+
+            If the name is missing, display "-" instead.
+          */
           document.getElementById("profileName").innerText =
             profile.name || "-";
 
+          /*
+            Display the user's role.
+
+            The formatRole() function is used to make the role look nicer.
+            Example:
+            "student" becomes "Student"
+          */
           document.getElementById("profileRole").innerText =
             formatRole(profile.role);
 
+          /*
+            Display the user's email address.
+
+            If the email is missing, display "-" instead.
+          */
           document.getElementById("profileEmail").innerText =
             profile.email || "-";
 
+          /*
+            Display the user's email address.
+
+            This line also sets the same email value again.
+          */
           document.getElementById("profileEmail").innerText =
             profile.email || "-";
         })
+
+        /*
+          This catch block runs if the profile request fails.
+
+          Possible reasons:
+          - Backend server is not running
+          - Network connection problem
+          - API request failed
+        */
         .catch(() => {
           alert("Failed to load profile.");
         });
     }
 
+    /*
+      Format the user's role text.
+
+      Main purpose:
+      - Convert the first letter to uppercase.
+      - Keep the remaining letters the same.
+
+      Example:
+      "student" becomes "Student"
+      "staff" becomes "Staff"
+      "admin" becomes "Admin"
+    */
     function formatRole(role) {
+
+      /*
+        If role is missing, return "-" as default.
+      */
       if (!role) return "-";
+
+      /*
+        Capitalize the first letter of the role.
+      */
       return role.charAt(0).toUpperCase() + role.slice(1);
     }
 
+    /*
+      Logout function.
+
+      Main purpose:
+      1. Remove user data from localStorage.
+      2. Remove user data from sessionStorage.
+      3. Redirect the user back to the login page.
+    */
     function logout() {
       localStorage.removeItem("user");
       sessionStorage.removeItem("user");
