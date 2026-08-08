@@ -9,6 +9,261 @@
 
   <!-- Main external CSS file for the system design -->
   <link rel="stylesheet" href="style.css">
+
+  <!--
+    Styles for the custom date picker.
+    Kept inline here so the component is self-contained; feel free to move
+    this block into style.css if you'd rather keep all styling in one file.
+  -->
+  <style>
+    /* Wrapper that positions the dropdown relative to the trigger button */
+    .custom-datepicker {
+      position: relative;
+      display: inline-block;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    /* Trigger button that replaces the native <input type="date"> */
+    .custom-date-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 160px;
+      padding: 10px 14px;
+      background: #fff;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      color: #D12E26;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .custom-date-btn:hover {
+      border-color: #D12E26;
+    }
+
+    .custom-date-btn.active {
+      border-color: #D12E26;
+    }
+
+    .custom-date-btn .calendar-icon {
+      margin-left: auto;
+      flex-shrink: 0;
+      color: #D12E26;
+    }
+
+    .custom-date-btn .date-label.placeholder {
+      color: #D12E26;
+      opacity: 0.85;
+    }
+
+    /* Dropdown panel containing the calendar */
+    .date-picker-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      z-index: 50;
+      width: 248px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+      padding: 12px;
+    }
+
+    .date-picker-menu.open {
+      display: block;
+    }
+
+    /* Month header with prev/next navigation */
+    .date-picker-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .date-picker-header .month-label {
+      font-weight: 600;
+      font-size: 13px;
+      color: #1f2937;
+      letter-spacing: 0.06em;
+      word-spacing: 0.35em;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background 0.15s ease;
+    }
+
+    .date-picker-header .month-label:hover {
+      background: #fdecea;
+      color: #D12E26;
+    }
+
+    /* Quick month-grid view, shown when the month/year label is clicked */
+    .date-picker-months {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .date-picker-month {
+      padding: 9px 0;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      font-family: 'Poppins', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: #1f2937;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .date-picker-month:hover {
+      background: #fdecea;
+    }
+
+    .date-picker-month.current-month {
+      border: 1.5px solid #D12E26;
+      color: #D12E26;
+      font-weight: 600;
+    }
+
+    .date-picker-month.selected-month {
+      background: #D12E26;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .date-picker-nav-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: #1f2937;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .date-picker-nav-btn:hover {
+      background: #f3f4f6;
+    }
+
+    /* Weekday row (Mon - Sun) */
+    .date-picker-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      margin-bottom: 4px;
+    }
+
+    .date-picker-weekdays span {
+      text-align: center;
+      font-size: 10px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+    }
+
+    /* Day grid */
+    .date-picker-days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      row-gap: 8px;
+    }
+
+    .date-picker-day {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      margin: 0 auto;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      font-family: 'Poppins', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: #1f2937;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .date-picker-day:hover:not(.disabled) {
+      background: #fdecea;
+    }
+
+    .date-picker-day.outside {
+      color: #d1d5db;
+    }
+
+    .date-picker-day.today {
+      border: 1.5px solid #D12E26;
+      color: #D12E26;
+      font-weight: 600;
+    }
+
+    .date-picker-day.selected {
+      background: #D12E26;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .date-picker-day.selected.today {
+      border: none;
+    }
+
+    /* Footer with Clear / Done actions */
+    .date-picker-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .date-picker-clear-btn {
+      background: none;
+      border: none;
+      color: #6b7280;
+      font-family: 'Poppins', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 6px 4px;
+    }
+
+    .date-picker-clear-btn:hover {
+      color: #D12E26;
+    }
+
+    .date-picker-done-btn {
+      background: #D12E26;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: 7px 18px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .date-picker-done-btn:hover {
+      background: #b52520;
+    }
+  </style>
 </head>
 
 <!--
@@ -51,14 +306,67 @@
       -->
       <div class="filter-bar">
 
-        <!-- Date filter label and input -->
+        <!-- Date filter label -->
         <label>Filter By:</label>
 
         <!--
-          Date input for filtering facilities by selected date.
-          The current code listens to changes on this input and calls applyFilters().
+          Custom date picker.
+          Replaces the native <input type="date"> with a styled dropdown
+          calendar (month navigation, weekday header, Today marker, and a
+          Done button), matching the reference design.
         -->
-        <input type="date" id="filterDate">
+        <div class="custom-datepicker" id="dateDropdown">
+
+          <!--
+            Trigger button. Shows the selected date, or the dd/mm/yyyy
+            placeholder when nothing is selected yet.
+          -->
+          <button type="button" class="custom-date-btn" id="dateTriggerBtn" onclick="toggleDatePicker()">
+            <span id="dateLabel" class="date-label placeholder">dd/mm/yyyy</span>
+            <svg class="calendar-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </button>
+
+          <!-- Calendar dropdown panel -->
+          <div class="date-picker-menu" id="datePickerMenu">
+
+            <!-- Month header with prev/next navigation -->
+            <div class="date-picker-header">
+              <button type="button" class="date-picker-nav-btn" onclick="changeMonth(-1)" aria-label="Previous month">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              </button>
+              <span class="month-label" id="calendarMonthLabel" onclick="openMonthPicker()">August 2026</span>
+              <button type="button" class="date-picker-nav-btn" onclick="changeMonth(1)" aria-label="Next month">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+            </div>
+
+            <!-- Weekday row -->
+            <div class="date-picker-weekdays" id="calendarWeekdays">
+              <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+            </div>
+
+            <!-- Day grid, populated by renderCalendar() -->
+            <div class="date-picker-days" id="calendarDays"></div>
+
+            <!-- Footer actions -->
+            <div class="date-picker-footer">
+              <button type="button" class="date-picker-clear-btn" onclick="clearDate()">Clear</button>
+              <button type="button" class="date-picker-done-btn" onclick="closeDatePicker()">Done</button>
+            </div>
+          </div>
+        </div>
+
+        <!--
+          Hidden input that keeps the same id/behavior the rest of the app
+          relies on (applyFilters() reads a "yyyy-mm-dd" value from #filterDate,
+          and a "change" event is dispatched on it whenever a date is picked).
+        -->
+        <input type="hidden" id="filterDate">
 
         <!--
           Custom dropdown for selecting facility type filters.
@@ -374,6 +682,8 @@
     function toggleDropdown() {
       document.getElementById("dropdownMenu").classList.toggle("open");
       document.querySelector(".custom-dropdown-btn").classList.toggle("active");
+      // Keep only one dropdown open at a time.
+      closeDatePicker();
     }
 
     /*
@@ -392,6 +702,15 @@
       if (dropdown && !dropdown.contains(e.target)) {
         document.getElementById("dropdownMenu").classList.remove("open");
         document.querySelector(".custom-dropdown-btn").classList.remove("active");
+      }
+
+      /*
+        Same idea for the custom date picker: close it if the click
+        landed outside of it.
+      */
+      const dateDropdown = document.getElementById("dateDropdown");
+      if (dateDropdown && !dateDropdown.contains(e.target)) {
+        closeDatePicker();
       }
     });
 
@@ -560,6 +879,329 @@
       return "Available Now";
     }
 
+    /* =======================================================
+       Custom date picker
+       =======================================================
+       Replaces the native <input type="date"> with a styled
+       dropdown calendar: a month header with prev/next arrows,
+       a weekday row, a day grid (today outlined, selected day
+       filled), and Clear / Done actions.
+
+       The hidden #filterDate input still holds the selected
+       date as "yyyy-mm-dd" and still fires a "change" event,
+       so applyFilters() keeps working exactly as before.
+    ======================================================= */
+
+    const MONTH_NAMES = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    // The month/year currently shown in the calendar grid.
+    const today = new Date();
+    let calendarYear = today.getFullYear();
+    let calendarMonth = today.getMonth(); // 0-11
+
+    // The date the user has actually selected (null = nothing selected yet).
+    let selectedDate = null; // Date object
+
+    // Which view the dropdown is currently showing: "days" (the normal
+    // calendar grid) or "months" (the quick month picker opened by
+    // clicking the "Month Year" label).
+    let pickerView = "days";
+
+    /*
+      Open or close the date picker dropdown.
+    */
+    function toggleDatePicker() {
+      const menu = document.getElementById("datePickerMenu");
+      const btn = document.getElementById("dateTriggerBtn");
+      const isOpen = menu.classList.contains("open");
+
+      if (isOpen) {
+        closeDatePicker();
+      } else {
+        // Jump the calendar back to the selected date's month (or today's).
+        const base = selectedDate || today;
+        calendarYear = base.getFullYear();
+        calendarMonth = base.getMonth();
+        pickerView = "days";
+        renderCalendar();
+
+        menu.classList.add("open");
+        btn.classList.add("active");
+
+        // Keep only one dropdown open at a time.
+        document.getElementById("dropdownMenu").classList.remove("open");
+        document.querySelector(".custom-dropdown-btn").classList.remove("active");
+      }
+    }
+
+    /*
+      Close the date picker dropdown.
+    */
+    function closeDatePicker() {
+      document.getElementById("datePickerMenu").classList.remove("open");
+      document.getElementById("dateTriggerBtn").classList.remove("active");
+    }
+
+    /*
+      Move the calendar forward or backward.
+
+      In the normal day-grid view this steps one month at a time.
+      In the quick month-grid view (opened via the label) it steps
+      one year at a time instead, since months are picked by clicking
+      them directly.
+
+      Parameter:
+      delta
+      - -1 to go back, 1 to go forward.
+    */
+    function changeMonth(delta) {
+      if (pickerView === "months") {
+        calendarYear += delta;
+        renderCalendar();
+        return;
+      }
+
+      calendarMonth += delta;
+
+      if (calendarMonth < 0) {
+        calendarMonth = 11;
+        calendarYear--;
+      } else if (calendarMonth > 11) {
+        calendarMonth = 0;
+        calendarYear++;
+      }
+
+      renderCalendar();
+    }
+
+    /*
+      Open the quick month picker: clicking the "Month Year" label
+      switches the dropdown from the day grid to a 3x4 grid of month
+      names for the current calendarYear, so the user can jump to a
+      different month in one click instead of paging with the arrows.
+    */
+    function openMonthPicker() {
+      pickerView = "months";
+      renderCalendar();
+    }
+
+    /*
+      Handle a month being picked from the quick month-grid view:
+      switch back to the day grid for that month/year.
+    */
+    function pickMonth(monthIndex) {
+      calendarMonth = monthIndex;
+      pickerView = "days";
+      renderCalendar();
+    }
+
+    /*
+      Build and display whichever view is currently active:
+      the day grid (with the "Month Year" header) or the quick
+      month-grid picker (with just the "Year" header).
+    */
+    function renderCalendar() {
+      if (pickerView === "months") {
+        renderMonthGrid();
+        return;
+      }
+      renderDayGrid();
+    }
+
+    /*
+      Build and display the day grid for the current calendar
+      month/year, along with the clickable "Month Year" header label.
+    */
+    function renderDayGrid() {
+      document.getElementById("calendarMonthLabel").textContent =
+        `${MONTH_NAMES[calendarMonth]} ${calendarYear}`;
+      document.getElementById("calendarWeekdays").style.display = "grid";
+
+      const daysContainer = document.getElementById("calendarDays");
+      daysContainer.className = "date-picker-days";
+      daysContainer.innerHTML = "";
+
+      // JS getDay(): 0 = Sunday ... 6 = Saturday. Convert to a Monday-first index (0-6).
+      const firstOfMonth = new Date(calendarYear, calendarMonth, 1);
+      const startOffset = (firstOfMonth.getDay() + 6) % 7;
+
+      const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+      const daysInPrevMonth = new Date(calendarYear, calendarMonth, 0).getDate();
+
+      // Leading days from the previous month, shown greyed out.
+      for (let i = startOffset; i > 0; i--) {
+        daysContainer.appendChild(
+          buildDayButton(daysInPrevMonth - i + 1, true, null)
+        );
+      }
+
+      // Days in the current month.
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateObj = new Date(calendarYear, calendarMonth, day);
+        daysContainer.appendChild(buildDayButton(day, false, dateObj));
+      }
+
+      // Trailing days from the next month so the grid stays a full 6 rows.
+      const totalCells = startOffset + daysInMonth;
+      const trailingCount = (7 - (totalCells % 7)) % 7;
+      for (let day = 1; day <= trailingCount; day++) {
+        daysContainer.appendChild(buildDayButton(day, true, null));
+      }
+    }
+
+    /*
+      Build and display the quick month-grid picker: 12 month
+      buttons (3 columns x 4 rows) for calendarYear. The header
+      shows just the year, and the prev/next arrows step by year
+      (handled in changeMonth()) instead of by month.
+    */
+    function renderMonthGrid() {
+      document.getElementById("calendarMonthLabel").textContent = `${calendarYear}`;
+      document.getElementById("calendarWeekdays").style.display = "none";
+
+      const daysContainer = document.getElementById("calendarDays");
+      daysContainer.className = "date-picker-months";
+      daysContainer.innerHTML = "";
+
+      MONTH_NAMES.forEach((name, index) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "date-picker-month";
+        btn.textContent = name.slice(0, 3);
+
+        if (index === today.getMonth() && calendarYear === today.getFullYear()) {
+          btn.classList.add("current-month");
+        }
+
+        if (
+          selectedDate &&
+          index === selectedDate.getMonth() &&
+          calendarYear === selectedDate.getFullYear()
+        ) {
+          btn.classList.add("selected-month");
+        }
+
+        btn.addEventListener("click", () => pickMonth(index));
+        daysContainer.appendChild(btn);
+      });
+    }
+
+    /*
+      Create a single day cell for the calendar grid.
+
+      Parameters:
+      day
+      - The day-of-month number to display.
+      outside
+      - True if this day belongs to the previous/next month (greyed out,
+        not clickable).
+      dateObj
+      - The actual Date this button represents (null for outside days).
+    */
+    function buildDayButton(day, outside, dateObj) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "date-picker-day";
+      btn.textContent = day;
+
+      if (outside) {
+        btn.classList.add("outside", "disabled");
+        btn.disabled = true;
+        return btn;
+      }
+
+      if (isSameDate(dateObj, today)) {
+        btn.classList.add("today");
+      }
+
+      if (selectedDate && isSameDate(dateObj, selectedDate)) {
+        btn.classList.add("selected");
+      }
+
+      btn.addEventListener("click", () => selectDay(dateObj));
+      return btn;
+    }
+
+    /*
+      Check whether two Date objects fall on the same calendar day.
+    */
+    function isSameDate(a, b) {
+      return a && b &&
+        a.getFullYear() === b.getFullYear() &&
+        a.getMonth() === b.getMonth() &&
+        a.getDate() === b.getDate();
+    }
+
+    /*
+      Handle the user picking a day on the calendar:
+      - Store it as the selected date.
+      - Update the trigger button's label.
+      - Sync the hidden #filterDate input and fire its "change" event
+        so applyFilters() runs.
+      - Re-render the grid so the new selection is highlighted.
+    */
+    function selectDay(dateObj) {
+      selectedDate = dateObj;
+      updateDateLabel();
+      syncHiddenInput();
+      renderCalendar();
+    }
+
+    /*
+      Clear the currently selected date and go back to showing
+      the dd/mm/yyyy placeholder.
+    */
+    function clearDate() {
+      selectedDate = null;
+      updateDateLabel();
+      syncHiddenInput();
+      renderCalendar();
+    }
+
+    /*
+      Update the trigger button's text: either the formatted
+      selected date, or the dd/mm/yyyy placeholder.
+    */
+    function updateDateLabel() {
+      const label = document.getElementById("dateLabel");
+
+      if (!selectedDate) {
+        label.textContent = "dd/mm/yyyy";
+        label.classList.add("placeholder");
+        return;
+      }
+
+      const dd = String(selectedDate.getDate()).padStart(2, "0");
+      const mm = String(selectedDate.getMonth() + 1).padStart(2, "0");
+      const yyyy = selectedDate.getFullYear();
+
+      label.textContent = `${dd}/${mm}/${yyyy}`;
+      label.classList.remove("placeholder");
+    }
+
+    /*
+      Keep the hidden #filterDate input (used by the rest of the app)
+      in sync with the selected date, and dispatch a "change" event
+      so any existing listeners (like applyFilters()) still fire.
+    */
+    function syncHiddenInput() {
+      const hiddenInput = document.getElementById("filterDate");
+
+      if (!selectedDate) {
+        hiddenInput.value = "";
+      } else {
+        const yyyy = selectedDate.getFullYear();
+        const mm = String(selectedDate.getMonth() + 1).padStart(2, "0");
+        const dd = String(selectedDate.getDate()).padStart(2, "0");
+        hiddenInput.value = `${yyyy}-${mm}-${dd}`;
+      }
+
+      hiddenInput.dispatchEvent(new Event("change"));
+    }
+
     /*
       When the date filter changes, apply the filters again.
 
@@ -570,22 +1212,8 @@
       applyFilters();
     });
 
-    /*
-      When the date input is clicked,
-      change its border color to red for focus styling.
-    */
-    document.getElementById("filterDate").addEventListener("click", function() {
-      this.style.border = "1.5px solid #D12E26";
-    });
-
-    /*
-      When the date input loses focus,
-      reset the border and remove the box shadow.
-    */
-    document.getElementById("filterDate").addEventListener("blur", function() {
-      this.style.border = "1px solid #e5e7eb";
-      this.style.boxShadow = "none";
-    });
+    // Draw the initial calendar grid for the current month.
+    renderCalendar();
 
     /*
       Convert time from 24-hour format to 12-hour format.
