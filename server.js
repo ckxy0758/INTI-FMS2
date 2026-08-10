@@ -61,5 +61,5 @@ app.use('/api', adminDashboardRoutes);
 // Start the backend server on port 3000.
 // Once running, the system can be accessed using http://0.0.0.0:3000.
 app.listen(3000, () => {
-  console.log("Server running at http://0.0.0.0:3000");
+  console.log("Server running at http://localhost:3000");
 });
