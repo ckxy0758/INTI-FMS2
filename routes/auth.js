@@ -121,7 +121,7 @@ router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
   // Only active accounts are allowed to log in
-  const sql = "SELECT * FROM users WHERE email = ? AND status = 'active'";
+  const sql = "SELECT * FROM users WHERE email = ?";
 
   db.query(sql, [email], (err, result) => {
     if (err) {
@@ -130,6 +130,29 @@ router.post("/login", (req, res) => {
 
     if (result.length === 1) {
       const user = result[0];
+
+      // Check account status
+      if (user.status === "pending") {
+          return res.json({
+              success: false,
+              message: "Your account is pending admin approval."
+          });
+      }
+
+      if (user.status === "rejected") {
+          return res.json({
+              success: false,
+              message: "Your registration has been rejected. Please contact the administrator."
+          });
+      }
+
+      if (user.status !== "active") {
+          return res.json({
+              success: false,
+              message: "Your account is currently inactive or suspended."
+          });
+      }
+
       const isHashed = user.password.startsWith("$2"); // Check if password is encrypted (bcrypt hashes start with "$2")
 
 
@@ -176,6 +199,129 @@ router.post("/login", (req, res) => {
       return res.json({ success: false, message: "Invalid email or password" });
     }
   });
+});
+
+/**
+ * POST /register
+ * Allows students/staff to register themselves.
+ * Default password = user_code.
+ * Account requires admin approval before login.
+ */
+router.post("/register", (req, res) => {
+  const { name, user_id, email, role } = req.body;
+
+  // Check required fields
+  if (!name || !user_id || !email || !role) {
+    return res.json({
+      success: false,
+      message: "Please fill in all fields"
+    });
+  }
+
+  // Only student and staff can self-register
+  if (role !== "student" && role !== "staff") {
+    return res.json({
+      success: false,
+      message: "Invalid role"
+    });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedUserId = user_id.trim();
+
+  // If email contains "student", role must be student
+  if (normalizedEmail.includes("student") && role !== "student") {
+    return res.json({
+      success: false,
+      message: "Email containing 'student' can only register as Student."
+    });
+  }
+
+  // Only allow INTI email addresses
+  if (
+    !normalizedEmail.endsWith("@newinti.edu.my")
+  ) {
+    return res.json({
+      success: false,
+      message: "Please use a valid INTI email address."
+    });
+  }
+
+  // Check if email or user ID already exists
+  const checkSql = `
+    SELECT user_id
+    FROM users
+    WHERE email = ? OR user_code = ?
+  `;
+
+  db.query(
+    checkSql,
+    [normalizedEmail, normalizedUserId],
+    (err, result) => {
+
+      if (err) {
+        console.error(err);
+        return res.json({
+          success: false,
+          message: "Database error"
+        });
+      }
+
+      if (result.length > 0) {
+        return res.json({
+          success: false,
+          message: "Email or ID is already registered."
+        });
+      }
+
+      // Default password is the user's ID
+      const defaultPassword = normalizedUserId;
+
+      // Hash the default password
+      bcrypt.hash(defaultPassword, 10, (hashErr, hashedPassword) => {
+
+        if (hashErr) {
+          console.error(hashErr);
+          return res.json({
+            success: false,
+            message: "Error securing password"
+          });
+        }
+
+        const sql = `
+          INSERT INTO users
+          (name, user_code, email, password, role, status, must_change_password)
+          VALUES (?, ?, ?, ?, ?, 'pending', TRUE)
+        `;
+
+        db.query(
+          sql,
+          [
+            name.trim(),
+            normalizedUserId,
+            normalizedEmail,
+            hashedPassword,
+            role
+          ],
+          (err) => {
+
+            if (err) {
+              console.error(err);
+              return res.json({
+                success: false,
+                message: "Registration failed"
+              });
+            }
+
+            return res.json({
+              success: true,
+              message: "Registration successful. Please wait for admin approval."
+            });
+          }
+        );
+      });
+    }
+  );
 });
 
 /**
@@ -395,6 +541,106 @@ router.post("/reset-password", (req, res) => {
     });
   });
 });
+
+/**
+ * POST /users/approve
+ * Admin approves multiple pending registrations.
+ *
+ * Request body:
+ * {
+ *   userIds: [1, 2, 3]
+ * }
+ */
+router.post(
+  "/users/approve",
+  verifyToken,
+  requireRole(["admin"]),
+  (req, res) => {
+
+    const { userIds } = req.body;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.json({
+        success: false,
+        message: "No users selected."
+      });
+    }
+
+    const sql = `
+      UPDATE users
+      SET status = 'active'
+      WHERE user_id IN (?) 
+      AND status = 'pending'
+    `;
+
+    db.query(sql, [userIds], (err, result) => {
+
+      if (err) {
+        console.error("Approve users error:", err);
+
+        return res.json({
+          success: false,
+          message: "Database error while approving users."
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: `${result.affectedRows} user(s) approved successfully.`
+      });
+    });
+  }
+);
+
+/**
+ * POST /users/reject
+ * Admin rejects multiple pending registrations.
+ *
+ * Request body:
+ * {
+ *   userIds: [1, 2, 3]
+ * }
+ */
+router.post(
+  "/users/reject",
+  verifyToken,
+  requireRole(["admin"]),
+  (req, res) => {
+
+    const { userIds } = req.body;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.json({
+        success: false,
+        message: "No users selected."
+      });
+    }
+
+    const sql = `
+      UPDATE users
+      SET status = 'rejected'
+      WHERE user_id IN (?)
+      AND status = 'pending'
+    `;
+
+    db.query(sql, [userIds], (err, result) => {
+
+      if (err) {
+        console.error("Reject users error:", err);
+
+        return res.json({
+          success: false,
+          message: "Database error while rejecting users."
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: `${result.affectedRows} user(s) rejected successfully.`
+      });
+    });
+  }
+);
 
 /**
  * PUT /users/:id/deactivate (admin only)

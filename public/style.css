@@ -4496,6 +4496,22 @@ input[type="password"]::-webkit-reveal {
   font-size: 15px;
 }
 
+/* Isolated styles strictly for register.html */
+.register-card input[type="text"],
+.register-card input[type="email"],
+.register-card select {
+  width: 100%;
+  height: 50px;
+  padding: 0 15px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+  font-size: 15px;
+  font-family: 'Poppins', sans-serif;
+  background-color: #ffffff;
+}
+
 .login-card input[type="email"]:focus {
   border-color: #D12E26 !important;
   background: #ffffff !important;
@@ -4793,4 +4809,148 @@ div#customTimeSection button[type="button"][onclick="addTimeSlotRow()"]:hover {
   border-color: #D12E26;
   background-color: #ffffff;
   box-shadow: 0 0 0 4px rgba(209, 46, 38, 0.12);
+}
+
+/* Table Footer Flex Container */
+.table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.table-footer .user-count-text {
+  margin: 0;
+}
+
+/* Pending Registration Button Style */
+.pending-reg-btn {
+  background-color: #c93a34;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.pending-reg-btn:hover {
+  background-color: #c6241c;
+  transform: translateY(-1px);
+}
+
+.pending-reg-btn:active {
+  transform: scale(0.98);
+}
+
+/* Pending User Modal Styling */
+.pending-modal-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  width: 90%;
+  max-width: 850px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.pending-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.pending-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #D12E26;
+}
+
+.pending-table-container {
+  overflow-y: auto;
+  max-height: 400px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.pending-user-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.pending-user-table th, 
+.pending-user-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+.pending-user-table th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+  position: sticky;
+  top: 0;
+}
+
+.pending-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-approve {
+  background-color: #22c55e;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+}
+
+.btn-approve:hover {
+  background-color: #16a34a;
+}
+
+.btn-reject {
+  background-color: #ef4444;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+}
+
+.btn-reject:hover {
+  background-color: #dc2626;
+}
+
+.checkbox-col {
+  width: 40px;
+  text-align: center;
+}
+
+.checkbox-col input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #D12E26;
+  cursor: pointer;
 }
