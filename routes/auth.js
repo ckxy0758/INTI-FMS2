@@ -239,6 +239,7 @@ router.post("/register", (req, res) => {
 
   // Only allow INTI email addresses
   if (
+    !normalizedEmail.endsWith("@student.newinti.edu.my") &&
     !normalizedEmail.endsWith("@newinti.edu.my")
   ) {
     return res.json({
