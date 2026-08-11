@@ -468,7 +468,7 @@ router.post("/forgot-password", (req, res) => {
       }
 
       // Send Email 
-      const resetLink = `http://localhost:3000/reset-password.html?token=${token}`;
+      const resetLink = `${process.env.APP_URL}/reset-password.html?token=${token}`;
       
       const mailOptions = {
         from: 'no-reply@yourdomain.com',

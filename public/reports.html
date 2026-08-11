@@ -322,7 +322,7 @@
         facilityId = document.getElementById("userUsageFacility").value;
       }
 
-      let url = `http://localhost:3000/api/admin/reports?userType=${userType}&facilityType=${facilityType}&facilityId=${facilityId}`;
+      let url = `/api/admin/reports?userType=${userType}&facilityType=${facilityType}&facilityId=${facilityId}`;
 
       if (month) url += `&month=${month}`;
       if (year) url += `&year=${year}`;
@@ -366,7 +366,7 @@
     }
 
     function loadFacilitiesForFilters() {
-      fetch("http://localhost:3000/api/facilities?role=admin", {
+      fetch("/api/facilities?role=admin", {
         headers: {
           "Authorization": "Bearer " + localStorage.getItem("authToken")
         }

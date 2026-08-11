@@ -178,7 +178,7 @@
      * - Facility usage data for the chart
      */
     function fetchDashboardData() {
-      fetch(`http://localhost:3000/api/admin/dashboard?userId=${user.id}`, {
+      fetch(`/api/admin/dashboard?userId=${user.id}`, {
         headers: {
           // Send JWT token for backend authentication
           "Authorization": "Bearer " + localStorage.getItem("authToken")
