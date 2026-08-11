@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>INTI Facility Management System</title>
   <!-- Google Fonts: Poppins, used throughout the UI -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -11,10 +12,10 @@
   <!-- Top Notification Bar with the system title and the "?" -->
   <header class="topbar">
     <h2>INTI Facility Management System</h2>
-    <span class="help-icon">
+    <span class="help-icon" id="helpIcon">
     ?
     <!-- The text shown when hover to the "?" -->
-    <span class="help-tooltip">
+    <span class="help-tooltip" id="helpTooltip">
       The INTI Facilities Booking Management System is designed to streamline facility services within INTI. Users can submit maintenance requests, track service status, and manage facility-related issues all in one platform.
     </span>
   </span>
@@ -171,7 +172,26 @@
         eye.src = "images/eye-open.png";  // open eye = currently hidden
       }
     }
-  </script>
+    
+  const helpIcon = document.getElementById("helpIcon");
+  const helpTooltip = document.getElementById("helpTooltip");
 
+  helpIcon.addEventListener("click", function (event) {
+    if (window.innerWidth <= 768) {
+      event.stopPropagation();
+      helpTooltip.classList.toggle("show");
+    }
+  });
+
+  document.addEventListener("click", function () {
+    if (window.innerWidth <= 768) {
+      helpTooltip.classList.remove("show");
+    }
+  });
+
+  helpTooltip.addEventListener("click", function (event) {
+    event.stopPropagation();
+  });
+</script>
 </body>
 </html>

@@ -1289,6 +1289,100 @@ router.get("/bookings/:id", verifyToken, (req, res) => {
 });
 
 /**
+ * PUT /bookings/:id/submit-payment
+ * Lets the booking's owner attach a proof-of-payment file (image or PDF,
+ * sent as a base64 data URI, matching the pattern already used for facility
+ * images) for a facility whose booking_flow_type is "payment_required".
+ *
+ * Only bookings currently in payment_status = 'pending_payment' (owned by
+ * the requesting user) are eligible. The file is decoded and written to
+ * disk under /public/uploads, and the relative path is stored in the new
+ * bookings.proof_of_payment column. payment_status moves to
+ * 'payment_submitted', and all admins are notified so one of them can
+ * verify the payment and approve the booking.
+ *
+ * Request body: { user_id, proof_of_payment }
+ * proof_of_payment must be a base64 data URI, e.g.
+ * "data:image/png;base64,...." or "data:application/pdf;base64,....".
+ */
+router.put("/bookings/:id/submit-payment", verifyToken, (req, res) => {
+  const bookingId = req.params.id;
+  const { user_id, proof_of_payment } = req.body;
+
+  if (!user_id || !proof_of_payment) {
+    return res.json({ success: false, message: "Missing proof of payment" });
+  }
+
+  // Match the "data:<mime>;base64,<data>" shape and figure out a sensible
+  // file extension from the mime type. Falls back to treating it as a
+  // generic binary blob (.bin) if the mime type isn't one of the common
+  // receipt formats, so an unexpected file type still gets saved.
+  const dataUriMatch = proof_of_payment.match(/^data:([\w/+.-]+);base64,(.+)$/);
+
+  if (!dataUriMatch) {
+    return res.json({ success: false, message: "Invalid file format" });
+  }
+
+  const mimeType = dataUriMatch[1];
+  const base64Data = dataUriMatch[2];
+
+  const extensionByMime = {
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "application/pdf": "pdf"
+  };
+  const extension = extensionByMime[mimeType] || "bin";
+
+  const uploadsDir = path.join(__dirname, "../public/uploads");
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+  const fileName = `payment_${bookingId}_${Date.now()}.${extension}`;
+  const filePath = path.join(uploadsDir, fileName);
+
+  fs.writeFile(filePath, base64Data, "base64", (writeErr) => {
+    if (writeErr) {
+      console.log("Proof of payment save error:", writeErr);
+      return res.json({ success: false, message: "Failed to save proof of payment" });
+    }
+
+    const relativePath = `uploads/${fileName}`;
+
+    const updateSql = `
+      UPDATE bookings
+      SET payment_status = 'payment_submitted', proof_of_payment = ?
+      WHERE booking_id = ? AND user_id = ? AND payment_status = 'pending_payment' AND booking_status != 'cancelled'
+    `;
+
+    db.query(updateSql, [relativePath, bookingId, user_id], (updateErr, result) => {
+      if (updateErr) {
+        console.log("Submit payment error:", updateErr);
+        return res.json({ success: false, message: "Failed to submit proof of payment" });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.json({ success: false, message: "This booking is not awaiting payment" });
+      }
+
+      // Let admins know a payment is ready to be verified
+      db.query(
+        "SELECT f.facility_name FROM bookings b JOIN facilities f ON b.facility_id = f.facility_id WHERE b.booking_id = ?",
+        [bookingId],
+        (lookupErr, rows) => {
+          if (!lookupErr && rows.length > 0) {
+            const adminMsg = `Proof of payment submitted for ${rows[0].facility_name}. Please verify and approve.`;
+            notifyAllAdmins(bookingId, "Payment Submitted", adminMsg, "system");
+          }
+        }
+      );
+
+      return res.json({ success: true, message: "Proof of payment submitted successfully" });
+    });
+  });
+});
+
+/**
  * PUT /bookings/:id/cancel
  * Lets the owning user cancel their own booking, enforcing a 1-hour-before-
  * start cancellation deadline. Bookings that are already finalized or
@@ -1356,18 +1450,36 @@ router.put("/bookings/:id/cancel", verifyToken, (req, res) => {
  */
 router.get("/admin/bookings", verifyToken, requireRole(['admin']), (req, res) => {
   const sql = `
-    SELECT 
-      b.booking_id,
-      DATE_FORMAT(b.booking_date, '%Y-%m-%d') AS booking_date,
-      TIME_FORMAT(b.start_time, '%H:%i:%s') AS start_time,
-      TIME_FORMAT(b.end_time, '%H:%i:%s') AS end_time,
-      b.remark, b.booking_status, b.payment_status, b.key_status,
-      u.name AS user_name, u.role AS user_role, f.facility_name
-    FROM bookings b
-    JOIN users u ON b.user_id = u.user_id
-    JOIN facilities f ON b.facility_id = f.facility_id
-    ORDER BY b.booking_date DESC, b.start_time DESC
-  `;
+  SELECT 
+    b.booking_id,
+    DATE_FORMAT(b.booking_date, '%Y-%m-%d') AS booking_date,
+    TIME_FORMAT(b.start_time, '%H:%i:%s') AS start_time,
+    TIME_FORMAT(b.end_time, '%H:%i:%s') AS end_time,
+
+    b.remark,
+    b.booking_status,
+    b.payment_required,
+    b.payment_status,
+    b.payment_amount,
+    b.proof_of_payment,
+    b.key_status,
+
+    u.name AS user_name,
+    u.role AS user_role,
+
+    f.facility_name,
+    f.booking_flow_type
+
+  FROM bookings b
+
+  JOIN users u
+    ON b.user_id = u.user_id
+
+  JOIN facilities f
+    ON b.facility_id = f.facility_id
+
+  ORDER BY b.booking_date DESC, b.start_time DESC
+`;
 
   db.query(sql, (err, result) => {
     if (err) {
@@ -1386,36 +1498,170 @@ router.get("/admin/bookings", verifyToken, requireRole(['admin']), (req, res) =>
  * on whether the facility requires key collection.
  */
 // Administrative booking approval transition logic
-router.put("/admin/bookings/:id/approve", verifyToken, requireRole(['admin']), (req, res) => {
-  const bookingId = req.params.id;
+// =====================================================
+// ADMIN APPROVE BOOKING
+// Normal booking + payment-required booking
+// =====================================================
+router.put(
+  "/admin/bookings/:id/approve",
+  verifyToken,
+  requireRole(["admin"]),
+  (req, res) => {
 
-  const updateSql = `
-    UPDATE bookings SET booking_status = 'approved'
-    WHERE booking_id = ? AND booking_status IN ('pending', 'pending_payment', 'payment_submitted')
-  `;
+    const bookingId = req.params.id;
 
-  db.query(updateSql, [bookingId], (err, result) => {
-    if (err) return res.json({ success: false, message: "Failed to approve booking" });
-    // affectedRows === 0 means the booking wasn't in an approvable state (or didn't exist)
-    if (result.affectedRows === 0) return res.json({ success: false, message: "This booking cannot be approved" });
+    // First get the booking + facility flow
+    const checkSql = `
+      SELECT
+        b.booking_id,
+        b.booking_status,
+        b.payment_required,
+        b.payment_status,
+        f.facility_name,
+        f.booking_flow_type
+      FROM bookings b
+      JOIN facilities f
+        ON b.facility_id = f.facility_id
+      WHERE b.booking_id = ?
+      LIMIT 1
+    `;
 
-    // Using the helper function instead of massive raw SQL
-    db.query("SELECT f.facility_name, f.booking_flow_type FROM bookings b JOIN facilities f ON b.facility_id = f.facility_id WHERE b.booking_id = ?", [bookingId], (err, rows) => {
-      if (!err && rows.length > 0) {
-        const facility = rows[0];
-        // Message differs depending on whether the flow involves a staff-issued key
-        const emailMessage = facility.booking_flow_type === "staff_key_approval"
-          ? `Your booking request of ${facility.facility_name} has been approved. Please go to AFM to collect the key.`
-          : `Your booking request of ${facility.facility_name} has been approved.`;
-        
-        notifyUserByBooking(bookingId, "Booking Approved", emailMessage, "booking_approved");
+    db.query(checkSql, [bookingId], (checkErr, rows) => {
+
+      if (checkErr) {
+        console.log("Approve booking check error:", checkErr);
+
+        return res.json({
+          success: false,
+          message: "Failed to approve booking"
+        });
       }
+
+      if (rows.length === 0) {
+        return res.json({
+          success: false,
+          message: "Booking not found"
+        });
+      }
+
+      const booking = rows[0];
+
+      const bookingStatus = booking.booking_status
+        ? booking.booking_status.trim().toLowerCase()
+        : "";
+
+      const paymentStatus = booking.payment_status
+        ? booking.payment_status.trim().toLowerCase()
+        : "";
+
+      const paymentRequired =
+        booking.payment_required === 1 ||
+        booking.payment_required === "1" ||
+        booking.booking_flow_type === "payment_required";
+
+
+      // =================================================
+      // PAYMENT REQUIRED BOOKING
+      // =================================================
+
+      if (paymentRequired) {
+
+        // Admin can approve only after proof is submitted
+        if (paymentStatus !== "payment_submitted") {
+          return res.json({
+            success: false,
+            message: "Payment proof has not been submitted yet."
+          });
+        }
+
+        const updatePaymentSql = `
+          UPDATE bookings
+          SET
+            booking_status = 'approved',
+            payment_status = 'verified'
+          WHERE booking_id = ?
+        `;
+
+        db.query(updatePaymentSql, [bookingId], (updateErr) => {
+
+          if (updateErr) {
+            console.log("Payment booking approve error:", updateErr);
+
+            return res.json({
+              success: false,
+              message: "Failed to approve booking"
+            });
+          }
+
+          notifyUserByBooking(
+            bookingId,
+            "Booking Approved",
+            `Your payment has been verified and your booking request of ${booking.facility_name} has been approved.`,
+            "booking_approved"
+          );
+
+          return res.json({
+            success: true,
+            message: "Booking approved successfully"
+          });
+
+        });
+
+        return;
+      }
+
+
+      // =================================================
+      // NORMAL / STAFF KEY APPROVAL
+      // =================================================
+
+      if (bookingStatus !== "pending") {
+        return res.json({
+          success: false,
+          message: "This booking cannot be approved"
+        });
+      }
+
+      const updateNormalSql = `
+        UPDATE bookings
+        SET booking_status = 'approved'
+        WHERE booking_id = ?
+      `;
+
+      db.query(updateNormalSql, [bookingId], (updateErr) => {
+
+        if (updateErr) {
+          console.log("Normal booking approve error:", updateErr);
+
+          return res.json({
+            success: false,
+            message: "Failed to approve booking"
+          });
+        }
+
+        const emailMessage =
+          booking.booking_flow_type === "staff_key_approval"
+            ? `Your booking request of ${booking.facility_name} has been approved. Please go to AFM to collect the key.`
+            : `Your booking request of ${booking.facility_name} has been approved.`;
+
+        notifyUserByBooking(
+          bookingId,
+          "Booking Approved",
+          emailMessage,
+          "booking_approved"
+        );
+
+        return res.json({
+          success: true,
+          message: "Booking approved successfully"
+        });
+
+      });
+
     });
 
-    // Note: response is sent immediately without waiting for the notification query above to finish
-    return res.json({ success: true, message: "Booking approved successfully" });
-  });
-});
+  }
+);
 
 /**
  * PUT /admin/bookings/:id/cancel (admin only)
@@ -1662,5 +1908,52 @@ function createOverdueKeyNotifications(callback) {
     if (callback) callback();
   });
 }
+
+router.put("/bookings/:id/submit-payment", (req, res) => {
+  const bookingId = req.params.id;
+  const { user_id, proof_of_payment } = req.body;
+
+  if (!proof_of_payment) {
+    return res.status(400).json({
+      success: false,
+      message: "Please attach proof of payment."
+    });
+  }
+
+  const sql = `
+    UPDATE bookings
+    SET proof_of_payment = ?,
+        payment_status = 'payment_submitted'
+    WHERE booking_id = ?
+      AND user_id = ?
+  `;
+
+  db.query(
+    sql,
+    [proof_of_payment, bookingId, user_id],
+    (err, result) => {
+      if (err) {
+        console.error("Submit proof of payment error:", err);
+
+        return res.status(500).json({
+          success: false,
+          message: "Failed to submit proof of payment."
+        });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Booking not found."
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: "Proof of payment submitted successfully."
+      });
+    }
+  );
+});
 
 module.exports = router;

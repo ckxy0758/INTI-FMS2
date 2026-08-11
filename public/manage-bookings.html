@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Manage Bookings</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -32,32 +33,66 @@
 
       <div class="booking-toolbar">
 
-        <label>Filter By:</label>
+      <label>Filter By:</label>
 
+      <div class="booking-filter-row">
+
+        <!-- Date -->
         <input type="date" id="filterDate">
 
+        <!-- Facility -->
         <div class="custom-dropdown" id="bookingFacilityDropdown">
-          <button class="custom-dropdown-btn" type="button" onclick="toggleBookingFacilityDropdown()">
+
+          <button
+            class="custom-dropdown-btn"
+            type="button"
+            onclick="toggleBookingFacilityDropdown()"
+          >
             <span id="bookingFacilityLabel">Facility</span>
 
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
+
           </button>
 
-          <div class="custom-dropdown-menu" id="bookingFacilityMenu"></div>
+          <div
+            class="custom-dropdown-menu"
+            id="bookingFacilityMenu"
+          ></div>
+
         </div>
 
-        <button class="export-btn" onclick="exportToCSV()">
-          <svg class="export-icon" xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor">
-            <path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/>
-          </svg>
-          <span>Export</span>
-        </button>
-
       </div>
+
+      <button class="export-btn" onclick="exportToCSV()">
+
+        <svg
+          class="export-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          height="18px"
+          viewBox="0 -960 960 960"
+          width="18px"
+          fill="currentColor"
+        >
+          <path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/>
+        </svg>
+
+        <span>Export</span>
+
+      </button>
+
+    </div>
 
       <div class="booking-table-card">
 
@@ -66,7 +101,7 @@
             <tr>
               <th>ID</th>
               <th>User</th>
-              <th>Room</th>
+              <th>Facility</th>
               <th>Date & Time</th>
               <th>Remark</th>
               <th>Action</th>
@@ -304,7 +339,14 @@
               <strong style="display:block; max-width:200px; margin:0 auto; text-align:center; word-break:break-word; white-space:normal; line-height:1.5;">${booking.remark || "-"}</strong>
             </td>
 
-            <td class="booking-action-icons">
+            <td
+              class="booking-action-icons"
+              style="
+                min-width:230px;
+                width:230px;
+                text-align:center;
+              "
+            >
               ${getActionButtons(booking)}
             </td>
 
@@ -322,44 +364,242 @@
     }
 
     function getActionButtons(booking) {
-      const status = booking.booking_status;
 
-      if (status === "pending" || status === "pending_payment") {
-        return `
-        <div class="action-icon-group">
-          <button class="approve-icon" title="Approve" onclick="approveBooking(${booking.booking_id})">
-            <img 
-              src="images/check_24dp_3FB50D_FILL0_wght400_GRAD0_opsz24.svg" 
-              class="approve-img"
-              alt="Approve"
-            >
-          </button>
+  const status = booking.booking_status
+    ? booking.booking_status.trim().toLowerCase()
+    : "";
 
-          <button class="reject-icon" title="Cancel" onclick="cancelBooking(${booking.booking_id})">
-            <img 
-              src="images/close_24dp_3FB50D_FILL0_wght400_GRAD0_opsz24.svg" 
-              class="reject-img"
-              alt="Cancel"
-            >
-          </button>
-        </div>
-      `;
-      }
+  const paymentStatus = booking.payment_status
+    ? booking.payment_status.trim().toLowerCase()
+    : "";
 
-      if (status === "approved") {
-        return `<span class="status-active">Approved</span>`;
-      }
+  const paymentRequired =
+    booking.payment_required === 1 ||
+    booking.payment_required === "1" ||
+    booking.booking_flow_type === "payment_required";
 
-      if (status === "cancelled") {
-        return `<span class="status-inactive">Cancelled</span>`;
-      }
 
-      if (status === "completed") {
-        return `<span class="status-active">Completed</span>`;
-      }
+  // =========================================
+  // PAYMENT REQUIRED
+  // =========================================
 
-      return `<span>${formatStatus(status)}</span>`;
-    }
+  if (paymentRequired) {
+
+  // =========================================
+  // CANCELLED
+  // =========================================
+  if (status === "cancelled") {
+    return `<span class="status-inactive">Cancelled</span>`;
+  }
+
+
+  // =========================================
+  // ALREADY APPROVED
+  // Keep View Proof available
+  // =========================================
+  if (status === "approved") {
+
+    return `
+      <div class="booking-action-buttons">
+
+        <button
+          type="button"
+          class="booking-view-proof-btn"
+          onclick="viewProofOfPayment(${booking.booking_id})">
+          View Proof
+        </button>
+
+        <span class="status-active">
+          Approved
+        </span>
+
+      </div>
+    `;
+  }
+
+
+  // =========================================
+  // PAYMENT NOT SUBMITTED YET
+  // =========================================
+  if (
+    paymentStatus === "pending_payment" ||
+    paymentStatus === ""
+  ) {
+    return `<span class="status-inactive">Pending Payment</span>`;
+  }
+
+
+  // =========================================
+  // PROOF SUBMITTED - WAITING ADMIN DECISION
+  // =========================================
+  if (paymentStatus === "payment_submitted") {
+
+    return `
+      <div class="booking-action-buttons">
+
+        <button
+          type="button"
+          class="booking-view-proof-btn"
+          onclick="viewProofOfPayment(${booking.booking_id})">
+          View Proof
+        </button>
+
+        <button
+          type="button"
+          class="booking-approve-btn"
+          onclick="approveBooking(${booking.booking_id})">
+          Approve
+        </button>
+
+        <button
+          type="button"
+          class="booking-reject-btn"
+          onclick="cancelBooking(${booking.booking_id})">
+          Reject
+        </button>
+
+      </div>
+    `;
+  }
+
+
+  // =========================================
+  // VERIFIED FALLBACK
+  // =========================================
+  if (paymentStatus === "verified") {
+
+    return `
+      <div class="booking-action-buttons">
+
+        <button
+          type="button"
+          class="booking-view-proof-btn"
+          onclick="viewProofOfPayment(${booking.booking_id})">
+          View Proof
+        </button>
+
+        <span class="status-active">
+          Approved
+        </span>
+
+      </div>
+    `;
+  }
+
+}
+
+
+  // =========================================
+  // NORMAL BOOKING
+  // =========================================
+
+  if (status === "pending") {
+
+    return `
+      <div class="booking-action-buttons">
+
+        <button
+          type="button"
+          class="booking-approve-btn"
+          onclick="approveBooking(${booking.booking_id})">
+          Approve
+        </button>
+
+        <button
+          type="button"
+          class="booking-reject-btn"
+          onclick="cancelBooking(${booking.booking_id})">
+          Reject
+        </button>
+
+      </div>
+    `;
+  }
+
+
+  // =========================================
+  // DISPLAY STATUS
+  // =========================================
+
+  if (status === "approved") {
+    return `<span class="status-active">Approved</span>`;
+  }
+
+  if (status === "cancelled") {
+    return `<span class="status-inactive">Cancelled</span>`;
+  }
+
+  if (status === "completed") {
+    return `<span class="status-active">Completed</span>`;
+  }
+
+  if (status === "reserved") {
+    return `<span class="status-active">Reserved</span>`;
+  }
+
+  if (status === "checked_in") {
+    return `<span class="status-active">Checked In</span>`;
+  }
+
+  if (status === "key_collected") {
+    return `<span class="status-active">Key Collected</span>`;
+  }
+
+  if (status === "expired") {
+    return `<span class="status-inactive">Expired</span>`;
+  }
+
+  return `<span>${formatStatus(status)}</span>`;
+}
+
+  function viewProofOfPayment(bookingId) {
+  const booking = allBookings.find(
+    b => String(b.booking_id) === String(bookingId)
+  );
+
+  if (!booking || !booking.proof_of_payment) {
+    showAlert("No proof of payment found.", "error");
+    return;
+  }
+
+  const proof = booking.proof_of_payment;
+
+  // PDF
+  if (proof.startsWith("data:application/pdf")) {
+    const newWindow = window.open();
+
+    newWindow.document.write(`
+      <html>
+        <head>
+          <title>Proof of Payment</title>
+        </head>
+
+        <body style="margin:0;">
+          <iframe
+            src="${proof}"
+            style="
+              width:100%;
+              height:100vh;
+              border:none;
+            ">
+          </iframe>
+        </body>
+      </html>
+    `);
+
+    return;
+  }
+
+  // Image
+  document.getElementById("proofModalImage").src = proof;
+  document.getElementById("proofPaymentModal").style.display = "flex";
+}
+
+function closeProofModal() {
+  document.getElementById("proofPaymentModal").style.display = "none";
+
+  document.getElementById("proofModalImage").src = "";
+}
 
 
     function approveBooking(bookingId) {
@@ -573,6 +813,53 @@
       <div id="modalButtons" class="custom-modal-buttons"></div>
     </div>
   </div>
+<div
+  id="proofPaymentModal"
+  class="custom-modal-overlay"
+  style="display:none;"
+>
 
+  <div
+    class="custom-modal-box"
+    style="
+      width:90%;
+      max-width:700px;
+    "
+  >
+
+    <h3
+      style="
+        color:#D12E26;
+        font-size:24px;
+        margin-top:0;
+      "
+    >
+      Proof of Payment
+    </h3>
+
+    <img
+      id="proofModalImage"
+      src=""
+      alt="Proof of Payment"
+      style="
+        display:block;
+        max-width:100%;
+        max-height:65vh;
+        object-fit:contain;
+        margin:20px auto;
+        border-radius:10px;
+      "
+    >
+
+    <button
+      class="custom-modal-btn-ok"
+      onclick="closeProofModal()"
+    >
+      Close
+    </button>
+
+  </div>
+
+</div>
 </body>
 </html>

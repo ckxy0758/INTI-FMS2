@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Browser tab title -->
   <title>Booking Details</title>
 
@@ -188,6 +189,14 @@
       - Other functions can reuse the loaded booking details if needed.
     */
     let currentBooking = null;
+
+    /*
+      Holds the attached proof-of-payment file as a base64 data URL while
+      the user is filling in the payment_required action panel below.
+      Reset back to "" after a successful submission (or when a fresh
+      upload box is rendered) so nothing carries over between bookings.
+    */
+    let proofOfPaymentBase64 = "";
 
     /*
       Start loading the booking details immediately after the page script runs.
@@ -430,6 +439,7 @@
          - direct_reservation
          - staff_key_approval
          - normal_approval
+         - payment_required
          - other/default flows
 
       3. Booking status
@@ -625,6 +635,114 @@
         return;
       }
 
+      // Payment Required Flow
+
+      /*
+        Payment required flow:
+        This applies when the facility's booking_flow_type is
+        "payment_required". The booking sits in payment_status
+        "pending_payment" until the user attaches a proof of payment,
+        which moves it to "payment_submitted"; an admin later marks it
+        "verified" (that verification step lives on the admin side,
+        not here).
+
+        This panel renders one of three states based on payment_status:
+        1. pending_payment (or missing) - show the upload control.
+        2. payment_submitted - confirm it was sent, awaiting review.
+        3. verified - confirm the booking is fully confirmed.
+      */
+      if (booking.booking_flow_type === "payment_required") {
+        const paymentStatus = booking.payment_status
+          ? booking.payment_status.trim().toLowerCase()
+          : "pending_payment";
+
+        const backButtonHtml = `
+          <button class="action-secondary-btn full-width-btn" style="margin-top: 15px;" onclick="window.location.href='activities.html'">
+            Back to Activities
+          </button>
+        `;
+
+        if (status === "cancelled") {
+        card.innerHTML = `
+          <h2>Booking Cancelled</h2>
+          <p>This booking has been cancelled, so a proof of payment can no longer be submitted.</p>
+
+          <div class="action-box">
+            <strong>Current Status</strong>
+            <h3>${formatStatus(booking)}</h3>
+          </div>
+
+          ${backButtonHtml}
+        `;
+      } else if (paymentStatus === "verified") {
+          card.innerHTML = `
+            <h2>Payment Verified</h2>
+            <p>Your payment has been verified. This booking is confirmed.</p>
+
+            <div class="action-box">
+              <strong>Current Status</strong>
+              <h3>${formatStatus(booking)}</h3>
+            </div>
+
+            ${backButtonHtml}
+          `;
+        } else if (paymentStatus === "payment_submitted") {
+          card.innerHTML = `
+            <h2>Payment Submitted</h2>
+            <p>Your proof of payment has been submitted and is awaiting verification by the admin.</p>
+
+            <div class="action-box">
+              <strong>Current Status</strong>
+              <h3>${formatStatus(booking)}</h3>
+            </div>
+
+            ${backButtonHtml}
+          `;
+        } else {
+          // pending_payment: show the attach-receipt upload control.
+          proofOfPaymentBase64 = "";
+
+          card.innerHTML = `
+            <h2>Proof of Payment</h2>
+            <p>This facility requires payment. Please attach your payment receipt below.</p>
+
+            <div class="action-box">
+              <strong>Current Status</strong>
+              <h3>${formatStatus(booking)}</h3>
+            </div>
+
+            <label class="facility-upload-box" style="margin-top:16px;">
+              <span class="upload-title">Attach Receipt</span>
+              <small class="upload-subtitle">JPG, PNG, or PDF</small>
+              <p class="upload-hint">Click here to upload</p>
+              <input type="file" id="proofOfPaymentFile" accept="image/*,.pdf" onchange="previewProofOfPayment(event)" hidden>
+            </label>
+
+            <!--
+              Empty on purpose: the attachment chip is only created inside
+              here once a file is picked (see previewProofOfPayment()) and
+              removed entirely when cleared (see removeProofOfPayment()).
+              It's NOT pre-rendered and toggled with display:none, because
+              .equipment-tag's "display: inline-flex !important" in
+              style.css would always win over an inline display:none and
+              keep the empty chip visibly on screen.
+            -->
+            <div id="paymentFileChipContainer" style="margin-top:10px; text-align:left;"></div>
+
+            <button class="action-main-btn full-width-btn" style="margin-top: 15px;" onclick="submitProofOfPayment()">
+              Submit Proof of Payment
+            </button>
+
+            ${backButtonHtml}
+          `;
+        }
+
+        /*
+          Stop the function after the payment panel is rendered.
+        */
+        return;
+      }
+
       // Default Pending Flow
 
       /*
@@ -658,6 +776,10 @@
 
       returnKey():
       - Used for QR-based key return.
+
+      previewProofOfPayment() / submitProofOfPayment():
+      - Used to attach and submit a proof-of-payment file for
+        payment_required bookings.
     */
 
     /*
@@ -758,6 +880,156 @@
           Show error modal if request fails.
         */
         showAlert("Key return failed. Please try again.", "error");
+      });
+    }
+
+    /*
+      Function: previewProofOfPayment(event)
+
+      Purpose:
+      - Reads the file the user selected in the "Attach Receipt" upload box.
+      - Converts it to a base64 data URL (same pattern used for facility
+        images on the admin side) and stores it in proofOfPaymentBase64,
+        ready to be sent by submitProofOfPayment().
+      - Builds an attachment chip (filename + size + × remove button) and
+        drops it into #paymentFileChipContainer. The chip is created here
+        rather than pre-rendered and shown/hidden, because .equipment-tag's
+        "display: inline-flex !important" in style.css would otherwise
+        always override an inline display:none and leave an empty chip
+        visible before any file was even picked.
+    */
+    function previewProofOfPayment(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        proofOfPaymentBase64 = e.target.result;
+        renderProofOfPaymentChip(file.name, file.size);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /*
+      Function: renderProofOfPaymentChip(name, size)
+
+      Purpose:
+      Builds the attachment chip element (matching the app's existing
+      .equipment-tag pill style) and places it inside
+      #paymentFileChipContainer, replacing anything already there.
+    */
+    function renderProofOfPaymentChip(name, size) {
+      const container = document.getElementById("paymentFileChipContainer");
+      if (!container) return;
+
+      container.innerHTML = "";
+
+      const chip = document.createElement("div");
+      chip.className = "equipment-tag";
+      chip.style.maxWidth = "100%";
+      chip.style.boxSizing = "border-box";
+
+      const nameSpan = document.createElement("span");
+      nameSpan.style.overflow = "hidden";
+      nameSpan.style.textOverflow = "ellipsis";
+      nameSpan.style.whiteSpace = "nowrap";
+      nameSpan.innerText = `${name} (${formatFileSize(size)})`;
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.innerText = "×";
+      removeBtn.addEventListener("click", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        removeProofOfPayment();
+      });
+
+      chip.appendChild(nameSpan);
+      chip.appendChild(removeBtn);
+      container.appendChild(chip);
+    }
+
+    /*
+      Function: removeProofOfPayment()
+
+      Purpose:
+      - Clears the currently attached proof-of-payment file: resets the
+        stored base64 data, the file input, and removes the chip element
+        from the DOM entirely (rather than hiding it).
+      - Triggered by the × button on the chip.
+    */
+    function removeProofOfPayment() {
+      proofOfPaymentBase64 = "";
+
+      const fileInput = document.getElementById("proofOfPaymentFile");
+      if (fileInput) fileInput.value = "";
+
+      const container = document.getElementById("paymentFileChipContainer");
+      if (container) container.innerHTML = "";
+    }
+
+    /*
+      Function: formatFileSize(bytes)
+
+      Purpose:
+      Converts a byte count into a short, human-readable size label.
+
+      Example:
+      2201000 becomes "2,151K"
+      6300000 becomes "6.0MB"
+    */
+    function formatFileSize(bytes) {
+      const kb = bytes / 1024;
+
+      if (kb < 1024) {
+        return `${Math.round(kb).toLocaleString()}K`;
+      }
+
+      return `${(kb / 1024).toFixed(1)}MB`;
+    }
+
+    /*
+      Function: submitProofOfPayment()
+
+      Purpose:
+      - Sends the attached proof-of-payment file to the backend.
+      - On success, refreshes the booking so the panel switches to the
+        "Payment Submitted" state (payment_status becomes payment_submitted).
+
+      Backend endpoint:
+      PUT /api/bookings/${bookingId}/submit-payment
+      NOTE: this route doesn't exist in the backend code shared so far -
+      it needs to be added there to accept { user_id, proof_of_payment },
+      store the file/data, and set the booking's payment_status to
+      "payment_submitted".
+
+      Request body:
+      - user_id: identifies who is submitting the payment.
+      - proof_of_payment: the base64 data URL of the attached file.
+    */
+    function submitProofOfPayment() {
+      if (!proofOfPaymentBase64) {
+        showAlert("Please attach your proof of payment before submitting.", "error");
+        return;
+      }
+
+      fetch(`/api/bookings/${bookingId}/submit-payment`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + localStorage.getItem("authToken")
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          proof_of_payment: proofOfPaymentBase64
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        showAlert(data.message, data.success ? "success" : "error", data.success ? () => loadBookingDetails() : null);
+      })
+      .catch(() => {
+        showAlert("Failed to submit proof of payment. Please try again.", "error");
       });
     }
 

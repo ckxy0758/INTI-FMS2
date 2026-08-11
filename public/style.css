@@ -957,6 +957,39 @@ span.flatpickr-weekday {
   gap: 28px;
 }
 
+/*
+  ===== FIX: BOOKING PANEL OVERFLOWS ON MOBILE =====
+
+  Root cause: .details-layout uses CSS Grid, and grid items default to
+  min-width: auto, which means their minimum width is based on the widest
+  piece of *content* inside them - not the grid track width. Native
+  <input type="date"> has a fairly wide intrinsic minimum size on iOS
+  Safari, which the grid then honors, forcing .booking-panel (and the
+  whole card) wider than the phone screen.
+
+  Fix: explicitly allow the grid items to shrink below their content's
+  natural width by setting min-width: 0 on them.
+
+  Add this block to style.css (anywhere is fine, e.g. right after the
+  existing .details-layout rule).
+*/
+
+.details-layout,
+.details-left,
+.booking-panel {
+  min-width: 0;
+}
+
+/* Extra safety net: keep any input/select/textarea inside the booking
+   panel from ever exceeding its own container's width, regardless of
+   how a given browser sizes that control internally. */
+.booking-panel input,
+.booking-panel select,
+.booking-panel textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .details-left,
 .booking-panel {
   background: #ffffff;
@@ -4793,4 +4826,3816 @@ div#customTimeSection button[type="button"][onclick="addTimeSlotRow()"]:hover {
   border-color: #D12E26;
   background-color: #ffffff;
   box-shadow: 0 0 0 4px rgba(209, 46, 38, 0.12);
+}
+
+/* =========================================================
+   FINAL MOBILE RESPONSIVE FIX
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+  /* ---------- GENERAL ---------- */
+
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .dashboard-body {
+    overflow-x: hidden;
+  }
+
+  .dashboard-layout {
+    display: block !important;
+    padding-top: 64px !important;
+    width: 100%;
+  }
+
+  .main-content,
+  body.sidebar-collapsed .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 20px 16px !important;
+    overflow-x: hidden;
+  }
+
+
+  /* ---------- HEADER ---------- */
+
+  .app-header {
+    height: 64px;
+    padding: 0 16px !important;
+    z-index: 2000;
+  }
+
+  .logo-area {
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .menu-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    min-width: 30px;
+    cursor: pointer;
+  }
+
+  .logo-area img {
+    height: 30px !important;
+    max-width: 75px;
+    object-fit: contain;
+  }
+
+  .system-title {
+    font-size: 14px !important;
+    line-height: 1.25;
+    white-space: normal;
+  }
+
+
+  /* ---------- MOBILE SIDEBAR ---------- */
+
+  .sidebar,
+  body.sidebar-collapsed .sidebar,
+  body.sidebar-collapsed .admin-sidebar {
+    position: fixed !important;
+    top: 64px !important;
+    left: -280px !important;
+
+    width: 260px !important;
+    height: calc(100vh - 64px) !important;
+
+    background: #ffffff;
+    border-right: 1px solid #e5e7eb;
+
+    padding: 18px 12px !important;
+    overflow-y: auto;
+
+    z-index: 1900;
+
+    transition: left 0.25s ease !important;
+  }
+
+  body.mobile-sidebar-open .sidebar {
+    left: 0 !important;
+  }
+
+  /* Never use collapsed-icon-only sidebar on mobile */
+  body.sidebar-collapsed .sidebar a {
+    justify-content: flex-start !important;
+    padding: 10px 13px !important;
+  }
+
+  body.sidebar-collapsed .sidebar a span:last-child {
+    display: inline !important;
+  }
+
+  .sidebar a {
+    margin-bottom: 10px !important;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+
+
+  /* ---------- PAGE TITLES ---------- */
+
+  .page-title {
+    font-size: 24px !important;
+    line-height: 1.25;
+  }
+
+  .page-subtitle {
+    font-size: 13px !important;
+    line-height: 1.5;
+    margin-bottom: 18px !important;
+  }
+
+
+  /* ---------- FACILITY LIST ---------- */
+
+  .facility-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .facility-card {
+    width: 100%;
+  }
+
+  .facility-img {
+    height: 150px !important;
+  }
+
+  .facility-info {
+    padding: 14px !important;
+  }
+
+
+  /* ---------- FILTERS ---------- */
+
+  .filter-bar,
+  .booking-toolbar {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100%;
+  }
+
+  .filter-bar input,
+  .filter-bar select,
+  .date-input-wrapper,
+  .custom-dropdown,
+  .custom-dropdown-btn,
+  .booking-toolbar input,
+  .booking-toolbar select {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box;
+  }
+
+  .custom-dropdown-menu {
+    width: 100% !important;
+  }
+
+
+  /* ---------- FACILITY DETAILS ---------- */
+
+  .details-layout {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .details-left,
+  .booking-panel {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 16px !important;
+  }
+
+  .details-image {
+    height: 200px !important;
+  }
+
+  .details-left h2 {
+    font-size: 22px !important;
+  }
+
+  .details-left p {
+    font-size: 14px !important;
+  }
+
+  .booking-panel h2 {
+    font-size: 22px !important;
+    margin-bottom: 22px !important;
+  }
+
+
+  /* ---------- BOOKING DETAILS ---------- */
+
+  .booking-details-layout {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .booking-detail-card,
+  .booking-action-card {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 16px !important;
+  }
+
+  .booking-detail-header {
+    align-items: flex-start !important;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .booking-detail-header h2 {
+    margin-bottom: 8px !important;
+    font-size: 16px !important;
+  }
+
+  .booking-status-badge {
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+  }
+
+  .booking-detail-image {
+    height: 170px !important;
+    margin-top: 10px !important;
+  }
+
+
+  /* ---------- ACTIVITIES ---------- */
+
+  .activity-filter-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px !important;
+  }
+
+  .activity-filter {
+    width: 100%;
+    padding: 9px 6px !important;
+    font-size: 11px !important;
+  }
+
+  #sortActivities {
+    grid-column: 1 / -1;
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  .activity-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+    padding: 14px !important;
+  }
+
+  .activity-img {
+    width: 100% !important;
+    height: 170px !important;
+  }
+
+  .activity-info {
+    width: 100%;
+  }
+
+  .activity-actions {
+    width: 100%;
+    display: flex !important;
+    gap: 10px;
+  }
+
+  .activity-actions button {
+    flex: 1;
+  }
+
+
+  /* ---------- PROGRESS TRACKER ---------- */
+
+  .activity-progress {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .progress-wrapper {
+    min-width: max-content;
+    justify-content: flex-start !important;
+  }
+
+
+  /* ---------- ADMIN DASHBOARD ---------- */
+
+  .dashboard-kpi-row,
+  .kpi-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  .kpi-card {
+    padding: 14px !important;
+  }
+
+  .kpi-card span {
+    font-size: 11px !important;
+  }
+
+  .kpi-card strong {
+    font-size: 20px !important;
+  }
+
+  .admin-top-row {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+  }
+
+  .admin-bottom-row {
+    width: 100% !important;
+  }
+
+
+  /* ---------- TABLES ---------- */
+
+  .booking-table-card,
+  .manage-user-table-card,
+  .manage-facility-table-card,
+  .key-table-card {
+    width: 100%;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 750px;
+  }
+
+  th,
+  td {
+    white-space: nowrap;
+  }
+
+
+  /* ---------- PAYMENT ACTIONS ---------- */
+
+  .payment-action-group {
+    display: flex !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+  }
+
+
+  /* ---------- MODALS ---------- */
+
+  .custom-modal-box,
+  .booking-modal {
+    width: calc(100% - 32px) !important;
+    max-width: 420px !important;
+    box-sizing: border-box;
+    padding: 22px 18px !important;
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+
+  #proofPaymentModal .custom-modal-box {
+    width: calc(100% - 24px) !important;
+  }
+
+  #proofModalImage {
+    max-height: 55vh !important;
+  }
+
+
+  /* ---------- PROFILE ---------- */
+
+  .profile-card {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+    padding: 16px !important;
+  }
+
+  .profile-avatar {
+    width: 72px !important;
+    height: 72px !important;
+    font-size: 30px !important;
+  }
+
+
+  /* ---------- FORM BUTTONS ---------- */
+
+  button,
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* ===== MOBILE SIDEBAR OVERLAY ===== */
+@media (max-width: 768px) {
+
+  body.mobile-sidebar-open::after {
+    content: "";
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(17, 24, 39, 0.35);
+    z-index: 1800;
+  }
+
+  body.mobile-sidebar-open .sidebar {
+    z-index: 1900;
+  }
+}
+
+/* =========================================================
+   MOBILE FACILITY FILTER FIX
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+  /* Keep Filter By label on its own row */
+  .filter-bar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    align-items: start !important;
+    width: 100% !important;
+  }
+
+  /* Filter By: takes full row */
+  .filter-bar > label {
+    grid-column: 1 / -1;
+    margin-bottom: 2px;
+  }
+
+  /* Date = left side */
+  .filter-bar .date-input-wrapper {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .filter-bar .date-input-wrapper input {
+    width: 100% !important;
+    height: 44px !important;
+    font-size: 13px !important;
+    padding-left: 10px !important;
+    padding-right: 32px !important;
+  }
+
+  /* Facility Type = right side */
+  .filter-bar .custom-dropdown {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .filter-bar .custom-dropdown-btn {
+    width: 100% !important;
+    height: 44px !important;
+    padding: 0 10px !important;
+    font-size: 13px !important;
+  }
+
+  /* Dropdown menu */
+  .filter-bar .custom-dropdown-menu {
+    width: 100% !important;
+    min-width: 180px !important;
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 9999 !important;
+  }
+
+  /* FIX missing facility names */
+  .filter-bar .dropdown-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    color: #374151 !important;
+    font-size: 13px !important;
+    padding: 10px !important;
+    min-height: 40px;
+  }
+
+  .filter-bar .dropdown-item span {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: inherit !important;
+    font-size: 13px !important;
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .filter-bar .dropdown-item input[type="checkbox"] {
+    display: block !important;
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    flex: 0 0 16px !important;
+  }
+
+}
+
+/* ===== FINAL MOBILE HEADER SPACING ===== */
+@media (max-width: 768px) {
+
+  /* 64px space for fixed header */
+  .dashboard-layout {
+    padding-top: 64px !important;
+  }
+
+  /* Small comfortable space under header */
+  .main-content,
+  body.sidebar-collapsed .main-content {
+    padding-top: 16px !important;
+  }
+
+  .page-title {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+}
+
+/* ===== MOBILE LOGOUT AT BOTTOM ===== */
+@media (max-width: 768px) {
+
+  .sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* Remove the old manual spacing before Logout */
+  .sidebar > br {
+    display: none !important;
+  }
+
+  /* Push Logout to the bottom */
+  .sidebar > a:last-of-type {
+    margin-top: auto !important;
+    margin-bottom: 20px !important;
+  }
+}
+
+/* ===== FINAL MOBILE SCROLL BEHAVIOR ===== */
+@media (max-width: 768px) {
+
+  /* Page can scroll normally */
+  html,
+  body {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  /* Header stays fixed */
+  .app-header {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 64px !important;
+    z-index: 2000 !important;
+  }
+
+  /* Sidebar stays fixed */
+  .sidebar,
+  body.sidebar-collapsed .sidebar,
+  body.sidebar-collapsed .admin-sidebar {
+    position: fixed !important;
+
+    top: 64px !important;
+    left: -280px !important;
+
+    width: 260px !important;
+    height: calc(100dvh - 64px) !important;
+
+    background: #ffffff;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    -webkit-overflow-scrolling: touch;
+
+    z-index: 1900 !important;
+  }
+
+  /* Show sidebar */
+  body.mobile-sidebar-open .sidebar {
+    left: 0 !important;
+  }
+
+  /* Sidebar itself can scroll */
+  body.mobile-sidebar-open .sidebar {
+    overflow-y: auto !important;
+    touch-action: pan-y;
+  }
+
+  /* Main content stays normal and scrollable */
+  .main-content,
+  body.sidebar-collapsed .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}
+
+/* ===== FIX BOOKING DATE ALIGNMENT ===== */
+.booking-panel #bookingDate {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 44px !important;
+
+  box-sizing: border-box !important;
+
+  padding: 0 12px !important;
+
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+
+  background: #ffffff !important;
+}
+
+@media (max-width: 768px) {
+  .booking-panel #bookingDate {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}
+
+/* ===== MOBILE FACILITY DETAILS SAME FONT SIZE ===== */
+@media (max-width: 768px) {
+
+  /* Facility Type / Location / Max. People */
+  .details-meta,
+  .details-meta div {
+    font-size: 14px !important;
+  }
+
+  /* Facility Rules / Additional Information headings */
+  .details-section h3 {
+    font-size: 14px !important;
+  }
+
+  /* Facility Rules content */
+  .details-section > div,
+  .details-section > div div {
+    font-size: 14px !important;
+  }
+
+  /* Additional Information text */
+  .additional-info-text {
+    font-size: 14px !important;
+  }
+}
+
+/* ===== MOBILE: MAKE BOOKING DATE MATCH SELECT BOXES ===== */
+@media (max-width: 768px) {
+
+  .booking-panel #bookingDate {
+    width: 100% !important;
+    height: 44px !important;
+    box-sizing: border-box !important;
+
+    border: 1.5px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    background: #ffffff !important;
+
+    padding: 0 42px 0 12px !important;
+
+    font-family: 'Poppins', sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    line-height: 44px !important;
+
+    color: #0d86ff !important;
+    text-align: left !important;
+  }
+
+  /* Chrome / Edge / Safari date text */
+  .booking-panel #bookingDate::-webkit-datetime-edit {
+    padding: 0 !important;
+    margin: 0 !important;
+
+    font-family: 'Poppins', sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+
+    color: #0d86ff !important;
+    text-align: left !important;
+  }
+
+  .booking-panel #bookingDate::-webkit-date-and-time-value {
+    text-align: left !important;
+
+    font-family: 'Poppins', sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+  }
+
+  /* Keep calendar icon on the right */
+  .booking-panel #bookingDate::-webkit-calendar-picker-indicator {
+    margin: 0 !important;
+    padding: 0 !important;
+    cursor: pointer;
+  }
+}
+
+/* ===== MOBILE ACTIVITY STATUS TRACKER - DESKTOP STYLE ===== */
+@media (max-width: 768px) {
+
+  .activity-progress {
+    width: 100% !important;
+    overflow-x: visible !important;
+    padding-bottom: 0 !important;
+  }
+
+  .progress-wrapper {
+    width: 100% !important;
+    min-width: 0 !important;
+
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+
+    padding: 8px 0 !important;
+  }
+
+    .progress-step {
+        width: 50px !important;
+        min-width: 50px !important;
+
+        text-align: center !important;
+        align-items: center !important;
+
+    font-size: 12px !important;
+    font-weight: 400 !important;
+
+    white-space: normal !important;
+    word-break: normal !important;
+  }
+
+  .progress-step .circle {
+    width: 32px !important;
+    height: 32px !important;
+    line-height: 32px !important;
+
+    font-size: 10px !important;
+    
+    margin: 0 auto 10px !important;
+    
+  }
+
+  .progress-line {
+    flex: 0 0 30px !important;
+
+    width: 30px !important;
+    height: 4px !important;
+
+    margin: 14px 4px 0 !important;
+
+    border-radius: 10px !important;
+  }
+}
+
+@media (max-width: 768px) {
+
+  .progress-step span {
+    width: 100% !important;
+    display: block !important;
+
+    text-align: center !important;
+    margin: 0 auto !important;
+
+    white-space: normal !important;
+    word-break: normal !important;
+  }
+}
+
+/* ===== MOBILE BOOKING DETAILS FIX ===== */
+@media (max-width: 768px) {
+
+  /* Main booking card stays fully inside screen */
+  .booking-detail-card,
+  .booking-action-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  /* Summary becomes one column on mobile */
+  .booking-detail-info-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    width: 100% !important;
+  }
+
+  .booking-detail-info-grid p {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+
+    display: grid !important;
+    grid-template-columns: 110px 1fr !important;
+    gap: 10px !important;
+
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+
+    overflow-wrap: anywhere !important;
+  }
+
+  .booking-detail-info-grid p strong {
+    min-width: 0 !important;
+  }
+
+  /* Image cannot exceed card */
+  .booking-detail-image {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Description stays inside card */
+  .booking-detail-desc {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-wrap: break-word !important;
+  }
+}
+
+/* ===== MOBILE NOTIFICATION - HIDE BELL ICON ===== */
+@media (max-width: 768px) {
+
+  .notification-icon {
+    display: none !important;
+  }
+
+}
+
+@media (max-width: 768px) {
+
+  .notification-card {
+    gap: 12px !important;
+  }
+
+  .notification-content {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+ /* ===== MOBILE SETTINGS PASSWORD CARD LAYOUT ===== */
+@media (max-width: 768px) {
+
+  .settings-option-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .settings-option-card h3 {
+    margin: 0 !important;
+  }
+
+  .settings-option-card p {
+    margin: 0 !important;
+  }
+
+  .settings-option-card button {
+    margin-top: 8px !important;
+
+    width: auto !important;
+    min-width: 150px !important;
+
+    padding: 11px 18px !important;
+
+    border-radius: 10px !important;
+    border: 1.5px solid #D12E26 !important;
+
+    background: #D12E26 !important;
+    color: #ffffff !important;
+
+    font-size: 13px !important;
+    font-weight: 600 !important;
+
+    white-space: nowrap !important;
+    box-shadow: none !important;
+  }
+}
+
+/* ===== MOBILE LOGIN PAGE COMPACT VIEW ===== */
+@media (max-width: 768px) {
+
+  .login-card {
+    width: calc(100% - 32px) !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+
+    padding: 28px 24px !important;
+    border-radius: 22px !important;
+  }
+
+  .login-card h1,
+  .login-card h2 {
+    font-size: 28px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .login-card > p {
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+    margin-bottom: 24px !important;
+  }
+
+  .login-card label {
+    font-size: 14px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .login-card input[type="email"],
+  .login-card input[type="password"] {
+    height: 46px !important;
+    font-size: 14px !important;
+
+    padding-left: 14px !important;
+    padding-right: 44px !important;
+
+    border-radius: 10px !important;
+  }
+
+  .password-wrapper {
+    margin-top: 18px !important;
+  }
+
+  .password-input {
+    width: 100% !important;
+  }
+
+  .toggle-eye {
+    right: 14px !important;
+  }
+
+  .toggle-eye img {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  .remember-row {
+    margin-top: 14px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .custom-checkbox {
+    font-size: 13px !important;
+    gap: 8px !important;
+  }
+
+  .login-card button {
+    width: 100% !important;
+    height: 48px !important;
+
+    font-size: 15px !important;
+    border-radius: 10px !important;
+
+    margin-top: 8px !important;
+  }
+
+  #message {
+    margin-top: 16px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* ===== MOBILE HELP TOOLTIP ===== */
+@media (max-width: 768px) {
+
+  .help-icon:active .help-tooltip,
+  .help-icon:focus .help-tooltip,
+  .help-icon:focus-within .help-tooltip {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateY(0) !important;
+  }
+
+  .help-icon {
+    position: relative !important;
+    z-index: 9999 !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .help-tooltip {
+    width: 240px !important;
+    max-width: calc(100vw - 40px) !important;
+    right: 0 !important;
+    top: 135% !important;
+    z-index: 10000 !important;
+  }
+}
+
+/* =========================================================
+   FINAL ADMIN MOBILE FIX - ALL ADMIN PAGES
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+  /* ===== PREVENT ENTIRE PAGE FROM BECOMING DESKTOP WIDTH ===== */
+
+  html,
+  body {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .dashboard-layout {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+
+  /* ===== ADMIN SIDEBAR ===== */
+
+  .admin-sidebar,
+  body.sidebar-collapsed .admin-sidebar {
+    position: fixed !important;
+
+    top: 64px !important;
+    left: -280px !important;
+
+    width: 260px !important;
+    height: calc(100dvh - 64px) !important;
+
+    padding: 18px 12px !important;
+
+    background: #ffffff !important;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    z-index: 1900 !important;
+
+    transition: left 0.25s ease !important;
+  }
+
+  /* Open admin sidebar only after hamburger is clicked */
+  body.mobile-sidebar-open .admin-sidebar {
+    left: 0 !important;
+  }
+
+
+  /* ===== REMOVE DESKTOP SIDEBAR SPACE ===== */
+
+  body:has(.admin-sidebar) .main-content,
+  body.sidebar-collapsed:has(.admin-sidebar) .main-content {
+
+    margin-left: 0 !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+
+    padding: 16px !important;
+
+    box-sizing: border-box !important;
+
+    overflow-x: hidden !important;
+  }
+
+
+  /* ===== MANAGE BOOKINGS PAGE ===== */
+
+  .main-content > section,
+  .main-content > div {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+
+  /* Page title */
+  .page-title {
+    font-size: 23px !important;
+    line-height: 1.25 !important;
+
+    white-space: normal !important;
+
+    margin-bottom: 5px !important;
+  }
+
+  .page-subtitle {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+
+    white-space: normal !important;
+  }
+
+
+  /* ===== STATUS TABS ===== */
+
+  .booking-tabs,
+  .status-tabs,
+  .tabs {
+    display: flex !important;
+
+    width: 100% !important;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+
+    gap: 18px !important;
+
+    -webkit-overflow-scrolling: touch;
+
+    scrollbar-width: none;
+  }
+
+  .booking-tabs::-webkit-scrollbar,
+  .status-tabs::-webkit-scrollbar,
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .booking-tabs button,
+  .status-tabs button,
+  .tabs button {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+
+    font-size: 12px !important;
+  }
+
+
+  /* ===== BOOKING FILTER BAR ===== */
+
+  .booking-toolbar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+
+    width: 100% !important;
+
+    gap: 10px !important;
+
+    align-items: center !important;
+  }
+
+  .booking-toolbar > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .booking-toolbar input,
+  .booking-toolbar select {
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 42px !important;
+
+    box-sizing: border-box !important;
+
+    font-size: 12px !important;
+  }
+
+  /* Export button */
+  .booking-toolbar .export-btn {
+    width: auto !important;
+
+    grid-column: 2 !important;
+    justify-self: end !important;
+
+    font-size: 11px !important;
+    padding: 9px 12px !important;
+  }
+
+
+  /* ===== TABLE CARD ===== */
+
+  .booking-table-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+
+    box-sizing: border-box !important;
+
+    padding: 10px !important;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+
+    -webkit-overflow-scrolling: touch;
+  }
+
+
+  /* Table can be wide,
+     BUT ONLY table scrolls, not whole website */
+  .manage-booking-table {
+    width: 750px !important;
+    min-width: 750px !important;
+
+    table-layout: auto !important;
+  }
+
+  .manage-booking-table th,
+  .manage-booking-table td {
+    font-size: 11px !important;
+
+    padding: 10px 8px !important;
+
+    white-space: nowrap !important;
+  }
+}
+
+/* =========================================================
+   MANAGE BOOKINGS - MOBILE FINAL LAYOUT
+   ========================================================= */
+@media (max-width: 768px) {
+
+  /* ===== STATUS TABS ===== */
+
+  .manage-booking-tabs {
+    display: flex !important;
+    align-items: center !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    gap: 24px !important;
+
+    margin-top: 8px !important;
+    margin-bottom: 22px !important;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+
+    padding-bottom: 4px !important;
+
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .manage-booking-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .booking-tab {
+    flex: 0 0 auto !important;
+
+    font-size: 13px !important;
+    line-height: 1.3 !important;
+
+    white-space: nowrap !important;
+
+    padding: 6px 0 !important;
+  }
+
+  .booking-tab.active {
+    padding-bottom: 6px !important;
+  }
+
+
+  /* ===== FILTER SECTION ===== */
+
+  .booking-toolbar {
+    display: grid !important;
+
+    grid-template-columns: 1fr 1fr !important;
+
+    gap: 10px !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    margin-bottom: 18px !important;
+
+    align-items: center !important;
+  }
+
+  /* Filter By takes full first row */
+  .booking-toolbar > label {
+    grid-column: 1 / -1 !important;
+
+    font-size: 14px !important;
+    margin: 0 !important;
+  }
+
+  /* Date */
+  .booking-toolbar input[type="date"] {
+    grid-column: 1 !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    height: 44px !important;
+
+    font-size: 12px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* Facility */
+  #bookingFacilityDropdown {
+    grid-column: 2 !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #bookingFacilityDropdown .custom-dropdown-btn {
+    width: 100% !important;
+    height: 44px !important;
+
+    font-size: 12px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* Export gets its own row */
+  .booking-toolbar .export-btn {
+    grid-column: 1 / -1 !important;
+
+    justify-self: end !important;
+
+    width: auto !important;
+    height: 40px !important;
+
+    margin-left: 0 !important;
+
+    padding: 0 14px !important;
+
+    font-size: 12px !important;
+  }
+
+
+  /* ===== TABLE CARD ===== */
+
+  .booking-table-card {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    padding: 8px !important;
+
+    box-sizing: border-box !important;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .manage-booking-table {
+    width: 750px !important;
+    min-width: 750px !important;
+
+    border-collapse: collapse !important;
+  }
+
+  .manage-booking-table th,
+  .manage-booking-table td {
+    padding: 10px 8px !important;
+
+    font-size: 11px !important;
+
+    white-space: nowrap !important;
+  }
+}
+
+/* ===== MOBILE MANAGE BOOKINGS - REMARK WIDTH FIX ===== */
+@media (max-width: 768px) {
+
+  .manage-booking-table {
+    width: 900px !important;
+    min-width: 900px !important;
+  }
+
+  /* Date & Time */
+  .manage-booking-table th:nth-child(4),
+  .manage-booking-table td:nth-child(4) {
+    width: 40px !important;
+  }
+
+  /* Remark */
+  .manage-booking-table th:nth-child(5),
+  .manage-booking-table td:nth-child(5) {
+    width: 120px !important;
+    min-width: 120px !important;
+
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+
+    line-height: 1.4 !important;
+  }
+
+  /* Action */
+  .manage-booking-table th:nth-child(6),
+  .manage-booking-table td:nth-child(6) {
+    width: 50px !important;
+  }
+
+  /* More */
+  .manage-booking-table th:nth-child(7),
+  .manage-booking-table td:nth-child(7) {
+    width: 30px !important;
+  }
+}
+
+/* ===== MANAGE BOOKINGS TABS - WIDER GAP ===== */
+@media (max-width: 768px) {
+
+  .manage-booking-tabs {
+    display: flex !important;
+    align-items: center !important;
+    gap: 38px !important;   /* increase this value */
+
+    width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+
+    padding-bottom: 6px !important;
+    margin-bottom: 24px !important;
+
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .manage-booking-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .booking-tab {
+    flex: 0 0 10px !important;
+    white-space: nowrap !important;
+    font-size: 13px !important;
+  }
+}
+
+/* ===== MOBILE MANAGE BOOKINGS - WIDER FIRST COLUMNS ===== */
+@media (max-width: 768px) {
+
+  /* Make whole table a little wider */
+  .manage-booking-table {
+    width: 1050px !important;
+    min-width: 1050px !important;
+  }
+
+  /* ID */
+  .manage-booking-table th:nth-child(1),
+  .manage-booking-table td:nth-child(1) {
+    width: 30px !important;
+    min-width: 30px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* User */
+  .manage-booking-table th:nth-child(2),
+  .manage-booking-table td:nth-child(2) {
+    width: 30px !important;
+    min-width: 30px !important;
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+
+  /* Room */
+  .manage-booking-table th:nth-child(3),
+  .manage-booking-table td:nth-child(3) {
+    width: 70px !important;
+    min-width: 70px !important;
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+}
+
+/* ===== MOBILE MANAGE BOOKINGS FILTER FIX ===== */
+@media (max-width: 768px) {
+
+  .booking-toolbar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    align-items: center !important;
+  }
+
+  /* Filter By label */
+  .booking-toolbar > label {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    margin-bottom: 2px !important;
+  }
+
+  /* DATE BOX */
+  .booking-toolbar input[type="date"] {
+    grid-column: 1 !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    height: 44px !important;
+
+    padding: 0 10px !important;
+
+    box-sizing: border-box !important;
+
+    font-size: 12px !important;
+  }
+
+  /* FACILITY BOX */
+  #bookingFacilityDropdown {
+    grid-column: 2 !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  #bookingFacilityDropdown .custom-dropdown-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 44px !important;
+
+    padding: 0 12px !important;
+
+    box-sizing: border-box !important;
+
+    font-size: 12px !important;
+  }
+
+  /* EXPORT */
+  .booking-toolbar .export-btn {
+    grid-column: 1 / -1 !important;
+
+    justify-self: end !important;
+
+    width: auto !important;
+
+    margin: 4px 0 0 !important;
+
+    height: 40px !important;
+    padding: 0 14px !important;
+  }
+}
+
+/* ===== FINAL MOBILE MANAGE BOOKING FILTER - NO OVERLAP ===== */
+@media (max-width: 768px) {
+
+  .booking-toolbar {
+    display: grid !important;
+
+    /* IMPORTANT: prevents grid children from pushing into each other */
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1fr) !important;
+
+    column-gap: 12px !important;
+    row-gap: 10px !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* Filter By */
+  .booking-toolbar > label {
+    grid-column: 1 / -1 !important;
+
+    width: auto !important;
+    min-width: 0 !important;
+
+    margin: 0 0 4px 0 !important;
+  }
+
+  /* DATE */
+  .booking-toolbar > input[type="date"] {
+    grid-column: 1 !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    height: 44px !important;
+
+    margin: 0 !important;
+    padding: 0 10px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* FACILITY */
+  .booking-toolbar > #bookingFacilityDropdown {
+    grid-column: 2 !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    margin: 0 !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .booking-toolbar > #bookingFacilityDropdown
+  .custom-dropdown-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    height: 44px !important;
+
+    margin: 0 !important;
+    padding: 0 12px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* EXPORT */
+  .booking-toolbar > .export-btn {
+    grid-column: 1 / -1 !important;
+
+    justify-self: end !important;
+
+    width: auto !important;
+
+    margin: 6px 0 0 0 !important;
+  }
+}
+
+/* =========================================================
+   MANAGE USERS - MOBILE ENHANCEMENT
+   ========================================================= */
+@media (max-width: 768px) {
+
+  /* ===== TABS ===== */
+
+  .manage-user-tabs {
+    display: flex !important;
+    align-items: center !important;
+
+    gap: 34px !important;
+
+    width: 100% !important;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+
+    margin-top: 8px !important;
+    margin-bottom: 24px !important;
+
+    padding-bottom: 5px !important;
+
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .manage-user-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .user-tab {
+    flex: 0 0 auto !important;
+
+    font-size: 13px !important;
+
+    white-space: nowrap !important;
+
+    padding: 6px 0 !important;
+  }
+
+
+  /* ===== SEARCH + ADD USER ===== */
+
+  .manage-user-toolbar {
+    display: grid !important;
+
+    grid-template-columns: minmax(0, 1fr) auto !important;
+
+    gap: 10px !important;
+
+    width: 100% !important;
+
+    align-items: center !important;
+
+    margin-bottom: 18px !important;
+  }
+
+  .user-search-box {
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 44px !important;
+
+    padding: 0 12px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .user-search-box input {
+    width: 100% !important;
+    min-width: 0 !important;
+
+    font-size: 12px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .add-user-btn {
+    width: auto !important;
+    min-width: 125px !important;
+
+    height: 44px !important;
+
+    padding: 0 14px !important;
+
+    border-radius: 10px !important;
+
+    font-size: 12px !important;
+    font-weight: 600 !important;
+
+    white-space: nowrap !important;
+  }
+
+
+  /* ===== USER TABLE CARD ===== */
+
+  .user-table-card {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    padding: 8px !important;
+
+    box-sizing: border-box !important;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .manage-user-table {
+    width: 950px !important;
+    min-width: 950px !important;
+
+    border-collapse: collapse !important;
+  }
+
+  .manage-user-table th,
+  .manage-user-table td {
+    padding: 12px 14px !important;
+
+    font-size: 12px !important;
+
+    white-space: nowrap !important;
+  }
+
+
+  /* Name */
+  .manage-user-table th:nth-child(1),
+  .manage-user-table td:nth-child(1) {
+    width: 170px !important;
+    min-width: 170px !important;
+  }
+
+  /* ID */
+  .manage-user-table th:nth-child(2),
+  .manage-user-table td:nth-child(2) {
+    width: 130px !important;
+    min-width: 130px !important;
+  }
+
+  /* Email */
+  .manage-user-table th:nth-child(3),
+  .manage-user-table td:nth-child(3) {
+    width: 240px !important;
+    min-width: 240px !important;
+  }
+
+  /* Role */
+  .manage-user-table th:nth-child(4),
+  .manage-user-table td:nth-child(4) {
+    width: 100px !important;
+    min-width: 100px !important;
+  }
+
+  /* Status */
+  .manage-user-table th:nth-child(5),
+  .manage-user-table td:nth-child(5) {
+    width: 110px !important;
+    min-width: 110px !important;
+  }
+
+  /* Action */
+  .manage-user-table th:nth-child(6),
+  .manage-user-table td:nth-child(6) {
+    width: 130px !important;
+    min-width: 130px !important;
+  }
+
+
+  /* ===== USER COUNT ===== */
+
+  .user-count-text {
+    margin-top: 16px !important;
+
+    font-size: 13px !important;
+    font-weight: 600 !important;
+  }
+}
+
+/* ===== MOBILE MANAGE USERS - SAME HEIGHT ===== */
+@media (max-width: 768px) {
+
+  .user-search-box,
+  .add-user-btn {
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    box-sizing: border-box !important;
+  }
+
+  .user-search-box {
+    padding: 0 12px !important;
+  }
+
+  .user-search-box input {
+    height: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .add-user-btn {
+    padding: 0 16px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+}
+
+/* =========================================================
+   MANAGE FACILITIES - MOBILE FINAL FIX
+   ========================================================= */
+@media (max-width: 768px) {
+
+  /* ==================================
+     SEARCH + ADD FACILITY
+     ================================== */
+
+  #facilityListPage .manage-user-toolbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+
+    gap: 10px !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    align-items: center !important;
+
+    margin-bottom: 18px !important;
+  }
+
+  #facilityListPage .user-search-box {
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 44px !important;
+
+    padding: 0 12px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  #facilityListPage .user-search-box input {
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 100% !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    font-size: 12px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  #facilityListPage .add-user-btn {
+    width: auto !important;
+
+    height: 44px !important;
+    min-height: 44px !important;
+
+    padding: 0 14px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    border-radius: 10px !important;
+
+    font-size: 12px !important;
+    font-weight: 600 !important;
+
+    white-space: nowrap !important;
+  }
+
+
+  /* ==================================
+     FACILITY LIST
+     ================================== */
+
+  #facilityList {
+    width: 100% !important;
+  }
+
+
+  /* ==================================
+     FACILITY CARD
+     ================================== */
+
+  #facilityList .admin-facility-card {
+    position: relative !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    padding: 14px !important;
+    margin-bottom: 16px !important;
+
+    box-sizing: border-box !important;
+
+    overflow: hidden !important;
+  }
+
+
+  /* ==================================
+     MAIN FACILITY IMAGE ONLY
+     ================================== */
+
+  #facilityList .admin-facility-img {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    height: 190px !important;
+
+    object-fit: cover !important;
+
+    border-radius: 12px !important;
+
+    margin: 0 0 0px 0 !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* ==================================
+     FACILITY INFORMATION
+     ================================== */
+
+  #facilityList .admin-facility-info {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    box-sizing: border-box !important;
+  }
+
+
+  /* Facility name */
+  #facilityList .admin-facility-info h3 {
+    width: 100% !important;
+
+    margin: 0 0 8px 0 !important;
+
+    font-size: 19px !important;
+    line-height: 1.3 !important;
+
+    color: #111827 !important;
+
+    white-space: normal !important;
+  }
+
+
+  /* Description */
+  #facilityList .facility-desc {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    margin: 0 0 14px 0 !important;
+
+    font-size: 13px !important;
+    line-height: 1.55 !important;
+
+    color: #6b7280 !important;
+
+    white-space: normal !important;
+
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+  }
+
+
+  /* ==================================
+     LOCATION / TIME / FLOW
+     ================================== */
+
+  #facilityList .facility-meta {
+    width: 100% !important;
+
+    display: flex !important;
+    align-items: center !important;
+
+    gap: 7px !important;
+
+    margin: 7px 0 !important;
+
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+
+    color: #6b7280 !important;
+
+    white-space: normal !important;
+
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+  }
+
+
+  /* VERY IMPORTANT:
+     only resize the small meta icons */
+  #facilityList .facility-meta > img {
+    width: 18px !important;
+    height: 18px !important;
+
+    min-width: 18px !important;
+    max-width: 18px !important;
+
+    flex: 0 0 18px !important;
+
+    object-fit: contain !important;
+
+    margin: 0 !important;
+
+    border-radius: 0 !important;
+  }
+
+
+  /* ==================================
+     EDIT BUTTON
+     ================================== */
+
+  #facilityList .facility-edit-btn {
+    position: absolute !important;
+
+    top: 18px !important;
+    right: 18px !important;
+
+    width: 34px !important;
+    height: 34px !important;
+
+    padding: 0 !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    background: rgba(255, 255, 255, 0.95) !important;
+
+    border: none !important;
+    border-radius: 8px !important;
+
+    z-index: 5 !important;
+  }
+
+  #facilityList .facility-edit-btn svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+}
+
+/* ===== MOBILE FACILITY IMAGE/TITLE GAP FIX ===== */
+@media (max-width: 768px) {
+
+  #facilityList .admin-facility-card {
+    gap: 15px !important;
+  }
+
+  #facilityList .admin-facility-img {
+    margin-bottom: 0 !important;
+  }
+
+  #facilityList .admin-facility-info {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  #facilityList .admin-facility-info h3 {
+    margin-top: 0 !important;
+  }
+}
+
+/* =========================================================
+   MANAGE FACILITY FORM - MOBILE
+   ========================================================= */
+@media (max-width: 768px) {
+
+  /* Main form card */
+  #facilityFormPage .facility-form-card {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    padding: 18px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* Selected Facility title */
+  #facilityFormPage .facility-selected-title {
+    font-size: 20px !important;
+    line-height: 1.3 !important;
+
+    margin-bottom: 14px !important;
+
+    white-space: normal !important;
+  }
+
+
+  /* ===== PHOTO SECTION ===== */
+
+  #facilityFormPage .facility-photo-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+
+    gap: 12px !important;
+
+    width: 100% !important;
+  }
+
+  #facilityFormPage .facility-image-box,
+  #facilityFormPage .facility-upload-box {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    box-sizing: border-box !important;
+  }
+
+  #facilityFormPage .facility-image-box {
+    height: 190px !important;
+  }
+
+  #facilityFormPage .facility-edit-image {
+    width: 100% !important;
+    height: 100% !important;
+
+    object-fit: cover !important;
+
+    border-radius: 12px !important;
+  }
+
+  #facilityFormPage .facility-upload-box {
+    min-height: 130px !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+
+  /* ===== MAIN FORM GRID ===== */
+
+  #facilityFormPage .facility-form-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+
+    gap: 14px !important;
+
+    width: 100% !important;
+  }
+
+  #facilityFormPage .facility-form-grid > div,
+  #facilityFormPage .facility-full-row {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+
+  /* Inputs / selects */
+  #facilityFormPage input,
+  #facilityFormPage select,
+  #facilityFormPage textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+
+    box-sizing: border-box !important;
+
+    font-size: 13px !important;
+  }
+
+  #facilityFormPage input,
+  #facilityFormPage select {
+    height: 44px !important;
+  }
+
+  /* Stop long select text being cut badly */
+  #facilityFormPage select {
+    padding-left: 12px !important;
+    padding-right: 38px !important;
+
+    text-overflow: ellipsis !important;
+  }
+
+
+  /* ===== DESCRIPTION ===== */
+
+  #facilityFormPage #description {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+
+    white-space: nowrap !important;
+  }
+
+
+  /* ===== OPERATING HOURS ===== */
+
+  #facilityFormPage .time-row {
+    display: grid !important;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      auto
+      minmax(0, 1fr) !important;
+
+    gap: 10px !important;
+
+    align-items: center !important;
+
+    width: 100% !important;
+  }
+
+  #facilityFormPage .time-row input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #facilityFormPage .time-row span {
+    text-align: center !important;
+  }
+
+
+  /* ===== TEXTAREA SECTION ===== */
+
+  #facilityFormPage .facility-textarea-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+
+    gap: 14px !important;
+  }
+
+
+  /* ===== BUTTON AREA ===== */
+
+  #facilityFormPage .facility-form-actions {
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 10px !important;
+
+    width: 100% !important;
+  }
+
+  #facilityFormPage .right-action-buttons {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+
+    gap: 10px !important;
+
+    width: 100% !important;
+  }
+
+  #facilityFormPage .back-facility-btn,
+  #facilityFormPage .delete-facility-btn,
+  #facilityFormPage .save-facility-btn {
+    width: 100% !important;
+
+    min-height: 44px !important;
+
+    box-sizing: border-box !important;
+  }
+}
+
+/* ===== MOBILE CUSTOM TIME SLOTS - COMPACT ===== */
+@media (max-width: 768px) {
+
+  #facilityFormPage #timeSlotContainer .time-row {
+    display: grid !important;
+    grid-template-columns:
+      minmax(0, 1fr)
+      20px
+      minmax(0, 1fr)
+      32px !important;
+
+    gap: 6px !important;
+    align-items: center !important;
+
+    width: 100% !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Time boxes */
+  #facilityFormPage #timeSlotContainer .time-row input[type="time"] {
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 42px !important;
+    min-height: 42px !important;
+
+    padding: 0 6px !important;
+
+    font-size: 12px !important;
+    text-align: center !important;
+
+    border-radius: 10px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* "to" */
+  #facilityFormPage #timeSlotContainer .time-row span {
+    width: 20px !important;
+    min-width: 20px !important;
+
+    font-size: 12px !important;
+    text-align: center !important;
+
+    margin: 0 !important;
+  }
+
+  /* Small X */
+  #facilityFormPage #timeSlotContainer .time-row button {
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    border-radius: 8px !important;
+
+    font-size: 12px !important;
+    line-height: 1 !important;
+  }
+
+  /* Add Time Slot button smaller */
+  #facilityFormPage #customTimeSection > button {
+    height: 38px !important;
+    min-height: 38px !important;
+
+    padding: 0 14px !important;
+
+    font-size: 12px !important;
+    border-radius: 8px !important;
+  }
+}
+
+/* ===== MOBILE CUSTOM TIME SLOTS - COMPACT ===== */
+@media (max-width: 768px) {
+
+  #facilityFormPage #timeSlotContainer .time-row {
+    display: grid !important;
+    grid-template-columns:
+      minmax(0, 1fr)
+      20px
+      minmax(0, 1fr)
+      32px !important;
+
+    gap: 6px !important;
+    align-items: center !important;
+
+    width: 100% !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Time boxes */
+  #facilityFormPage #timeSlotContainer .time-row input[type="time"] {
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 42px !important;
+    min-height: 42px !important;
+
+    padding: 0 6px !important;
+
+    font-size: 12px !important;
+    text-align: center !important;
+
+    border-radius: 10px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* "to" */
+  #facilityFormPage #timeSlotContainer .time-row span {
+    width: 20px !important;
+    min-width: 20px !important;
+
+    font-size: 12px !important;
+    text-align: center !important;
+
+    margin: 0 !important;
+  }
+
+  /* Small X */
+  #facilityFormPage #timeSlotContainer .time-row button {
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    border-radius: 8px !important;
+
+    font-size: 12px !important;
+    line-height: 1 !important;
+  }
+
+  /* Add Time Slot button smaller */
+  #facilityFormPage #customTimeSection > button {
+    height: 38px !important;
+    min-height: 38px !important;
+
+    padding: 0 14px !important;
+
+    font-size: 12px !important;
+    border-radius: 8px !important;
+  }
+}
+
+/* ===== MOBILE FACILITY TIME INPUTS - FINAL COMPACT FIX ===== */
+@media (max-width: 768px) {
+
+  /* Operating Hours */
+  #facilityFormPage .facility-full-row > .time-row input[type="time"] {
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+
+    padding: 0 8px !important;
+    margin: 0 !important;
+
+    font-size: 13px !important;
+    line-height: 44px !important;
+
+    border-radius: 10px !important;
+    box-sizing: border-box !important;
+
+    -webkit-appearance: none !important;
+    appearance: none !important;
+  }
+
+  /* Custom Available Time Slots */
+  #facilityFormPage #timeSlotContainer .time-row input[type="time"] {
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+
+    padding: 0 8px !important;
+    margin: 0 !important;
+
+    font-size: 13px !important;
+    line-height: 44px !important;
+
+    border-radius: 10px !important;
+    box-sizing: border-box !important;
+
+    -webkit-appearance: none !important;
+    appearance: none !important;
+  }
+
+  /* Safari internal time text */
+  #facilityFormPage input[type="time"]::-webkit-datetime-edit {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  #facilityFormPage input[type="time"]::-webkit-date-and-time-value {
+    text-align: center !important;
+    margin: 0 !important;
+  }
+
+  /* Operating hour row */
+  #facilityFormPage .facility-full-row > .time-row {
+    gap: 8px !important;
+  }
+
+  /* Custom slot rows */
+  #facilityFormPage #timeSlotContainer .time-row {
+    gap: 6px !important;
+    margin-bottom: 8px !important;
+  }
+}
+
+/* ===== MOBILE FACILITY FORM SPACING FIX ===== */
+@media (max-width: 768px) {
+
+  /* 1. More gap between heading and custom time boxes */
+  #facilityFormPage #customTimeSection > label {
+    display: block !important;
+    margin-bottom: 10px !important;
+  }
+
+  #facilityFormPage #timeSlotContainer {
+    margin-top: 6px !important;
+  }
+
+
+  /* 2. Less gap between equipment tags and Back button */
+  #facilityFormPage .facility-form-actions {
+    margin-top: 30px !important;
+  }
+
+  #facilityFormPage .equipment-tag-list {
+    margin-bottom: 0 !important;
+  }
+
+  #facilityFormPage #equipmentOptions {
+    margin-bottom: 0 !important;
+  }
+}
+
+/* ===== MANAGE BOOKINGS MOBILE FILTER ROW ===== */
+@media (max-width: 768px) {
+
+  .booking-toolbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+
+    column-gap: 12px !important;
+    row-gap: 10px !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* Filter By */
+  .booking-toolbar > label {
+    grid-column: 1 / -1 !important;
+
+    margin: 0 0 4px 0 !important;
+    width: 100% !important;
+  }
+
+  /* DATE */
+  .booking-toolbar > input[type="date"] {
+    grid-column: 1 !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    height: 44px !important;
+
+    margin: 0 !important;
+    padding: 0 10px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* FACILITY */
+  .booking-toolbar .custom-dropdown {
+    grid-column: 2 !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    margin: 0 !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .booking-toolbar .custom-dropdown-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    height: 44px !important;
+
+    margin: 0 !important;
+    padding: 0 12px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* EXPORT */
+  .booking-toolbar .export-btn {
+    grid-column: 1 / -1 !important;
+
+    justify-self: end !important;
+
+    width: auto !important;
+    height: 40px !important;
+
+    margin: 4px 0 0 0 !important;
+    padding: 0 14px !important;
+  }
+}
+
+/* =========================================================
+   MANAGE BOOKINGS MOBILE FILTER - FINAL FIX
+   ========================================================= */
+@media (max-width: 768px) {
+
+  /* Toolbar */
+  .booking-toolbar {
+    display: grid !important;
+
+    grid-template-columns:
+      minmax(0, calc(50% - 6px))
+      minmax(0, calc(50% - 6px)) !important;
+
+    column-gap: 12px !important;
+    row-gap: 12px !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    box-sizing: border-box !important;
+
+    align-items: stretch !important;
+  }
+
+  /* Filter By */
+  .booking-toolbar > label {
+    grid-column: 1 / -1 !important;
+
+    width: 100% !important;
+
+    margin: 0 0 4px 0 !important;
+  }
+
+  /* ==========================
+     DATE
+     ========================== */
+
+  .booking-toolbar > #filterDate {
+    grid-column: 1 !important;
+
+    display: block !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    height: 44px !important;
+
+    margin: 0 !important;
+    padding: 0 10px !important;
+
+    box-sizing: border-box !important;
+
+    border-radius: 9px !important;
+
+    font-size: 12px !important;
+  }
+
+
+  /* ==========================
+     FACILITY
+     ========================== */
+
+  .booking-toolbar > #bookingFacilityDropdown {
+    grid-column: 2 !important;
+
+    position: relative !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    margin: 0 !important;
+
+    box-sizing: border-box !important;
+  }
+
+  #bookingFacilityDropdown .custom-dropdown-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    height: 44px !important;
+
+    padding: 0 12px !important;
+
+    box-sizing: border-box !important;
+  }
+
+
+  /* ==========================
+     FACILITY DROPDOWN MENU
+     ========================== */
+
+  #bookingFacilityMenu {
+    position: absolute !important;
+
+    top: calc(100% + 6px) !important;
+    left: 0 !important;
+    right: auto !important;
+
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+
+    max-height: 260px !important;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    box-sizing: border-box !important;
+
+    z-index: 9999 !important;
+  }
+
+
+  /* Each facility option */
+  #bookingFacilityMenu .dropdown-item {
+    display: flex !important;
+    align-items: center !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+
+    gap: 9px !important;
+
+    padding: 9px 10px !important;
+    margin: 0 !important;
+
+    box-sizing: border-box !important;
+
+    font-size: 12px !important;
+
+    color: #374151 !important;
+  }
+
+
+  /* Checkbox */
+  #bookingFacilityMenu .dropdown-item input[type="checkbox"] {
+    display: block !important;
+
+    width: 16px !important;
+    height: 16px !important;
+
+    min-width: 16px !important;
+    max-width: 16px !important;
+
+    flex: 0 0 16px !important;
+
+    margin: 0 !important;
+  }
+
+
+  /* IMPORTANT - SHOW FACILITY NAME */
+  #bookingFacilityMenu .dropdown-item span {
+    display: block !important;
+
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    flex: 1 1 auto !important;
+
+    width: auto !important;
+    min-width: 0 !important;
+
+    color: #374151 !important;
+
+    font-size: 12px !important;
+    font-weight: 500 !important;
+
+    white-space: nowrap !important;
+
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+
+  /* ==========================
+     EXPORT
+     ========================== */
+
+  .booking-toolbar > .export-btn {
+    grid-column: 1 / -1 !important;
+
+    justify-self: end !important;
+
+    width: auto !important;
+    height: 40px !important;
+
+    margin: 4px 0 0 0 !important;
+
+    padding: 0 14px !important;
+  }
+
+}
+
+/* =====================================================
+   MANAGE BOOKINGS MOBILE FILTER - STRUCTURAL FIX
+   ===================================================== */
+@media (max-width: 768px) {
+
+  .booking-toolbar {
+    display: block !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .booking-toolbar > label {
+    display: block !important;
+
+    width: 100% !important;
+
+    margin: 0 0 12px 0 !important;
+  }
+
+
+  /* DATE + FACILITY ROW */
+  .booking-filter-row {
+    display: flex !important;
+
+    flex-direction: row !important;
+    align-items: stretch !important;
+
+    gap: 12px !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    box-sizing: border-box !important;
+  }
+
+
+  /* DATE */
+  .booking-filter-row > #filterDate {
+    flex: 1 1 0 !important;
+
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+
+    height: 44px !important;
+
+    margin: 0 !important;
+
+    box-sizing: border-box !important;
+  }
+
+
+  /* FACILITY */
+  .booking-filter-row > #bookingFacilityDropdown {
+    flex: 1 1 0 !important;
+
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+
+    margin: 0 !important;
+
+    box-sizing: border-box !important;
+  }
+
+
+  #bookingFacilityDropdown .custom-dropdown-btn {
+    width: 100% !important;
+
+    height: 44px !important;
+
+    margin: 0 !important;
+
+    box-sizing: border-box !important;
+  }
+
+
+  /* Dropdown menu */
+  #bookingFacilityMenu {
+    width: 100% !important;
+    min-width: 100% !important;
+
+    max-height: 260px !important;
+
+    overflow-y: auto !important;
+  }
+
+
+  /* Facility names */
+  #bookingFacilityMenu .dropdown-item {
+    display: flex !important;
+    align-items: center !important;
+
+    gap: 9px !important;
+
+    width: 100% !important;
+
+    box-sizing: border-box !important;
+  }
+
+  #bookingFacilityMenu .dropdown-item span {
+    display: block !important;
+
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    color: #374151 !important;
+
+    font-size: 12px !important;
+
+    white-space: nowrap !important;
+  }
+
+
+  /* EXPORT */
+  .booking-toolbar > .export-btn {
+    display: flex !important;
+
+    width: fit-content !important;
+
+    margin: 12px 0 0 auto !important;
+
+    height: 40px !important;
+  }
+}
+
+/* =========================================================
+   MANAGE BOOKINGS FILTER - DESKTOP + MOBILE FINAL
+   ========================================================= */
+
+
+/* =========================
+   DESKTOP
+   ========================= */
+@media (min-width: 769px) {
+
+  .booking-toolbar {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+
+    gap: 14px !important;
+
+    width: 100% !important;
+  }
+
+  .booking-toolbar > label {
+    margin: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  /* Date + Facility beside each other */
+  .booking-filter-row {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+
+    gap: 14px !important;
+
+    width: auto !important;
+  }
+
+  /* Date */
+  .booking-filter-row #filterDate {
+    width: 180px !important;
+    min-width: 180px !important;
+
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* Facility */
+  .booking-filter-row #bookingFacilityDropdown {
+    width: 180px !important;
+    min-width: 180px !important;
+  }
+
+  .booking-filter-row #bookingFacilityDropdown .custom-dropdown-btn {
+    width: 100% !important;
+
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* Export goes back to right side */
+  .booking-toolbar > .export-btn {
+    margin-left: auto !important;
+
+    width: auto !important;
+    height: 42px !important;
+
+    align-self: center !important;
+  }
+}
+
+
+/* =========================
+   MOBILE
+   ========================= */
+@media (max-width: 768px) {
+
+  .booking-toolbar {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .booking-toolbar > label {
+    display: block !important;
+    margin: 0 0 12px 0 !important;
+  }
+
+
+  /* ===== DATE + FACILITY ===== */
+
+  .booking-filter-row {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+
+    gap: 12px !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    box-sizing: border-box !important;
+  }
+
+
+  /* DATE */
+  .booking-filter-row > #filterDate {
+    flex: 1 1 0 !important;
+
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+
+    margin: 0 !important;
+    padding: 0 10px !important;
+
+    box-sizing: border-box !important;
+
+    border-radius: 9px !important;
+
+    font-size: 12px !important;
+  }
+
+
+  /* FACILITY */
+  .booking-filter-row > #bookingFacilityDropdown {
+    flex: 1 1 0 !important;
+
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+
+    height: 44px !important;
+
+    margin: 0 !important;
+
+    box-sizing: border-box !important;
+  }
+
+
+  .booking-filter-row
+  > #bookingFacilityDropdown
+  > .custom-dropdown-btn {
+
+    width: 100% !important;
+
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+
+    margin: 0 !important;
+    padding: 0 12px !important;
+
+    box-sizing: border-box !important;
+
+    border-radius: 9px !important;
+  }
+
+
+  /* Facility dropdown */
+  #bookingFacilityMenu {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+
+    max-height: 260px !important;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+
+  #bookingFacilityMenu .dropdown-item {
+    display: flex !important;
+    align-items: center !important;
+
+    width: 100% !important;
+
+    gap: 9px !important;
+
+    box-sizing: border-box !important;
+  }
+
+
+  #bookingFacilityMenu .dropdown-item span {
+    display: block !important;
+
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    color: #374151 !important;
+
+    font-size: 12px !important;
+
+    white-space: nowrap !important;
+  }
+
+
+  /* ===== EXPORT ===== */
+
+  .booking-toolbar > .export-btn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: auto !important;
+    height: 40px !important;
+
+    margin: 12px 0 0 auto !important;
+  }
+}
+
+/* ===== MOBILE MANAGE BOOKINGS - MATCH FILTER HEIGHT ===== */
+@media (max-width: 768px) {
+
+  .booking-filter-row > #filterDate,
+  .booking-filter-row > #bookingFacilityDropdown,
+  .booking-filter-row > #bookingFacilityDropdown > .custom-dropdown-btn {
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Date input */
+  .booking-filter-row > #filterDate {
+    padding: 0 12px !important;
+    line-height: 46px !important;
+
+    border: 1.5px solid #e5e7eb !important;
+    border-radius: 9px !important;
+
+    -webkit-appearance: none !important;
+    appearance: none !important;
+  }
+
+  /* Facility button */
+  .booking-filter-row
+  > #bookingFacilityDropdown
+  > .custom-dropdown-btn {
+    padding: 0 12px !important;
+
+    border: 1.5px solid #e5e7eb !important;
+    border-radius: 9px !important;
+  }
+
+  /* iPhone Safari date content */
+  .booking-filter-row
+  > #filterDate::-webkit-datetime-edit {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .booking-filter-row
+  > #filterDate::-webkit-date-and-time-value {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 46px !important;
+    text-align: center !important;
+  }
+}
+
+/* =========================================================
+   KEY MANAGEMENT - MOBILE
+   ========================================================= */
+@media (max-width: 768px) {
+
+  /* =========================
+     SEARCH + STATUS FILTER
+     ========================= */
+
+  .manage-user-toolbar {
+    display: grid !important;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1fr) !important;
+
+    gap: 10px !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    align-items: center !important;
+
+    margin-bottom: 18px !important;
+  }
+
+  .manage-user-toolbar .user-search-box {
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 44px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .manage-user-toolbar .user-search-box input {
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 44px !important;
+
+    padding: 0 10px !important;
+
+    font-size: 12px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  #keyStatusFilter {
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 44px !important;
+
+    padding: 0 34px 0 10px !important;
+
+    font-size: 12px !important;
+
+    box-sizing: border-box !important;
+  }
+
+
+  /* =========================
+     KEY LIST
+     ========================= */
+
+  #keyList {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+
+  /* =========================
+     KEY CARD
+     ========================= */
+
+  #keyList .key-card {
+    position: relative !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    padding: 14px !important;
+    margin-bottom: 16px !important;
+
+    box-sizing: border-box !important;
+
+    gap: 10px !important;
+  }
+
+
+  /* Main image */
+  #keyList .key-card-img {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    height: 180px !important;
+
+    object-fit: cover !important;
+
+    border-radius: 12px !important;
+
+    margin: 0 !important;
+  }
+
+
+  /* =========================
+     KEY INFORMATION
+     ========================= */
+
+  #keyList .key-card-info {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    padding: 0 !important;
+
+    box-sizing: border-box !important;
+  }
+
+  #keyList .key-card-info h3 {
+    margin: 0 0 10px 0 !important;
+
+    font-size: 18px !important;
+    line-height: 1.3 !important;
+
+    color: #111827 !important;
+  }
+
+  #keyList .key-card-info p {
+    display: flex !important;
+    align-items: center !important;
+
+    gap: 7px !important;
+
+    margin: 7px 0 !important;
+
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+
+    color: #6b7280 !important;
+  }
+
+
+  /* Small icons */
+  #keyList .key-info-icon {
+    width: 17px !important;
+    height: 17px !important;
+
+    min-width: 17px !important;
+    max-width: 17px !important;
+
+    flex: 0 0 17px !important;
+
+    object-fit: contain !important;
+  }
+
+
+  /* =========================
+     STATUS
+     ========================= */
+
+  #keyList .key-card-status {
+    width: 100% !important;
+
+    margin-top: 4px !important;
+
+    font-size: 12px !important;
+
+    text-align: left !important;
+  }
+
+  #keyList .key-card-status span {
+    display: inline-block !important;
+
+    padding: 6px 10px !important;
+
+    border-radius: 999px !important;
+
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+  }
+
+
+  /* =========================
+     ACTION BUTTON
+     ========================= */
+
+  #keyList .action-main-btn {
+    width: 100% !important;
+
+    height: 42px !important;
+
+    margin-top: 4px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    box-sizing: border-box !important;
+  }
+
+  #keyList .key-more-btn {
+    width: 42px !important;
+    height: 42px !important;
+
+    align-self: flex-end !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    margin-top: 2px !important;
+  }
+
+  #keyList .key-arrow-icon {
+    width: 18px !important;
+    height: 18px !important;
+  }
+}
+
+/* =========================================================
+   KEY MANAGEMENT - MOBILE POLISH
+   ========================================================= */
+@media (max-width: 768px) {
+
+  /* =========================
+     SEARCH + FILTER
+     ========================= */
+
+  .manage-user-toolbar {
+    gap: 12px !important;
+  }
+
+  /* Search outer box */
+  .manage-user-toolbar .user-search-box {
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+
+    border: 1.5px solid #e1e5ec !important;
+    border-radius: 10px !important;
+
+    background: #ffffff !important;
+
+    padding: 0 12px !important;
+
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Search input itself */
+  .manage-user-toolbar .user-search-box input {
+    width: 100% !important;
+    height: 100% !important;
+
+    border: none !important;
+    outline: none !important;
+
+    background: transparent !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    font-size: 12px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .manage-user-toolbar .user-search-box:focus-within {
+    border-color: #D12E26 !important;
+  }
+
+  /* Status filter same style and height */
+  #keyStatusFilter {
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+
+    border: 1.5px solid #e1e5ec !important;
+    border-radius: 10px !important;
+
+    background-color: #ffffff !important;
+
+    font-size: 12px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  #keyStatusFilter:focus {
+    border-color: #D12E26 !important;
+    outline: none !important;
+  }
+
+
+  /* =========================
+     KEY CARD
+     ========================= */
+
+  #keyList .key-card {
+    position: relative !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 0 !important;
+
+    width: 100% !important;
+
+    padding: 14px !important;
+    margin-bottom: 16px !important;
+
+    background: #ffffff !important;
+
+    border: 1px solid #e1e5ec !important;
+    border-radius: 14px !important;
+
+    box-shadow: 0 3px 10px rgba(0,0,0,0.035) !important;
+
+    box-sizing: border-box !important;
+  }
+
+
+  /* Image */
+  #keyList .key-card-img {
+    width: 100% !important;
+    height: 180px !important;
+
+    margin: 0 0 12px 0 !important;
+
+    border: none !important;
+    border-radius: 11px !important;
+
+    object-fit: cover !important;
+  }
+
+
+  /* =========================
+     INFO
+     ========================= */
+
+  #keyList .key-card-info {
+    width: 100% !important;
+
+    padding: 0 4px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  #keyList .key-card-info h3 {
+    margin: 0 0 12px 0 !important;
+
+    font-size: 18px !important;
+    font-weight: 700 !important;
+
+    color: #111827 !important;
+  }
+
+
+  /* Each information row */
+  #keyList .key-card-info p {
+    display: grid !important;
+
+    grid-template-columns:
+      18px
+      100px
+      minmax(0, 1fr) !important;
+
+    align-items: center !important;
+
+    column-gap: 8px !important;
+
+    width: 100% !important;
+
+    margin: 7px 0 !important;
+
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+
+
+  /* Icons */
+  #keyList .key-info-icon {
+    width: 17px !important;
+    height: 17px !important;
+
+    margin: 0 !important;
+
+    object-fit: contain !important;
+  }
+
+
+  /* Label e.g Holder / Date */
+  #keyList .key-card-info strong {
+    min-width: 0 !important;
+
+    font-size: 12px !important;
+    font-weight: 600 !important;
+
+    color: #4b5563 !important;
+  }
+
+
+  /* =========================
+     STATUS
+     ========================= */
+
+  #keyList .key-card-status {
+    width: 100% !important;
+    min-width: 0 !important;
+
+    margin: 14px 4px 8px !important;
+
+    text-align: left !important;
+  }
+
+  #keyList .key-card-status span {
+    display: inline-flex !important;
+    align-items: center !important;
+
+    width: auto !important;
+
+    padding: 6px 10px !important;
+
+    border-radius: 8px !important;
+
+    font-size: 11px !important;
+    font-weight: 600 !important;
+
+    line-height: 1.2 !important;
+  }
+
+
+  /* =========================
+     ARROW / ACTION
+     ========================= */
+
+  #keyList .key-more-btn {
+    position: absolute !important;
+
+    right: 18px !important;
+    bottom: 18px !important;
+
+    width: 34px !important;
+    height: 34px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    border: none !important;
+    background: transparent !important;
+  }
+
+  #keyList .key-arrow-icon {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+
+  /* Key Collected action */
+  #keyList .action-main-btn {
+    width: 100% !important;
+
+    height: 42px !important;
+
+    margin-top: 10px !important;
+
+    border-radius: 9px !important;
+  }
+}
+
+/* ===== MANAGE BOOKINGS ACTION BUTTONS ===== */
+
+.booking-action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.booking-action-buttons button {
+  height: 34px;
+  padding: 0 12px;
+
+  border-radius: 7px;
+
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+
+  cursor: pointer;
+  white-space: nowrap;
+
+  transition: 0.15s ease;
+}
+
+
+/* View Proof */
+
+.booking-view-proof-btn {
+  background: #ffffff;
+  color: #374151;
+
+  border: 1px solid #d1d5db;
+}
+
+.booking-view-proof-btn:hover {
+  border-color: #6b7280;
+}
+
+
+/* Approve */
+
+.booking-approve-btn {
+  background: #f0fdf4;
+  color: #16a34a;
+
+  border: 1px solid #22c55e;
+}
+
+.booking-approve-btn:hover {
+  background: #dcfce7;
+}
+
+
+/* Reject */
+
+.booking-reject-btn {
+  background: #fef2f2;
+  color: #dc2626;
+
+  border: 1px solid #ef4444;
+}
+
+.booking-reject-btn:hover {
+  background: #fee2e2;
 }

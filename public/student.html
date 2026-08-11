@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!--
     Browser tab title.
     This is the name shown at the top of the browser tab for this page.
@@ -18,6 +19,233 @@
     Most of the dashboard layout, cards, filter bar, and facility grid styling comes from this CSS file.
   -->
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css">
+
+<style>
+  .custom-datepicker {
+    position: relative;
+    display: inline-block;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .custom-date-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 160px;
+    padding: 10px 14px;
+    background: #fff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    color: #D12E26;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .custom-date-btn:hover,
+  .custom-date-btn.active {
+    border-color: #D12E26;
+  }
+
+  .custom-date-btn .calendar-icon {
+    margin-left: auto;
+    flex-shrink: 0;
+    color: #D12E26;
+  }
+
+  .custom-date-btn .date-label.placeholder {
+    color: #D12E26;
+    opacity: 0.85;
+  }
+
+  .date-picker-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 50;
+    width: 248px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+    padding: 12px;
+  }
+
+  .date-picker-menu.open {
+    display: block;
+  }
+
+  .date-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .date-picker-header .month-label {
+    font-weight: 600;
+    font-size: 13px;
+    color: #1f2937;
+    letter-spacing: 0.06em;
+    word-spacing: 0.35em;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+
+  .date-picker-header .month-label:hover {
+    background: #fdecea;
+    color: #D12E26;
+  }
+
+  .date-picker-months {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .date-picker-month {
+    padding: 9px 0;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    font-family: 'Poppins', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1f2937;
+    cursor: pointer;
+  }
+
+  .date-picker-month:hover {
+    background: #fdecea;
+  }
+
+  .date-picker-month.current-month {
+    border: 1.5px solid #D12E26;
+    color: #D12E26;
+    font-weight: 600;
+  }
+
+  .date-picker-month.selected-month {
+    background: #D12E26;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .date-picker-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: #1f2937;
+    cursor: pointer;
+  }
+
+  .date-picker-nav-btn:hover {
+    background: #f3f4f6;
+  }
+
+  .date-picker-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 4px;
+  }
+
+  .date-picker-weekdays span {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+  }
+
+  .date-picker-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    row-gap: 8px;
+  }
+
+  .date-picker-day {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin: 0 auto;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    font-family: 'Poppins', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1f2937;
+    cursor: pointer;
+  }
+
+  .date-picker-day:hover:not(.disabled) {
+    background: #fdecea;
+  }
+
+  .date-picker-day.outside {
+    color: #d1d5db;
+  }
+
+  .date-picker-day.today {
+    border: 1.5px solid #D12E26;
+    color: #D12E26;
+    font-weight: 600;
+  }
+
+  .date-picker-day.selected {
+    background: #D12E26;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .date-picker-day.selected.today {
+    border: none;
+  }
+
+  .date-picker-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  .date-picker-clear-btn {
+    background: none;
+    border: none;
+    color: #6b7280;
+    font-family: 'Poppins', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 6px 4px;
+  }
+
+  .date-picker-done-btn {
+    background: #D12E26;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 7px 18px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+</style>
 </head>
 
 <!--
@@ -82,7 +310,101 @@
           Date filter input.
           The selected date can be used to filter or refresh facility display.
         -->
-        <input type="date" id="filterDate">
+        <div class="custom-datepicker" id="dateDropdown">
+
+        <button
+          type="button"
+          class="custom-date-btn"
+          id="dateTriggerBtn"
+          onclick="toggleDatePicker()"
+        >
+          <span id="dateLabel" class="date-label placeholder">
+            dd/mm/yyyy
+          </span>
+
+          <svg
+            class="calendar-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </button>
+
+        <div class="date-picker-menu" id="datePickerMenu">
+
+          <div class="date-picker-header">
+            <button
+              type="button"
+              class="date-picker-nav-btn"
+              onclick="changeMonth(-1)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+
+            <span
+              class="month-label"
+              id="calendarMonthLabel"
+              onclick="openMonthPicker()">
+            </span>
+
+            <button
+              type="button"
+              class="date-picker-nav-btn"
+              onclick="changeMonth(1)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+
+          <div class="date-picker-weekdays" id="calendarWeekdays">
+            <span>M</span>
+            <span>T</span>
+            <span>W</span>
+            <span>T</span>
+            <span>F</span>
+            <span>S</span>
+            <span>S</span>
+          </div>
+
+          <div class="date-picker-days" id="calendarDays"></div>
+
+          <div class="date-picker-footer">
+            <button
+              type="button"
+              class="date-picker-clear-btn"
+              onclick="clearDate()">
+              Clear
+            </button>
+
+            <button
+              type="button"
+              class="date-picker-done-btn"
+              onclick="closeDatePicker()">
+              Done
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <input type="hidden" id="filterDate">
 
         <!--
           Custom dropdown container for facility type filtering.
@@ -194,28 +516,6 @@
       The instruction is not to change anything, so this duplicate line remains.
     */
     loadLayout("facilities");
-
-    /*
-      Get the date filter input element.
-      This is used below to add and remove the "active" class when the input is focused or blurred.
-    */
-    const filterDate = document.getElementById("filterDate");
-
-    /*
-      When the date input is focused/clicked,
-      add the "active" class so CSS can apply active styling.
-    */
-    filterDate.addEventListener("focus", function() {
-      this.classList.add("active");
-    });
-
-    /*
-      When the date input loses focus,
-      remove the "active" class so it returns to the normal styling.
-    */
-    filterDate.addEventListener("blur", function() {
-      this.classList.remove("active");
-    });
 
     /*
       Get the logged-in user from browser storage.
@@ -477,6 +777,9 @@
     function toggleDropdown() {
       document.getElementById("dropdownMenu").classList.toggle("open");
       document.querySelector(".custom-dropdown-btn").classList.toggle("active");
+
+      // Close date picker when Facility Type opens
+      closeDatePicker();
     }
 
     /*
@@ -485,10 +788,18 @@
       This improves user experience because the dropdown will not stay open unnecessarily.
     */
     document.addEventListener("click", function(e) {
+
       const dropdown = document.getElementById("typeDropdown");
+
       if (dropdown && !dropdown.contains(e.target)) {
         document.getElementById("dropdownMenu").classList.remove("open");
         document.querySelector(".custom-dropdown-btn").classList.remove("active");
+      }
+
+      const dateDropdown = document.getElementById("dateDropdown");
+
+      if (dateDropdown && !dateDropdown.contains(e.target)) {
+        closeDatePicker();
       }
     });
 
@@ -647,6 +958,377 @@
       In this current code, applyFilters() mainly filters by facility type.
       The date input is still kept as part of the filter bar interface.
     */
+   const MONTH_NAMES = [
+      "January", "February", "March", "April",
+      "May", "June", "July", "August",
+      "September", "October", "November", "December"
+    ];
+
+    const today = new Date();
+
+    let calendarYear = today.getFullYear();
+    let calendarMonth = today.getMonth();
+    let selectedDate = null;
+    let pickerView = "days";
+
+
+    function toggleDatePicker() {
+
+      const menu = document.getElementById("datePickerMenu");
+      const btn = document.getElementById("dateTriggerBtn");
+
+      const isOpen = menu.classList.contains("open");
+
+      if (isOpen) {
+        closeDatePicker();
+        return;
+      }
+
+      const base = selectedDate || today;
+
+      calendarYear = base.getFullYear();
+      calendarMonth = base.getMonth();
+
+      pickerView = "days";
+
+      renderCalendar();
+
+      menu.classList.add("open");
+      btn.classList.add("active");
+
+      // Close Facility Type dropdown
+      document.getElementById("dropdownMenu").classList.remove("open");
+      document.querySelector(".custom-dropdown-btn").classList.remove("active");
+    }
+
+
+    function closeDatePicker() {
+
+      document.getElementById("datePickerMenu").classList.remove("open");
+      document.getElementById("dateTriggerBtn").classList.remove("active");
+    }
+
+
+    function changeMonth(delta) {
+
+      if (pickerView === "months") {
+        calendarYear += delta;
+        renderCalendar();
+        return;
+      }
+
+      calendarMonth += delta;
+
+      if (calendarMonth < 0) {
+        calendarMonth = 11;
+        calendarYear--;
+      }
+
+      if (calendarMonth > 11) {
+        calendarMonth = 0;
+        calendarYear++;
+      }
+
+      renderCalendar();
+    }
+
+
+    function openMonthPicker() {
+      pickerView = "months";
+      renderCalendar();
+    }
+
+
+    function pickMonth(monthIndex) {
+
+      calendarMonth = monthIndex;
+      pickerView = "days";
+
+      renderCalendar();
+    }
+
+
+    function renderCalendar() {
+
+      if (pickerView === "months") {
+        renderMonthGrid();
+        return;
+      }
+
+      renderDayGrid();
+    }
+
+
+    function renderDayGrid() {
+
+      document.getElementById("calendarMonthLabel").textContent =
+        `${MONTH_NAMES[calendarMonth]} ${calendarYear}`;
+
+      document.getElementById("calendarWeekdays").style.display = "grid";
+
+      const daysContainer =
+        document.getElementById("calendarDays");
+
+      daysContainer.className = "date-picker-days";
+      daysContainer.innerHTML = "";
+
+      const firstOfMonth =
+        new Date(calendarYear, calendarMonth, 1);
+
+      const startOffset =
+        (firstOfMonth.getDay() + 6) % 7;
+
+      const daysInMonth =
+        new Date(
+          calendarYear,
+          calendarMonth + 1,
+          0
+        ).getDate();
+
+      const daysInPrevMonth =
+        new Date(
+          calendarYear,
+          calendarMonth,
+          0
+        ).getDate();
+
+
+      for (let i = startOffset; i > 0; i--) {
+
+        daysContainer.appendChild(
+          buildDayButton(
+            daysInPrevMonth - i + 1,
+            true,
+            null
+          )
+        );
+      }
+
+
+      for (let day = 1; day <= daysInMonth; day++) {
+
+        const dateObj =
+          new Date(calendarYear, calendarMonth, day);
+
+        daysContainer.appendChild(
+          buildDayButton(day, false, dateObj)
+        );
+      }
+
+
+      const totalCells =
+        startOffset + daysInMonth;
+
+      const trailingCount =
+        (7 - (totalCells % 7)) % 7;
+
+
+      for (let day = 1; day <= trailingCount; day++) {
+
+        daysContainer.appendChild(
+          buildDayButton(day, true, null)
+        );
+      }
+    }
+
+
+    function renderMonthGrid() {
+
+      document.getElementById("calendarMonthLabel").textContent =
+        `${calendarYear}`;
+
+      document.getElementById("calendarWeekdays").style.display =
+        "none";
+
+      const daysContainer =
+        document.getElementById("calendarDays");
+
+      daysContainer.className =
+        "date-picker-months";
+
+      daysContainer.innerHTML = "";
+
+
+      MONTH_NAMES.forEach((name, index) => {
+
+        const btn =
+          document.createElement("button");
+
+        btn.type = "button";
+        btn.className = "date-picker-month";
+        btn.textContent = name.slice(0, 3);
+
+
+        if (
+          index === today.getMonth() &&
+          calendarYear === today.getFullYear()
+        ) {
+          btn.classList.add("current-month");
+        }
+
+
+        if (
+          selectedDate &&
+          index === selectedDate.getMonth() &&
+          calendarYear === selectedDate.getFullYear()
+        ) {
+          btn.classList.add("selected-month");
+        }
+
+
+        btn.addEventListener(
+          "click",
+          () => pickMonth(index)
+        );
+
+        daysContainer.appendChild(btn);
+      });
+    }
+
+
+    function buildDayButton(day, outside, dateObj) {
+
+      const btn =
+        document.createElement("button");
+
+      btn.type = "button";
+      btn.className = "date-picker-day";
+      btn.textContent = day;
+
+
+      if (outside) {
+
+        btn.classList.add(
+          "outside",
+          "disabled"
+        );
+
+        btn.disabled = true;
+
+        return btn;
+      }
+
+
+      if (isSameDate(dateObj, today)) {
+        btn.classList.add("today");
+      }
+
+
+      if (
+        selectedDate &&
+        isSameDate(dateObj, selectedDate)
+      ) {
+        btn.classList.add("selected");
+      }
+
+
+      btn.addEventListener(
+        "click",
+        () => selectDay(dateObj)
+      );
+
+      return btn;
+    }
+
+
+    function isSameDate(a, b) {
+
+      return (
+        a &&
+        b &&
+        a.getFullYear() === b.getFullYear() &&
+        a.getMonth() === b.getMonth() &&
+        a.getDate() === b.getDate()
+      );
+    }
+
+
+    function selectDay(dateObj) {
+
+      selectedDate = dateObj;
+
+      updateDateLabel();
+      syncHiddenInput();
+      renderCalendar();
+    }
+
+
+    function clearDate() {
+
+      selectedDate = null;
+
+      updateDateLabel();
+      syncHiddenInput();
+      renderCalendar();
+    }
+
+
+    function updateDateLabel() {
+
+      const label =
+        document.getElementById("dateLabel");
+
+      if (!selectedDate) {
+
+        label.textContent = "dd/mm/yyyy";
+        label.classList.add("placeholder");
+
+        return;
+      }
+
+      const dd =
+        String(selectedDate.getDate())
+          .padStart(2, "0");
+
+      const mm =
+        String(selectedDate.getMonth() + 1)
+          .padStart(2, "0");
+
+      const yyyy =
+        selectedDate.getFullYear();
+
+      label.textContent =
+        `${dd}/${mm}/${yyyy}`;
+
+      label.classList.remove("placeholder");
+    }
+
+
+    function syncHiddenInput() {
+
+      const hiddenInput =
+        document.getElementById("filterDate");
+
+
+      if (!selectedDate) {
+
+        hiddenInput.value = "";
+
+      } else {
+
+        const yyyy =
+          selectedDate.getFullYear();
+
+        const mm =
+          String(selectedDate.getMonth() + 1)
+            .padStart(2, "0");
+
+        const dd =
+          String(selectedDate.getDate())
+            .padStart(2, "0");
+
+        hiddenInput.value =
+          `${yyyy}-${mm}-${dd}`;
+      }
+
+
+      hiddenInput.dispatchEvent(
+        new Event("change")
+      );
+    }
+
+
+    renderCalendar();
     document.getElementById("filterDate").addEventListener("change", function() {
       applyFilters();
     });

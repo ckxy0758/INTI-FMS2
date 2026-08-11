@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Activities</title>
   <!-- Google Fonts: Poppins family, multiple weights used across the dashboard UI -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -201,7 +202,22 @@
       // --- Case 1: Booking was cancelled ---
       // Regardless of flow type, a cancelled booking shows a simple 2-step tracker:
       // Submitted -> Cancelled
-      if (bookingStatus === "cancelled") {
+      const paymentStatus = activity.payment_status
+      ? activity.payment_status.trim().toLowerCase()
+      : "";
+
+    const isPaymentBooking =
+      activity.booking_flow_type === "payment_required" ||
+      activity.payment_required === 1 ||
+      activity.payment_required === "1";
+
+    if (
+      bookingStatus === "cancelled" &&
+      !(
+        isPaymentBooking &&
+        ["pending_payment", "payment_submitted", "verified"].includes(paymentStatus)
+      )
+    ) {
         return `
           <div class="progress-wrapper">
 
@@ -354,12 +370,12 @@
         // Payment-based sub-flow: step 2 reflects the payment status
         step2Text = "Pending Payment";
 
-        if (activity.payment_status === "pending_payment") {
+        if (paymentStatus === "pending_payment") {
           step = 2;
           step2Text = "Pending Payment";
         }
 
-        if (activity.payment_status === "payment_submitted") {
+        if (paymentStatus === "payment_submitted") {
           step = 2;
           step2Text = "Payment Submitted";
         }
@@ -367,7 +383,7 @@
         if (
           activity.payment_status === "verified" ||
           bookingStatus === "approved"
-        ) {
+        ){
           step = 3;
           step2Text = "Payment Verified";
         }

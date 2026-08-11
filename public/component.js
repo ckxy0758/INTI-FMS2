@@ -232,18 +232,41 @@ function loadLayout(activePage) {
     `;
   }
 
-    if (localStorage.getItem("sidebarCollapsed") === "true") {
-      document.body.classList.add("sidebar-collapsed");
+    const menuIcon = document.querySelector(".menu-icon");
+
+// Desktop: remember collapsed sidebar
+if (window.innerWidth > 768) {
+  if (localStorage.getItem("sidebarCollapsed") === "true") {
+    document.body.classList.add("sidebar-collapsed");
+  }
+}
+
+// Hamburger button
+menuIcon.addEventListener("click", function () {
+
+  // MOBILE
+  if (window.innerWidth <= 768) {
+    document.body.classList.toggle("mobile-sidebar-open");
+    return;
+  }
+
+  // DESKTOP
+  document.body.classList.toggle("sidebar-collapsed");
+
+  localStorage.setItem(
+    "sidebarCollapsed",
+    document.body.classList.contains("sidebar-collapsed")
+  );
+});
+
+// Close mobile sidebar when user clicks a sidebar link
+document.querySelectorAll(".sidebar a").forEach(link => {
+  link.addEventListener("click", function () {
+
+    if (window.innerWidth <= 768) {
+      document.body.classList.remove("mobile-sidebar-open");
     }
 
-  const menuIcon = document.querySelector(".menu-icon");
-
-  menuIcon.addEventListener("click", function () {
-    document.body.classList.toggle("sidebar-collapsed");
-
-    localStorage.setItem(
-      "sidebarCollapsed",
-      document.body.classList.contains("sidebar-collapsed")
-    );
   });
-}
+});
+    }
