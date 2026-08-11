@@ -1195,6 +1195,12 @@ router.post("/bookings", verifyToken, (req, res) => {
         if (bookingFlowType === "payment_required") bookingStatus = "pending_payment";
         if (bookingFlowType === "direct_reservation") bookingStatus = "reserved";
 
+        // Direct Booking Flow handling (auto-approved, no key required)
+        if (bookingFlowType === "direct_booking") {
+          bookingStatus = "approved";
+          keyStatus = "not_required";
+        }
+
         const paymentRequired = bookingFlowType === "payment_required" ? 1 : 0;
         const paymentStatus = paymentRequired ? "pending_payment" : "not_required";
         const paymentAmount = 0; 
@@ -1215,6 +1221,9 @@ router.post("/bookings", verifyToken, (req, res) => {
         } else if (bookingFlowType === "direct_reservation") {
           nTitle = "Reservation Successful";
           nMsg = `Your have successfully reserved ${facilityName}. Please remember to check in.`;
+        } else if (bookingFlowType === "direct_booking") {
+          nTitle = "Booking Approved";
+          nMsg = `Your booking request for ${facilityName} has been approved.`;
         }
 
         // Look for any other active (non-final) bookings on this facility/date that
