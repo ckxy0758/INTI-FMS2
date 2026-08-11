@@ -4529,6 +4529,22 @@ input[type="password"]::-webkit-reveal {
   font-size: 15px;
 }
 
+/* Isolated styles strictly for register.html */
+.register-card input[type="text"],
+.register-card input[type="email"],
+.register-card select {
+  width: 100%;
+  height: 50px;
+  padding: 0 15px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+  font-size: 15px;
+  font-family: 'Poppins', sans-serif;
+  background-color: #ffffff;
+}
+
 .login-card input[type="email"]:focus {
   border-color: #D12E26 !important;
   background: #ffffff !important;

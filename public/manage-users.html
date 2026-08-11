@@ -59,13 +59,21 @@
         </table>
       </div>
 
-      <p id="userCount" class="user-count-text"></p>
+      <!-- Footer Row containing User Count on left & Pending Registration button on right -->
+      <div class="table-footer">
+        <p id="userCount" class="user-count-text"></p>
+        
+        <button id="pendingRegBtn" class="pending-reg-btn" onclick="openPendingRegistrationModal()">
+          Pending Registration (<span id="pendingCount">0</span>)
+        </button>
+      </div>
 
     </main>
 
   </div>
 
-  <div id="createUserModal" class="modal-overlay">
+  <!-- Create User Modal -->
+  <div id="createUserModal" class="modal-overlay" style="display:none;">
     <div class="create-user-modal">
 
       <button class="modal-close-btn" onclick="closeCreateModal()">×</button>
@@ -94,6 +102,40 @@
       </button>
 
       <p id="message"></p>
+
+    </div>
+  </div>
+
+  <!-- Pending Registration Modal -->
+  <div id="pendingModal" class="modal-overlay" style="display:none;">
+    <div class="pending-modal-card">
+
+      <div class="pending-modal-header">
+        <h2>Pending User Registrations</h2>
+        <button class="modal-close-btn" onclick="closePendingModal()">×</button>
+      </div>
+
+      <div class="pending-table-container">
+        <table class="pending-user-table">
+          <thead>
+            <tr>
+              <th class="checkbox-col">
+                <input type="checkbox" id="selectAllPending" checked onclick="toggleAllPendingCheckboxes(this)">
+              </th>
+              <th>Name</th>
+              <th>ID</th>
+              <th>Email</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody id="pendingUserTable"></tbody>
+        </table>
+      </div>
+
+      <div class="pending-modal-footer">
+        <button id="btnRejectPending" class="btn-reject" onclick="rejectPendingUsers()">Reject Selected (0)</button>
+        <button id="btnApprovePending" class="btn-approve" onclick="approvePendingUsers()">Approve Selected (0)</button>
+      </div>
 
     </div>
   </div>
@@ -138,18 +180,13 @@
         return;
       }
 
-    fetch("/api/users", {
+      fetch("/api/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer " + localStorage.getItem("authToken")
         },
-        body: JSON.stringify({
-          name,
-          user_code,
-          email,
-          role
-        })
+        body: JSON.stringify({ name, user_code, email, role })
       })
       .then(res => res.json())
       .then(data => {
@@ -180,11 +217,12 @@
     }
 
     function loadUsers() {
-    fetch("/api/users", {
+      fetch("/api/users", {
         headers: {
           "Authorization": "Bearer " + localStorage.getItem("authToken")
         }
-      })        .then(res => res.json())
+      })
+        .then(res => res.json())
         .then(data => {
           if (!data.success) {
             document.getElementById("userTable").innerHTML = `
@@ -196,6 +234,11 @@
           }
 
           allUsers = data.users;
+
+          // Count pending users
+          const pendingUsers = allUsers.filter(u => u.status === "pending");
+          document.getElementById("pendingCount").innerText = pendingUsers.length;
+
           applyFilters();
         });
     }
@@ -219,7 +262,10 @@
     function applyFilters() {
       const searchValue = document.getElementById("userSearch").value.toLowerCase();
 
-      let filteredUsers = allUsers.filter(item => {
+      // Exclude pending users from the main table
+      let activeAndInactiveUsers = allUsers.filter(item => item.status !== "pending");
+
+      let filteredUsers = activeAndInactiveUsers.filter(item => {
         const matchRole =
           currentRoleFilter === "all" ||
           item.role.toLowerCase() === currentRoleFilter;
@@ -231,10 +277,10 @@
         return matchRole && matchSearch;
       });
 
-      renderUsers(filteredUsers);
+      renderUsers(filteredUsers, activeAndInactiveUsers.length);
     }
 
-    function renderUsers(users) {
+    function renderUsers(users, totalNonPending) {
       const userTable = document.getElementById("userTable");
       const userCount = document.getElementById("userCount");
 
@@ -273,7 +319,146 @@
         `;
       });
 
-      userCount.innerText = `Showing ${users.length} of ${allUsers.length} users`;
+      userCount.innerText = `Showing ${users.length} of ${totalNonPending} users`;
+    }
+
+    function updatePendingButtonLabels() {
+      const allCheckboxes = document.querySelectorAll(".pending-user-checkbox");
+      const checkedCheckboxes = document.querySelectorAll(".pending-user-checkbox:checked");
+      const masterCheckbox = document.getElementById("selectAllPending");
+
+      const total = allCheckboxes.length;
+      const selected = checkedCheckboxes.length;
+
+      // Keep master checkbox synced with individual checkbox states
+      if (total > 0 && selected === total) {
+        masterCheckbox.checked = true;
+      } else {
+        masterCheckbox.checked = false;
+      }
+
+      const btnReject = document.getElementById("btnRejectPending");
+      const btnApprove = document.getElementById("btnApprovePending");
+
+      // Update button text based on selection count
+      if (total > 0 && selected === total) {
+        btnReject.innerText = `Reject All (${selected})`;
+        btnApprove.innerText = `Approve All (${selected})`;
+      } else {
+        btnReject.innerText = `Reject Selected (${selected})`;
+        btnApprove.innerText = `Approve Selected (${selected})`;
+      }
+    }
+
+    /* Pending Modal Functions */
+    function openPendingRegistrationModal() {
+      const pendingUsers = allUsers.filter(u => u.status === "pending");
+      const pendingTable = document.getElementById("pendingUserTable");
+      const masterCheckbox = document.getElementById("selectAllPending");
+
+      pendingTable.innerHTML = "";
+      masterCheckbox.checked = true;
+
+      if (pendingUsers.length === 0) {
+        pendingTable.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; color: #6b7280; padding: 20px;">No pending registration requests.</td>
+          </tr>
+        `;
+      } else {
+        pendingUsers.forEach(item => {
+          pendingTable.innerHTML += `
+            <tr>
+              <td class="checkbox-col">
+                <input 
+                  type="checkbox" 
+                  class="pending-user-checkbox" 
+                  value="${item.user_id}" 
+                  checked 
+                  onchange="updatePendingButtonLabels()"
+                >
+              </td>
+              <td>${item.name}</td>
+              <td>${item.user_code}</td>
+              <td>${item.email}</td>
+              <td>${formatRole(item.role)}</td>
+            </tr>
+          `;
+        });
+      }
+
+      document.getElementById("pendingModal").style.display = "flex";
+      
+      // Calculate initial count and button text
+      updatePendingButtonLabels();
+    }
+
+    function closePendingModal() {
+      document.getElementById("pendingModal").style.display = "none";
+    }
+
+    function toggleAllPendingCheckboxes(master) {
+      const checkboxes = document.querySelectorAll(".pending-user-checkbox");
+      checkboxes.forEach(cb => cb.checked = master.checked);
+      
+      updatePendingButtonLabels();
+    }
+
+    function getSelectedPendingUserIds() {
+      const checkboxes = document.querySelectorAll(".pending-user-checkbox:checked");
+      return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    function approvePendingUsers() {
+      const selectedIds = getSelectedPendingUserIds();
+      if (selectedIds.length === 0) {
+        showAlert("Please select at least one user to approve.", "error");
+        return;
+      }
+
+      showConfirm(`Are you sure you want to approve ${selectedIds.length} user(s)?`, () => {
+        fetch("/api/users/approve", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + localStorage.getItem("authToken")
+          },
+          body: JSON.stringify({ userIds: selectedIds })
+        })
+        .then(res => res.json())
+        .then(data => {
+          showAlert(data.message || "Users approved successfully.", "success");
+          closePendingModal();
+          loadUsers();
+        })
+        .catch(() => showAlert("Failed to approve users.", "error"));
+      });
+    }
+
+    function rejectPendingUsers() {
+      const selectedIds = getSelectedPendingUserIds();
+      if (selectedIds.length === 0) {
+        showAlert("Please select at least one user to reject.", "error");
+        return;
+      }
+
+      showConfirm(`Are you sure you want to reject ${selectedIds.length} user(s)?`, () => {
+        fetch("/api/users/reject", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + localStorage.getItem("authToken")
+          },
+          body: JSON.stringify({ userIds: selectedIds })
+        })
+        .then(res => res.json())
+        .then(data => {
+          showAlert(data.message || "Users rejected successfully.", "success");
+          closePendingModal();
+          loadUsers();
+        })
+        .catch(() => showAlert("Failed to reject users.", "error"));
+      });
     }
 
     function formatRole(role) {
@@ -286,6 +471,9 @@
     function formatStatus(status) {
       if (status === "active") return "Active";
       if (status === "inactive") return "Inactive";
+      if (status === "pending") return "Pending";
+      if (status === "rejected") return "Rejected";
+      if (status === "suspended") return "Suspended";
       return status;
     }
 
@@ -302,7 +490,8 @@
     }
 
     function showConfirm(message, onConfirm) {
-      document.getElementById("modalIcon").innerHTML = `<div style="width:44px; height:44px; background:#fef3c7; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; font-size:32px; font-weight:800; color:#f59e0b;">!</div>`;      document.getElementById("modalTitle").innerText = "Confirmation";
+      document.getElementById("modalIcon").innerHTML = `<div style="width:44px; height:44px; background:#fef3c7; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; font-size:32px; font-weight:800; color:#f59e0b;">!</div>`;
+      document.getElementById("modalTitle").innerText = "Confirmation";
       document.getElementById("modalTitle").style.color = "#D12E26";
       document.getElementById("modalTitle").style.fontSize = "24px";
       document.getElementById("modalTitle").style.marginBottom = "6px";
@@ -329,7 +518,8 @@
           headers: {
             "Authorization": "Bearer " + localStorage.getItem("authToken")
           }
-        })          .then(res => res.json())
+        })
+          .then(res => res.json())
           .then(data => {
             showAlert(data.message, data.success ? "success" : "error");
             loadUsers();
@@ -354,15 +544,15 @@
     }
   </script>
 
-<!-- Custom Modal -->
-<div id="customModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:9999; align-items:center; justify-content:center;">
-  <div style="background:#fff; border-radius:16px; padding:32px; width:380px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.15);">
-    <div id="modalIcon" style="font-size:40px; margin-bottom:12px;"></div>
-    <h3 id="modalTitle" style="margin:0 0 8px; font-size:20px; color:#111827;"></h3>
-    <p id="modalMessage" style="color:#6b7280; font-size:14px; margin:0 0 24px;"></p>
-    <div id="modalButtons" style="display:flex; gap:12px; justify-content:center;"></div>
+  <!-- Custom Alert / Confirm Modal -->
+  <div id="customModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:16px; padding:32px; width:380px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.15);">
+      <div id="modalIcon" style="font-size:40px; margin-bottom:12px;"></div>
+      <h3 id="modalTitle" style="margin:0 0 8px; font-size:20px; color:#111827;"></h3>
+      <p id="modalMessage" style="color:#6b7280; font-size:14px; margin:0 0 24px;"></p>
+      <div id="modalButtons" style="display:flex; gap:12px; justify-content:center;"></div>
+    </div>
   </div>
-</div>
 
 </body>
 </html>
