@@ -20,8 +20,8 @@ const { verifyToken, requireRole, JWT_SECRET } = require("../middleware/authMidd
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'courneyk8570@gmail.com',
-    pass: 'hlkmpewoamjcdfrn' // Secure App Password integration goes here
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   }
 });
 
@@ -33,7 +33,12 @@ const transporter = nodemailer.createTransport({
  * @param {string} message - Plain-text email body.
  */
 function sendEmailNotification(userEmail, title, message) {
-  const mailOptions = { from: 'courneyk8570@gmail.com', to: userEmail, subject: title, text: message };
+  const mailOptions = {
+  from: process.env.EMAIL_USER,
+  to: userEmail,
+  subject: title,
+  text: message
+};
   // Non-blocking execution prevents the server from waiting for the email to send
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) console.error("Email error:", error);
