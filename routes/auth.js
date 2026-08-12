@@ -3,47 +3,63 @@ const router = express.Router();
 const db = require("../db");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
-const nodemailer = require("nodemailer");
 const jwt = require("jsonwebtoken");
 const fs = require("fs");
 const path = require("path");
-const { verifyToken, requireRole, JWT_SECRET } = require("../middleware/authMiddleware");
+const { BrevoClient } = require("@getbrevo/brevo");
+
+const {
+    verifyToken,
+    requireRole,
+    JWT_SECRET
+} = require("../middleware/authMiddleware");
+
+const brevo = new BrevoClient({
+    apiKey: process.env.BREVO_API_KEY
+});
+
 
 // ============================================================================
 // 1. EMAIL NOTIFICATION SETUP
 // ============================================================================
 
-// Configure the SMTP transport layer securely using Gmail
-// NOTE: credentials are hardcoded here (not loaded from environment variables).
-// In production this should typically be moved to process.env / a secrets manager
-// instead of being committed directly in source code.
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
-
 /**
  * Reusable helper to send emails asynchronously in the background.
- * Fire-and-forget: does not block the caller and only logs the outcome.
  * @param {string} userEmail - Recipient email address.
  * @param {string} title - Email subject line.
  * @param {string} message - Plain-text email body.
  */
-function sendEmailNotification(userEmail, title, message) {
-  const mailOptions = {
-  from: process.env.EMAIL_USER,
-  to: userEmail,
-  subject: title,
-  text: message
-};
-  // Non-blocking execution prevents the server from waiting for the email to send
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) console.error("Email error:", error);
-    else console.log("Email sent: " + info.response);
-  });
+async function sendEmailNotification(userEmail, title, message) {
+    try {
+        const result = await brevo.transactionalEmails.sendTransacEmail({
+            sender: {
+                name: "INTI Facility Management System",
+                email: "iicp.facilities@gmail.com"
+            },
+            to: [
+                {
+                    email: userEmail
+                }
+            ],
+            subject: title,
+            textContent: message
+        });
+
+        console.log("Email sent successfully:", result);
+
+        return {
+            success: true,
+            data: result
+        };
+
+    } catch (error) {
+        console.error("Brevo email error:", error);
+
+        return {
+            success: false,
+            error: error
+        };
+    }
 }
 
 // --- GLOBAL NOTIFICATION HELPERS ---
@@ -441,58 +457,111 @@ router.post("/change-password", verifyToken, (req, res) => {
  * email doesn't exist) to prevent attackers from enumerating valid accounts.
  * Request body: { email }
  */
-router.post("/forgot-password", (req, res) => {
-  const { email } = req.body;
+router.post("/forgot-password", async (req, res) => {
+    const { email } = req.body;
 
-  if (!email) {
-    return res.json({ success: false, message: "Email is required" });
-  }
-
-  // Check if user exists 
-  const checkUserSql = "SELECT * FROM users WHERE email = ? AND status = 'active'";
-  
-  db.query(checkUserSql, [email], (err, result) => {
-    if (err) return res.json({ success: false, message: "Database error" });
-    
-    // Anti-Enumeration Security: Always return success to hide registered emails from attackers
-    if (result.length === 0) {
-      return res.json({ success: true, message: "If the email exists, a reset link was sent." });
+    if (!email) {
+        return res.json({
+            success: false,
+            message: "Email is required"
+        });
     }
 
-    // Generate a 32-byte secure hex token expiring in 1 hour
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 3600000); // now + 1 hour in ms
+    const checkUserSql =
+        "SELECT * FROM users WHERE email = ? AND status = 'active'";
 
-    // Store token in database
-    const insertTokenSql = `INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)`;
+    db.query(checkUserSql, [email], async (err, result) => {
 
-    db.query(insertTokenSql, [email, token, expiresAt], (insertErr) => {
-      if (insertErr) {
-        console.error("Token insert error:", insertErr);
-        return res.json({ success: false, message: "Failed to process request" });
-      }
+        if (err) {
+            console.error("Database error:", err);
 
-      // Send Email 
-      const resetLink = `${process.env.APP_URL}/reset-password.html?token=${token}`;
-      
-      const mailOptions = {
-        from: 'no-reply@yourdomain.com',
-        to: email,
-        subject: 'Password Reset Request',
-        text: `You requested a password reset. Click the link to set a new password: ${resetLink}\n\nThis link expires in 1 hour.`
-      };
-
-      // Dispatch the email asychronously
-      transporter.sendMail(mailOptions, (mailErr) => {
-        if (mailErr) {
-          console.error("Email error:", mailErr);
-          return res.json({ success: false, message: "Failed to send email" });
+            return res.json({
+                success: false,
+                message: "Database error"
+            });
         }
-        
-        return res.json({ success: true, message: "If the email exists, a reset link was sent." });
-      });
+
+        // Anti-enumeration protection
+        if (result.length === 0) {
+            return res.json({
+                success: true,
+                message: "If the email exists, a reset link was sent."
+            });
+        }
+
+        const token = crypto
+            .randomBytes(32)
+            .toString("hex");
+
+        const expiresAt =
+            new Date(Date.now() + 3600000);
+
+        const insertTokenSql = `
+            INSERT INTO password_resets
+            (email, token, expires_at)
+            VALUES (?, ?, ?)
+        `;
+
+        db.query(
+            insertTokenSql,
+            [email, token, expiresAt],
+            async (insertErr) => {
+
+                if (insertErr) {
+                    console.error(
+                        "Token insert error:",
+                        insertErr
+                    );
+
+                    return res.json({
+                        success: false,
+                        message: "Failed to process request"
+                    });
+                }
+
+                const resetLink =
+                    `${process.env.APP_URL}/reset-password.html?token=${token}`;
+
+                const message = `
+Hello,
+
+You requested to reset your password for the INTI Facility Management System.
+
+Click the link below to reset your password:
+
+${resetLink}
+
+This link will expire after 1 hour.
+
+If you did not request this password reset, please ignore this email.
+`;
+
+                const emailResult =
+                    await sendEmailNotification(
+                        email,
+                        "Reset Password - INTI Facility Management System",
+                        message
+                    );
+
+                if (!emailResult.success) {
+                    console.error(
+                        "Failed to send password reset email:",
+                        emailResult.error
+                    );
+
+                    return res.json({
+                        success: false,
+                        message: "Failed to send reset email"
+                    });
+                }
+
+                return res.json({
+                    success: true,
+                    message: "Password reset link sent to your email"
+                });
+            }
+        );
     });
-  });
 });
 
 /**
@@ -2215,6 +2284,29 @@ router.put("/bookings/:id/submit-payment", (req, res) => {
       });
     }
   );
+});
+
+// testing send email api
+router.get("/test-email", async (req, res) => {
+    const result = await sendEmailNotification(
+        "p24016691@student.newinti.edu.my",
+        "INTI FMS Test Email",
+        "This is a test email from INTI Facility Management System."
+    );
+
+    if (!result.success) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to send test email",
+            error: result.error
+        });
+    }
+
+    res.json({
+        success: true,
+        message: "Test email sent successfully",
+        data: result.data
+    });
 });
 
 module.exports = router;
