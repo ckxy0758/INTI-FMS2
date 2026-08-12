@@ -8956,3 +8956,224 @@ div#customTimeSection button[type="button"][onclick="addTimeSlotRow()"]:hover {
   background: #f3f4f6 !important;
   color: #D12E26 !important;
 }
+
+/* =========================================================
+   REGISTER PAGE - SAME STYLE AS LOGIN
+   ========================================================= */
+
+.register-card {
+  width: 420px;
+  max-width: calc(100% - 32px);
+
+  padding: 30px 34px;
+
+  box-sizing: border-box;
+}
+
+
+/* Register title area */
+.register-card > div:first-child {
+  margin-bottom: 22px !important;
+}
+
+.register-card h1 {
+  font-size: 28px !important;
+  font-weight: 800 !important;
+  color: #111827 !important;
+
+  margin: 0 0 6px !important;
+}
+
+.register-card > div:first-child p {
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+
+  color: #6b7280 !important;
+
+  margin: 0 !important;
+}
+
+
+/* Labels */
+.register-card label {
+  display: block;
+
+  margin: 14px 0 6px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  color: #374151;
+}
+
+
+/* Inputs + select */
+.register-card input,
+.register-card select {
+  width: 100%;
+  height: 46px;
+
+  padding: 0 14px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+
+  background: #ffffff;
+
+  color: #111827;
+
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+
+  outline: none;
+
+  box-sizing: border-box;
+}
+
+
+/* Focus */
+.register-card input:focus,
+.register-card select:focus {
+  border-color: #D12E26;
+
+  box-shadow: 0 0 0 2px rgba(209, 46, 38, 0.08);
+}
+
+
+/* Placeholder */
+.register-card input::placeholder {
+  color: #b6b8bd;
+}
+
+
+/* Submit button */
+.register-card > button {
+  width: 100%;
+  height: 48px;
+
+  margin-top: 20px !important;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #D12E26;
+  color: #ffffff;
+
+  font-family: 'Poppins', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+
+.register-card > button:hover {
+  background: #b92620;
+}
+
+
+/* Sign in section */
+.register-card > div:nth-of-type(2) {
+  margin-top: 18px !important;
+}
+
+
+/* Message */
+.register-card #message {
+  margin: 14px 0 0 !important;
+
+  font-size: 13px;
+
+  text-align: center;
+}
+
+/* =========================================================
+   REGISTER PAGE - MOBILE
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+  /* Allow taller registration form to scroll */
+  .login-page {
+    min-height: 100dvh !important;
+  }
+
+  .login-hero {
+    min-height: calc(100dvh - 70px) !important;
+
+    align-items: flex-start !important;
+
+    padding: 28px 0 40px !important;
+
+    box-sizing: border-box !important;
+  }
+
+
+  /* Same width/look as mobile login */
+  .register-card {
+    width: calc(100% - 32px) !important;
+    max-width: 100% !important;
+
+    padding: 28px 24px !important;
+
+    border-radius: 22px !important;
+
+    box-sizing: border-box !important;
+  }
+
+
+  .register-card h1 {
+    font-size: 28px !important;
+    margin-bottom: 8px !important;
+  }
+
+
+  .register-card > div:first-child p {
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+  }
+
+
+  .register-card label {
+    font-size: 14px !important;
+
+    margin-top: 14px !important;
+    margin-bottom: 6px !important;
+  }
+
+
+  .register-card input,
+  .register-card select {
+    width: 100% !important;
+
+    height: 46px !important;
+
+    padding: 0 14px !important;
+
+    font-size: 14px !important;
+
+    border-radius: 10px !important;
+
+    box-sizing: border-box !important;
+  }
+
+
+  .register-card > button {
+    width: 100% !important;
+    height: 48px !important;
+
+    margin-top: 20px !important;
+
+    font-size: 15px !important;
+
+    border-radius: 10px !important;
+  }
+
+
+  .register-card #message {
+    margin-top: 14px !important;
+
+    font-size: 13px !important;
+  }
+
+}
