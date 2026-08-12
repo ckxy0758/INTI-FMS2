@@ -9177,3 +9177,25 @@ div#customTimeSection button[type="button"][onclick="addTimeSlotRow()"]:hover {
   }
 
 }
+
+/* =========================================================
+   REGISTER PAGE - DESKTOP TOP / BOTTOM SPACE
+   ========================================================= */
+
+@media (min-width: 769px) {
+
+  .login-page .login-hero {
+    align-items: flex-start !important;
+
+    padding-top: 40px !important;
+    padding-bottom: 40px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .register-card {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+}
