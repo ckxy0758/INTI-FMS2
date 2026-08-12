@@ -397,6 +397,14 @@
       document.getElementById("pendingModal").style.display = "none";
     }
 
+    document.getElementById("pendingModal").addEventListener("click", function (event) {
+
+      if (event.target === this) {
+        closePendingModal();
+      }
+
+    });
+
     function toggleAllPendingCheckboxes(master) {
       const checkboxes = document.querySelectorAll(".pending-user-checkbox");
       checkboxes.forEach(cb => cb.checked = master.checked);
