@@ -8724,3 +8724,193 @@ div#customTimeSection button[type="button"][onclick="addTimeSlotRow()"]:hover {
     height: 44px;
   }
 }
+
+/* =========================================================
+   PENDING REGISTRATION MODAL
+   ========================================================= */
+
+.pending-modal-card {
+  width: 720px;
+  max-width: calc(100% - 40px);
+
+  background: #ffffff;
+
+  border-radius: 16px;
+
+  padding: 28px;
+
+  box-shadow: 0 14px 40px rgba(0,0,0,0.14);
+
+  box-sizing: border-box;
+}
+
+
+/* Header */
+.pending-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 20px;
+}
+
+.pending-modal-header h2 {
+  margin: 0;
+
+  color: #111827;
+
+  font-size: 22px;
+  font-weight: 700;
+}
+
+
+/* Table wrapper */
+.pending-table-container {
+  width: 100%;
+
+  overflow-x: auto;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+
+/* Table */
+.pending-user-table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  font-size: 13px;
+}
+
+.pending-user-table thead {
+  background: #f8fafc;
+}
+
+.pending-user-table th {
+  padding: 14px 12px;
+
+  color: #6b7280;
+
+  font-weight: 600;
+
+  text-align: left;
+
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.pending-user-table td {
+  padding: 14px 12px;
+
+  color: #111827;
+
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pending-user-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+
+/* Checkbox column */
+.pending-user-table .checkbox-col {
+  width: 40px;
+  text-align: center;
+}
+
+
+/* Footer buttons */
+.pending-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  gap: 12px;
+
+  margin-top: 20px;
+}
+
+
+/* Reject */
+.btn-reject {
+  height: 42px;
+
+  padding: 0 18px;
+
+  border: 1.5px solid #D12E26;
+  border-radius: 9px;
+
+  background: #ffffff;
+
+  color: #D12E26;
+
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.btn-reject:hover {
+  background: #fef2f2;
+}
+
+
+/* Approve */
+.btn-approve {
+  height: 42px;
+
+  padding: 0 18px;
+
+  border: 1.5px solid #22c55e;
+  border-radius: 9px;
+
+  background: #22c55e;
+
+  color: #ffffff;
+
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.btn-approve:hover {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+@media (max-width: 768px) {
+
+  .pending-modal-card {
+    width: calc(100% - 28px);
+    max-width: calc(100% - 28px);
+
+    padding: 18px;
+  }
+
+  .pending-modal-header h2 {
+    font-size: 18px;
+  }
+
+  .pending-table-container {
+    overflow-x: auto;
+  }
+
+  .pending-user-table {
+    min-width: 620px;
+  }
+
+  .pending-modal-footer {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-reject,
+  .btn-approve {
+    width: 100%;
+    height: 44px;
+  }
+}
