@@ -751,9 +751,16 @@
 
         It simply shows the booking status and tells the user the request is being processed.
       */
+     // Determine the message based on booking status
+      const isApproved = booking.booking_status && booking.booking_status.toLowerCase() === 'approved';
+
+      const statusMessage = isApproved 
+        ? `Your booking has been approved.` 
+        : `Your booking request is being processed.`;
+        
       card.innerHTML = `
         <h2>Booking Status</h2>
-        <p>Your booking request is being processed.</p>
+        <p>${statusMessage}</p>
 
         <div class="action-box">
           <strong>Status</strong>
