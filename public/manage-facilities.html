@@ -118,6 +118,7 @@
                 <option value="payment_required">Payment Required</option>
                 <option value="direct_reservation">Direct Reservation</option>
                 <option value="staff_key_approval">Staff Key Approval</option>
+                <option value="direct_booking">Direct Booking</option>
               </select>
             </div>
 
@@ -739,6 +740,7 @@
       if (flow === "payment_required") return "Payment Required";
       if (flow === "direct_reservation") return "Direct Reservation";
       if (flow === "staff_key_approval") return "Staff Key Approval";
+      if (flow === "direct_booking") return "Direct Booking";
       return "Normal Approval";
     }
 

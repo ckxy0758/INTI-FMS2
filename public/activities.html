@@ -353,6 +353,30 @@
       }
       // --- END OF NEW BLOCK ---
 
+      // --- Case for Direct Booking Flow (e.g., Table Tennis) ---
+      // Steps: Submitted -> Approved (Jumps straight to Approved upon booking creation)
+      if (activity.booking_flow_type === "direct_booking") {
+        let step = 2; // Directly at Approved stage
+
+        return `
+          <div class="progress-wrapper">
+
+            <div class="progress-step active">
+              <div class="circle">1</div>
+              <span>Submitted</span>
+            </div>
+
+            <div class="progress-line active-line"></div>
+
+            <div class="progress-step active">
+              <div class="circle">2</div>
+              <span>Approved</span>
+            </div>
+
+          </div>
+        `;
+      }
+
       // --- Case 5: Default/legacy flow (no specific booking_flow_type matched above) ---
       // Generic 3-step tracker: Submitted -> (Waiting List / Payment step) -> Approved
       // Step 2's label and progression depend on whether payment is required for this activity.
@@ -471,6 +495,12 @@
         if (paymentStatus === "pending_payment") return "Pending Payment";
         if (paymentStatus === "payment_submitted") return "Payment Submitted";
         if (paymentStatus === "verified") return "Payment Verified";
+      }
+
+      // Direct booking flow status mapping
+      if (activity.booking_flow_type === "direct_booking") {
+        if (bookingStatus === "pending") return "Submitted";
+        if (bookingStatus === "approved") return "Approved";
       }
 
       // Generic fallback mapping for any remaining/default booking statuses
