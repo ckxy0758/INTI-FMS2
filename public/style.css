@@ -8655,3 +8655,72 @@ div#customTimeSection button[type="button"][onclick="addTimeSlotRow()"]:hover {
 .booking-reject-btn:hover {
   background: #fee2e2;
 }
+
+/* ===== PENDING REGISTRATION BUTTON ===== */
+.pending-reg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 42px;
+  padding: 0 18px;
+
+  border: 1.5px solid #D12E26;
+  border-radius: 9px;
+
+  background: #fff;
+  color: #D12E26;
+
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.pending-reg-btn:hover {
+  background: #D12E26;
+  color: #fff;
+}
+
+.pending-reg-btn #pendingCount {
+  margin-left: 4px;
+  font-weight: 700;
+}
+
+/* ===== MANAGE USERS FOOTER ===== */
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 16px;
+
+  margin-top: 18px;
+}
+
+.user-count-text {
+  margin: 0;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  color: #111827;
+}
+
+@media (max-width: 768px) {
+
+  .table-footer {
+    flex-direction: column;
+    align-items: flex-start;
+
+    gap: 12px;
+  }
+
+  .pending-reg-btn {
+    width: 100%;
+    height: 44px;
+  }
+}
